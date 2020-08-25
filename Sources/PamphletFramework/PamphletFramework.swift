@@ -89,7 +89,7 @@ public struct PamphletFramework {
         }
         return Data()
         #else
-        return data
+        return data!
         #endif
         }
         }
