@@ -2,6 +2,9 @@
 
 Pamphlet turns text files into Swift code, allowing those text resources to be easily embeddable into your executable. Resource availability is then checked by the compiler, and will error if the resource is removed from the project.
 
+For **DEBUG** builds, Pamphet will load the content from disk and not use the embedded content. This is particularly useful when you want resource reloading during development, but resource embedded during release.
+
+
 **Example**
 
 Let suppose we were making a simple web server where the contents of the server are compiled in using Pamplet.  So the directory structure might look like this:
@@ -58,6 +61,12 @@ public enum Pamphlet {
 ```swift
 // swiftlint:disable all
 public extension Pamphlet {
+#if DEBUG
+if let contents = try? String(contentsOfFile:"/www/index.html") {
+    return contents
+}
+return "file not found"
+#else
     static func index_html() -> String {
 return ###"""
 <html>
@@ -67,27 +76,6 @@ return ###"""
     Hello World!
   </body>
 </html>
-"""###
-```
-
-*Pamphlet+style.css.swift*
-
-```swift
-// swiftlint:disable all
-public extension Pamphlet {
-    static func style_css() -> String {
-return ###"""
-<content of style.css goes here>
-"""###
-```
-
-*Pamphlet+code.js.swift*
-
-```swift
-// swiftlint:disable all
-public extension Pamphlet {
-    static func code_js() -> String {
-return ###"""
-<content of code.js goes here>
+#endif
 """###
 ```

@@ -76,11 +76,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Pamphlet"
+            argument = "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Resources"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Sources/SOServer/Pamphlet"
+            argument = "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Sources/SOServer/Resources"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

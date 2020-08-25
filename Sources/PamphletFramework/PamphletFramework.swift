@@ -41,13 +41,21 @@ public struct PamphletFramework {
         
         public extension Pamphlet {
             static func {0}() -> String {
+        #if DEBUG
+        if let contents = try? String(contentsOfFile:"{2}") {
+            return contents
+        }
+        return "file not found"
+        #else
         return ###"""
         {1}
-        """### }
+        """###
+        #endif
+        }
         }
         """####
         do {
-            let swift = String(ipecac: template, variableName, try String(contentsOfFile: inFile))
+            let swift = String(ipecac: template, variableName, try String(contentsOfFile: inFile), inFile)
             try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
         } catch {
             fatalError("Processing failed for file: \(inFile)")
