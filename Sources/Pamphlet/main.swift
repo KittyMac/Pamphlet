@@ -10,7 +10,7 @@ struct Pamphlet: ParsableCommand {
     var outDirectory: String
     
     @Argument(help: "List of valid file extensions")
-    var extensions: [String] = ["txt", "md", "html", "htm", "js", "css"]
+    var extensions: [String] = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
     
     mutating func run() throws {
         PamphletFramework().process(extensions, inDirectory, outDirectory)

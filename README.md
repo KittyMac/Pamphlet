@@ -1,21 +1,22 @@
 # Pamphlet
 
-Pamphlet turns text files into Swift code, allowing those text resources to be easily embeddable into your executable. Resource availability is then checked by the compiler, and will error if the resource is removed from the project.
+Pamphlet turns resource files into Swift code, allowing those resources to be easily embedded into your executable. Resource availability is then checked by the compiler, and will error if the resource is removed from the project.
 
-For **DEBUG** builds, Pamphet will load the content from disk and not use the embedded content. This is particularly useful when you want resource reloading during development, but resource embedded during release.
+For **DEBUG** builds, Pamphet will load the content from disk and not use the embedded content. This is particularly useful when you want resource reloading during development, but embedded resources during release.
 
 
 **Example**
 
-Let suppose we were making a simple web server where the contents of the server are compiled in using Pamphlet.  So the directory structure might look like this:
+Let suppose we were making a simple web server where the contents of the server are compiled in using Pamphlet.  Our directory structure might look like this:
 
 www  
 ├── index.html  
 ├── style.css  
 ├── code.js  
+├── logo.png  
 
 
-And Pamphlet might be called like this:
+And Pamphlet could be called like this:
 
 ```bash
 pamphlet /path/to/www ./Sources/server/ 
@@ -24,15 +25,18 @@ pamphlet /path/to/www ./Sources/server/
 When finished, you would access the content in your Swift code like this:
 
 ```swift
-let html = Pamphlet.index_html()
-let style = Pamphlet.style_css()
-let js = Pamphlet.code_js()
+let html: String = Pamphlet.index_html()
+let style: String = Pamphlet.style_css()
+let js: String = Pamphlet.code_js()
+let logo: Data = Pamphlet.logo_png()
 ```
 
 or you can look them up dynamically by their file name like this:
 
 ```swift
-let html = Pamphlet[dynamicMember: "/index.html"]
+if let html: String = Pamphlet[dynamicMember: "/index.html"] {
+    // use html
+}
 ```
 
 
