@@ -7,7 +7,7 @@ For **DEBUG** builds, Pamphet will load the content from disk and not use the em
 
 **Example**
 
-Let suppose we were making a simple web server where the contents of the server are compiled in using Pamplet.  So the directory structure might look like this:
+Let suppose we were making a simple web server where the contents of the server are compiled in using Pamphlet.  So the directory structure might look like this:
 
 www  
 ├── index.html  
@@ -24,9 +24,9 @@ pamphlet /path/to/www ./Sources/server/
 When finished, you would access the content in your Swift code like this:
 
 ```swift
-let html = Pamplet.index_html()
-let style = Pamplet.style_css()
-let js = Pamplet.code_js()
+let html = Pamphlet.index_html()
+let style = Pamphlet.style_css()
+let js = Pamphlet.code_js()
 ```
 
 or you can look them up dynamically by their file name like this:
