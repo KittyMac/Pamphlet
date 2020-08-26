@@ -9,11 +9,14 @@ For **DEBUG** builds, Pamphet will load the content from disk and not use the em
 
 Let suppose we were making a simple web server where the contents of the server are compiled in using Pamphlet.  Our directory structure might look like this:
 
+```
 www  
 ├── index.html  
 ├── style.css  
-├── code.js  
-├── logo.png  
+├── script.js  
+├── Images/  
+     ├── logo.png  
+```
 
 
 And Pamphlet could be called like this:
@@ -25,10 +28,10 @@ pamphlet /path/to/www ./Sources/server/
 When finished, you would access the content in your Swift code like this:
 
 ```swift
-let html: String = Pamphlet.index_html()
-let style: String = Pamphlet.style_css()
-let js: String = Pamphlet.code_js()
-let logo: Data = Pamphlet.logo_png()
+let html: String = Pamphlet.IndexHtml()
+let style: String = Pamphlet.StyleCss()
+let js: String = Pamphlet.ScriptJs()
+let logo: Data = Pamphlet.Images.LogoPng()
 ```
 
 or you can look them up dynamically by their file name like this:
@@ -36,6 +39,9 @@ or you can look them up dynamically by their file name like this:
 ```swift
 if let html: String = Pamphlet[dynamicMember: "/index.html"] {
     // use html
+}
+if let logo: Data = Pamphlet[dynamicMember: "Images/logo.png"] {
+    // use logo
 }
 ```
 
@@ -45,33 +51,47 @@ The files that Pamphlet generates will look like these:
 *Pamphlet.swift*
 
 ```swift
+import Foundation
+
 // swiftlint:disable all
+
 @dynamicMemberLookup
 public enum Pamphlet {
     static subscript(dynamicMember member: String) -> String? {
         switch member {
-        case "index.html": return index_html()
-        case "style.css": return style_css()
-        case "code.js": return code_js()
+        case "/index.html": return Pamphlet.IndexHtml()
+        case "/script.js": return Pamphlet.ScriptJs()
+        case "/style.css": return Pamphlet.StyleCss()
+        default: break
+        }
+        return nil
+    }
+    static subscript(dynamicMember member: String) -> Data? {
+        switch member {
+        case "/Images/logo.png": return Pamphlet.Images.LogoPng()
         default: break
         }
         return nil
     }
 }
+extension Pamphlet { public enum Images { } }
 ```
 
 *Pamphlet+index.html.swift*
 
 ```swift
+import Foundation
+
 // swiftlint:disable all
+
 public extension Pamphlet {
+    static func IndexHtml() -> String {
 #if DEBUG
-if let contents = try? String(contentsOfFile:"/www/index.html") {
+if let contents = try? String(contentsOfFile:"/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test/index.html") {
     return contents
 }
 return "file not found"
 #else
-    static func index_html() -> String {
 return ###"""
 <html>
   <head>
@@ -80,6 +100,10 @@ return ###"""
     Hello World!
   </body>
 </html>
+
+"""###
 #endif
+}
+}
 """###
 ```
