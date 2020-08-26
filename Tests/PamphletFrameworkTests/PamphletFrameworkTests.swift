@@ -8,7 +8,9 @@ final class PamphletTests: XCTestCase {
         let extensions = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
-                                    "/tmp")
+                                    "/tmp/Pamphlet",
+                                    true,
+                                    true)
     }
     
 

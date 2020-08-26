@@ -118,7 +118,7 @@ public struct PamphletFramework {
         for page in (textPages + dataPages) {
             if page.parts.count > 1 {
                 let template = ####"""
-                extension {?} { public enum {?} { } }
+                public extension {?} { enum {?} { } }
                 
                 """####
                 let code = String(ipecac: template,
@@ -139,14 +139,14 @@ public struct PamphletFramework {
         
         @dynamicMemberLookup
         public enum Pamphlet {
-            static subscript(dynamicMember member: String) -> String? {
+            public static subscript(dynamicMember member: String) -> String? {
                 switch member {
         {?}
                 default: break
                 }
                 return nil
             }
-            static subscript(dynamicMember member: String) -> Data? {
+            public static subscript(dynamicMember member: String) -> Data? {
                 switch member {
         {?}
                 default: break
@@ -239,7 +239,82 @@ public struct PamphletFramework {
         return true
     }
     
-    public func process(_ extensions: [String], _ inDirectory: String, _ outDirectory: String) {        
+    private func processPackageSwift(_ outFile: String) -> Bool {
+        let template = ####"""
+        // swift-tools-version:5.2
+        import PackageDescription
+        let package = Package(
+            name: "Pamphlet",
+            products: [
+                .library(name: "Pamphlet", targets: ["Pamphlet"])
+            ],
+            targets: [
+                .target(
+                    name: "Pamphlet"
+                )
+            ]
+        )
+        """####
+        
+        do {
+            try template.write(toFile: outFile, atomically: true, encoding: .utf8)
+        } catch {
+            return false
+        }
+        return true
+    }
+    
+    private func removeOldFiles(_ outDirectory: String) {
+        let resourceKeys: [URLResourceKey] = [.creationDateKey, .isDirectoryKey]
+        let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: outDirectory),
+                                                        includingPropertiesForKeys: resourceKeys,
+                                                        options: [.skipsHiddenFiles],
+                                                        errorHandler: { (url, error) -> Bool in
+                                                            print("directoryEnumerator error at \(url): ", error)
+                                                            return true
+        })!
+        
+        for case let fileURL as URL in enumerator {
+            do {
+                let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
+                let fileName = fileURL.lastPathComponent
+                if fileName.hasPrefix("Pamphlet+") && resourceValues.isDirectory == false {
+                    try? FileManager.default.removeItem(at: fileURL)
+                }
+            } catch {
+                    
+            }
+        }
+    }
+    
+    public func process(_ extensions: [String],
+                        _ inDirectory: String,
+                        _ outDirectory: String,
+                        _ swiftpm: Bool,
+                        _ clean: Bool) {
+        
+        var generateFilesDirectory = outDirectory
+        
+        try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
+        
+        if swiftpm {
+            // We assume that the output directory is where we want the Package.swft,
+            // so we need to create the Sources/ and Sources/Pamphlet directories
+            // and store the generated files in there
+            generateFilesDirectory = outDirectory + "/Sources/Pamphlet"
+            try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
+            
+            // Generate a Package.swift
+            let packageSwiftPath = outDirectory + "/Package.swift"
+            if !processPackageSwift(packageSwiftPath) {
+                fatalError("Unable to create Package.swift at \(packageSwiftPath)")
+            }
+        }
+        
+        if clean {
+            removeOldFiles(generateFilesDirectory)
+        }
+        
         let resourceKeys: [URLResourceKey] = [.creationDateKey, .isDirectoryKey]
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
@@ -251,17 +326,22 @@ public struct PamphletFramework {
         
         var textPages: [FilePath] = []
         var dataPages: [FilePath] = []
+        
+        print("in: " + inDirectory)
+        print("out: " + generateFilesDirectory)
+        
+        let inDirectoryFullPath = URL(fileURLWithPath: inDirectory).path
 
         for case let fileURL as URL in enumerator {
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
                 let pathExtension = (fileURL.path as NSString).pathExtension
                 if extensions.contains(pathExtension) && resourceValues.isDirectory == false {
-                    let partialPath = String(fileURL.path.dropFirst(inDirectory.count))
+                    let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
                     let filePath = FilePath(partialPath)
                     
-                    if !processTextFile(filePath, fileURL.path, outDirectory + "/" + filePath.swiftFileName) {
-                        if !processDataFile(filePath, fileURL.path, outDirectory + "/" + filePath.swiftFileName) {
+                    if !processTextFile(filePath, fileURL.path, generateFilesDirectory + "/" + filePath.swiftFileName) {
+                        if !processDataFile(filePath, fileURL.path, generateFilesDirectory + "/" + filePath.swiftFileName) {
                             fatalError("Processing failed for file: \(fileURL.path)")
                         } else {
                             dataPages.append(filePath)
@@ -277,7 +357,7 @@ public struct PamphletFramework {
             }
         }
         
-        createPamphletFile(textPages, dataPages, outDirectory + "/Pamphlet.swift")
+        createPamphletFile(textPages, dataPages, generateFilesDirectory + "/Pamphlet.swift")
     }
     
 }

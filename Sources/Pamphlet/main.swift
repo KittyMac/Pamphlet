@@ -3,6 +3,12 @@ import ArgumentParser
 
 struct Pamphlet: ParsableCommand {
     
+    @Flag(help: "Delete existing Pamphlet files in the output directories before processing")
+    var clean: Bool = false
+    
+    @Flag(help: "Generate a full swiftpm package directory")
+    var swiftpm: Bool = false
+    
     @Argument(help: "Path to directory of file to process")
     var inDirectory: String
     
@@ -13,7 +19,7 @@ struct Pamphlet: ParsableCommand {
     var extensions: [String] = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
     
     mutating func run() throws {
-        PamphletFramework().process(extensions, inDirectory, outDirectory)
+        PamphletFramework().process(extensions, inDirectory, outDirectory, swiftpm, clean)
     }
 }
 
