@@ -327,8 +327,8 @@ public struct PamphletFramework {
         var textPages: [FilePath] = []
         var dataPages: [FilePath] = []
         
-        print("in: " + inDirectory)
-        print("out: " + generateFilesDirectory)
+        //print("in: " + inDirectory)
+        //print("out: " + generateFilesDirectory)
         
         let inDirectoryFullPath = URL(fileURLWithPath: inDirectory).path
 
