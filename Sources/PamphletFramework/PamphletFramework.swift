@@ -336,7 +336,8 @@ public struct PamphletFramework {
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
                 let pathExtension = (fileURL.path as NSString).pathExtension
-                if extensions.contains(pathExtension) && resourceValues.isDirectory == false {
+                if (extensions.count == 0 || extensions.contains(pathExtension)) &&
+                    resourceValues.isDirectory == false {
                     let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
                     let filePath = FilePath(partialPath)
                     

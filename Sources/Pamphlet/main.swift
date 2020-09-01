@@ -15,8 +15,8 @@ struct Pamphlet: ParsableCommand {
     @Argument(help: "Path to sources directory to output Swift files to")
     var outDirectory: String
     
-    @Argument(help: "List of valid file extensions")
-    var extensions: [String] = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+    @Argument(help: "List of valid file extensions (empty means all)")
+    var extensions: [String] = []
     
     mutating func run() throws {
         PamphletFramework().process(extensions, inDirectory, outDirectory, swiftpm, clean)
