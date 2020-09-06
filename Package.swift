@@ -24,6 +24,8 @@ let package = Package(
         .target(
             name: "PamphletFramework",
             dependencies: ["Ipecac"]),
+        .target(
+            name: "mcpp"),
         .testTarget(
             name: "PamphletFrameworkTests",
             dependencies: ["PamphletFramework"]),
