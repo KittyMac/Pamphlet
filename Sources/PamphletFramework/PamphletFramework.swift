@@ -1,5 +1,6 @@
 import Foundation
 import Ipecac
+import libmcpp
 
 private func toVariableName(_ source: String) -> String {
     var scratch = ""
@@ -191,11 +192,21 @@ public struct PamphletFramework {
         }
         """####
         do {
+            
+            var fileContents = try String(contentsOfFile: inFile)
+            
+            if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                // This file wants to use the mcpp preprocessor
+                try fileContents.write(toFile:"/tmp/mcpp.in", atomically: true, encoding: .utf8)
+                mcpp_preprocessFile("/tmp/mcpp.in", "/tmp/mcpp.out")
+                fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
+            }
+            
             let swift = String(ipecac: template,
                                path.extensionName,
                                path.variableName,
                                inFile,
-                               try String(contentsOfFile: inFile))
+                               fileContents)
             try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
         } catch {
             return false
