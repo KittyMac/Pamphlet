@@ -6,7 +6,8 @@ let package = Package(
     name: "Pamphlet",
     products: [
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
-        .library(name: "PamphletFramework", targets: ["PamphletFramework"])
+        .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
+		.library(name: "libmcpp", targets: ["libmcpp"])
     ],
     dependencies: [
 		.package(url: "https://github.com/KittyMac/Ipecac.git", .branch("master")),
@@ -23,9 +24,9 @@ let package = Package(
         ),
         .target(
             name: "PamphletFramework",
-            dependencies: ["Ipecac"]),
+            dependencies: ["Ipecac", "libmcpp"]),
         .target(
-            name: "mcpp"),
+            name: "libmcpp"),
         .testTarget(
             name: "PamphletFrameworkTests",
             dependencies: ["PamphletFramework"]),

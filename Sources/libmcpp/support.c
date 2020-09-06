@@ -1722,7 +1722,7 @@ com_start:
                     sp -= 2;
                     while (*sp != '\n')     /* Until end of line    */
                         mcpp_fputc( *sp++, OUT);
-                    mcpp_fputc('\n', OUT);
+                    mcpp_fputc( '\n', OUT);
                     wrong_line = TRUE;
                 }
                 goto  end_line;
