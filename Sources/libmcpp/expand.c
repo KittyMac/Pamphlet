@@ -710,7 +710,8 @@ static char *   replace(
         } else {
             m_inf->locs.start_col = m_inf->locs.start_line = 0L;
         }
-        m_inf->args = m_inf->loc_args = NULL;       /* Default args */
+        m_inf->args = NULL;       /* Default args */
+        m_inf->loc_args = NULL;       /* Default args */
         for (num = 1, recurs = 0; num < m_num; num++)
             if (mac_inf[ num].defp == defp)
                 recurs++;           /* Recursively nested macro     */
@@ -1972,7 +1973,7 @@ static char *   rescan(
                         seq_len = mgc_seq.magic_end - mgc_seq.magic_start;
                         if (seq_len) {
                             insert_to_bptr( mgc_seq.magic_start, seq_len);
-                            mgc_cleared = remove_magics(
+                            mgc_cleared = (char *)remove_magics(
                                     (const char *) infile->bptr, FALSE);
                                         /* Remove pair of magics    */
                             strcpy( infile->bptr, mgc_cleared);
