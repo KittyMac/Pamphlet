@@ -41,11 +41,7 @@
 
 #define SYSTEM_H
 
-#if     HAVE_CONFIG_H
 #include    "configed.H"
-#else
-#include    "noconfig.H"
-#endif
 
 /* Some system has a wrong definition of UCHAR_MAX.  See cpp-test.html#5.1.3 */
 #if     UCHARMAX < -255

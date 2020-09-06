@@ -1371,9 +1371,9 @@ static void version( void)
 #endif
 
 #ifdef  VERSION_MSG
-        "MCPP V.2.7.2-ned (2017/02) "
+        "MCPP V.2.7.2 (2008/11) "
 #else
-        "MCPP V.", VERSION, "-ned (", DATE, ") "
+        "MCPP V.", VERSION, " (", DATE, ") "
 #endif
 #if     COMPILER == INDEPENDENT
             , "compiler-independent-build "
@@ -3534,11 +3534,11 @@ void    add_file(
     FILEINFO *      file;
     const char *    too_many_include_nest =
             "More than %.0s%ld nesting of #include";    /* _F_ _W4_ */
-
+            
     //
     // When encoding is UTF-8, skip BOM if present.
     //
-    if(fp != NULL && ftell(fp) == 0)
+    if(mbchar == UTF8 && fp != NULL && ftell(fp) == 0)
     {
         const unsigned char UTF8_BOM[3] = {0xEF, 0xBB, 0xBF};
         unsigned char FILE_HEAD[3] = {0, 0, 0};
