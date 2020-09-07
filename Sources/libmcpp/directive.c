@@ -1084,8 +1084,8 @@ static int  get_repl(
 
         case STR:                           /* String in mac. body  */
         case CHR:                           /* Character constant   */
-            //if (mcpp_mode == OLD_PREP)
-            repl_cur = str_parm_scan( repl_cur);
+            if (mcpp_mode == OLD_PREP)
+                repl_cur = str_parm_scan( repl_cur);
             break;
         case SEP:
             if (mcpp_mode == OLD_PREP && c == COM_SEP)

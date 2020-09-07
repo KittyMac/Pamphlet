@@ -114,8 +114,6 @@ return ###"""
 
 Pamphlet includes a version of the powerful [mcpp](http://mcpp.sourceforge.net) preprocessor, a C99 compliant C/C++ preprocessor.  While this may seem perplexing, it instantly adds powerful template programming to any text-based files processed using Pamphlet.
 
-**Note:** The version of mcpp included in pamphlet uses the STD mode for the preprocessor with one important change; string literals will be parsed and macros expanded inside of them.
-
 **Example**
 
 Only files which start with ```#define PAMPHLET_PREPROCESSOR``` will be preprocessed, so there is no concern that the preprocessor might interfere with normal pamplet operation.

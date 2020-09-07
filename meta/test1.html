@@ -1,3 +1,5 @@
 #define PAMPHLET_PREPROCESSOR
-#define HELLO(x) "Hello x!"
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+#define HELLO(x) QUOTE(Hello x!)
 HELLO(dog)HELLO(cat)HELLO(pineapple)HELLO(world)
