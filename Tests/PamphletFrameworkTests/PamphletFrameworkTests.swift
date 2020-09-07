@@ -17,7 +17,7 @@ final class PamphletTests: XCTestCase {
         
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.html")
         
-        XCTAssertEqual(result, "\n\n\n\n\"Hello dog!\"  \"Hello cat!\"  \"Hello pineapple!\"  \"Hello world!\"\n")
+        XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
     }
     
 

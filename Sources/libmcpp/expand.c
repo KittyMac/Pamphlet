@@ -992,12 +992,14 @@ static int  prescan(
     if (mcpp_mode == POST_STD) {
         file = unget_string( defp->repl, defp->name);
     } else {
-        *out++ = TOK_SEP;                   /* Wrap replacement     */
-        workp = work_buf;                   /*  text with token     */
-        workp = stpcpy( workp, defp->repl); /*   separators to      */
-        *workp++ = TOK_SEP;                 /*    prevent unintended*/
-        *workp = EOS;                       /*     token merging.   */
-        file = unget_string( work_buf, defp->name);
+        // Rocco: Removed to get rid of extra spaces in macro expansion
+        //*out++ = TOK_SEP;                   /* Wrap replacement     */
+        //workp = work_buf;                   /*  text with token     */
+        //workp = stpcpy( workp, defp->repl); /*   separators to      */
+        //*workp++ = TOK_SEP;                 /*    prevent unintended*/
+        //*workp = EOS;                       /*     token merging.   */
+        //file = unget_string( work_buf, defp->name);
+        file = unget_string( defp->repl, defp->name);
     }
 
     while (c = get_ch(), file == infile) {  /* To the end of repl   */
@@ -1209,7 +1211,8 @@ static char *   catenate(
     }
 
     if (mcpp_mode == STD && ! option_flags.lang_asm) {
-        *out++ = TOK_SEP;                   /* Prevent token merging*/
+        // Rocco: removed extra spaces around macro expansion
+        //*out++ = TOK_SEP;                   /* Prevent token merging*/
         *out = EOS;
     }
     if (in_arg) {       /* There are more tokens after the generated one    */
