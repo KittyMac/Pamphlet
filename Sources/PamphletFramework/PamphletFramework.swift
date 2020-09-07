@@ -314,7 +314,9 @@ public struct PamphletFramework {
         }
     }
     
-    public func preprocess(_ inFile: String) {
+    @discardableResult
+    public func preprocess(_ inFile: String) -> String {
+        var result: String = ""
         do {
             var fileContents = try String(contentsOfFile: inFile)
             
@@ -325,10 +327,12 @@ public struct PamphletFramework {
                 fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
             }
             
-            print(fileContents)
+            result = fileContents
         } catch {
-            print("unable to parse file")
+            result = "unable to parse file"
         }
+        print(result)
+        return result
     }
     
     public func process(_ extensions: [String],
