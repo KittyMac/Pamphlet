@@ -2,6 +2,75 @@ import Foundation
 import Ipecac
 import libmcpp
 
+let stringTemplate = ####"""
+import Foundation
+
+// swiftlint:disable all
+
+public extension {?} {
+    static func {?}() -> String {
+#if DEBUG
+let filePath = "{?}"
+if let contents = try? String(contentsOfFile:filePath) {
+    if contents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+        do {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/local/bin/pamphlet")
+            task.arguments = ["preprocess", filePath]
+            let outputPipe = Pipe()
+            task.standardOutput = outputPipe
+            try task.run()
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(decoding: outputData, as: UTF8.self)
+            return output
+        } catch {
+            return "Failed to use /usr/local/bin/pamphlet to preprocess the requested file"
+        }
+    }
+    return contents
+}
+return "file not found"
+#else
+return ###"""
+{?}
+"""###
+#endif
+}
+}
+"""####
+
+private let dataTemplate = ####"""
+import Foundation
+
+// swiftlint:disable all
+
+public extension {?} {
+    static func {?}() -> Data {
+#if DEBUG
+if let contents = try? Data(contentsOf:URL(fileURLWithPath: "{?}")) {
+    return contents
+}
+return Data()
+#else
+return data!
+#endif
+}
+}
+
+private let data = Data(base64Encoded:"{?}")
+"""####
+
+private let compressedTemplate = ####"""
+
+public extension {?} {
+    static func {?}Gzip() -> Data {
+        return gzip_data!
+    }
+}
+
+private let gzip_data = Data(base64Encoded:"{?}")
+"""####
+
 private func toVariableName(_ source: String) -> String {
     var scratch = ""
     scratch.reserveCapacity(source.count)
@@ -138,16 +207,26 @@ public struct PamphletFramework {
         
         // swiftlint:disable all
         
-        @dynamicMemberLookup
         public enum Pamphlet {
-            public static subscript(dynamicMember member: String) -> String? {
+            public static func get(string member: String) -> String? {
                 switch member {
         {?}
                 default: break
                 }
                 return nil
             }
-            public static subscript(dynamicMember member: String) -> Data? {
+            public static func get(gzip member: String) -> Data? {
+                #if DEBUG
+                    return nil
+                #else
+                    switch member {
+        {?}
+                    default: break
+                    }
+                    return nil
+                #endif
+            }
+            public static func get(data member: String) -> Data? {
                 switch member {
         {?}
                 default: break
@@ -158,10 +237,12 @@ public struct PamphletFramework {
         {?}
         """####
         let textPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
+        let compressedPagesCode = textPages.map { "            case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
         let dataPagesCode = dataPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
         do {
             let swift = String(ipecac: template,
                                textPagesCode,
+                               compressedPagesCode,
                                dataPagesCode,
                                allDirectoryExtensions)
             try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
@@ -171,43 +252,11 @@ public struct PamphletFramework {
     }
     
     private func processTextFile(_ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
-        let template = ####"""
-        import Foundation
         
-        // swiftlint:disable all
-        
-        public extension {?} {
-            static func {?}() -> String {
-        #if DEBUG
-        let filePath = "{?}"
-        if let contents = try? String(contentsOfFile:filePath) {
-            if contents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                do {
-                    let task = Process()
-                    task.executableURL = URL(fileURLWithPath: "/usr/local/bin/pamphlet")
-                    task.arguments = ["preprocess", filePath]
-                    let outputPipe = Pipe()
-                    task.standardOutput = outputPipe
-                    try task.run()
-                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(decoding: outputData, as: UTF8.self)
-                    return output
-                } catch {
-                    return "Failed to use /usr/local/bin/pamphlet to preprocess the requested file"
-                }
-            }
-            return contents
-        }
-        return "file not found"
-        #else
-        return ###"""
-        {?}
-        """###
-        #endif
-        }
-        }
-        """####
         do {
+            
+            var uncompressedString = ""
+            var compressedString = ""
             
             var fileContents = try String(contentsOfFile: inFile)
             
@@ -218,12 +267,44 @@ public struct PamphletFramework {
                 fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
             }
             
-            let swift = String(ipecac: template,
-                               path.extensionName,
-                               path.variableName,
-                               inFile,
-                               fileContents)
+            do {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+                task.arguments = ["-9"]
+                let inputPipe = Pipe()
+                let outputPipe = Pipe()
+                task.standardInput = inputPipe
+                task.standardOutput = outputPipe
+                try task.run()
+                if let fileContentsAsData = fileContents.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                    inputPipe.fileHandleForWriting.closeFile()
+                    let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    compressedString = String(ipecac: compressedTemplate,
+                                       path.extensionName,
+                                       path.variableName,
+                                       compressedData.base64EncodedString())
+                    
+                    
+                } else {
+                    throw ""
+                }
+            } catch {
+                fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+            }
+            
+            uncompressedString = String(ipecac: stringTemplate,
+                                        path.extensionName,
+                                        path.variableName,
+                                        inFile,
+                                        fileContents)
+            
+            
+            let swift = uncompressedString + "\n\n" + compressedString
+            
             try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
+            
         } catch {
             return false
         }
@@ -231,30 +312,9 @@ public struct PamphletFramework {
     }
     
     private func processDataFile(_ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
-        let template = ####"""
-        import Foundation
-        
-        // swiftlint:disable all
-        
-        public extension {?} {
-            static func {?}() -> Data {
-        #if DEBUG
-        if let contents = try? Data(contentsOf:URL(fileURLWithPath: "{?}")) {
-            return contents
-        }
-        return Data()
-        #else
-        return data!
-        #endif
-        }
-        }
-        
-        private let data = Data(base64Encoded:"{?}")
-        """####
-        
         do {
             let fileData = try Data(contentsOf: URL(fileURLWithPath: inFile))
-            let swift = String(ipecac: template,
+            let swift = String(ipecac: dataTemplate,
                                path.extensionName,
                                path.variableName,
                                inFile,

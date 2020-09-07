@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "Pamphlet",
+    platforms: [
+        .macOS(.v10_13)
+    ],
     products: [
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
