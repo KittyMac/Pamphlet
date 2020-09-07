@@ -533,16 +533,19 @@ ident:
         }
         if (token_type == NAM)
             break;
-        /* Else fall through    -- i.e. WSTR, WCHR  */
-    case QUO:                   /* String or character constant     */
+        
+    // Rocco: Removed skipping string and character strings to allow
+    // macro processing in literals
+    /*
+    case QUO:                   // String or character constant
         out = scan_quote( c, out, out_end, FALSE);
-        if (token_type == 0) {                  /* Without prefix L */
+        if (token_type == 0) {                  // Without prefix L
             if (c == '"')
                 token_type = STR;
             else
                 token_type = CHR;
-        }   /* Else WSTR or WCHR    */
-        break;
+        }   // Else WSTR or WCHR
+        break;*/
     case DOT:
         ch = get_ch();
         unget_ch();

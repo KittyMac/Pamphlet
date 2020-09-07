@@ -152,3 +152,19 @@ Would result in this preprocessed output:
 The preprocessed file is then stored in the generated Swift code.
 
 For **DEBUG** builds, Pamphet dynamically loaded content relies on the pamphlet existing on the development system at ```/usr/local/bin/pamphlet```.  When the resource is requested, its contents will be preprocessed using the CLI tool like this ```pamphlet preprocess /path/to/index.html```.
+
+**NOTE: Since pamphlet preprocessing is meant to be used with any text resource (and not just C/C++ source code), the preprocessor has been modified to process all string and character literals. This allows you to put macros in strings and have them processed.**
+
+**Example**
+
+```
+#define PAMPHLET_PREPROCESSOR
+#define HELLO(x) 'Hello x!'
+"HELLO(dog)HELLO(cat)HELLO(pineapple)HELLO(world)"
+```
+
+Results in:
+
+```
+"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'"
+```
