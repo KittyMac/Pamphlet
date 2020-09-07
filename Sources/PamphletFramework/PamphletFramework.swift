@@ -179,7 +179,23 @@ public struct PamphletFramework {
         public extension {?} {
             static func {?}() -> String {
         #if DEBUG
-        if let contents = try? String(contentsOfFile:"{?}") {
+        let filePath = "{?}"
+        if let contents = try? String(contentsOfFile:filePath) {
+            if contents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                do {
+                    let task = Process()
+                    task.executableURL = URL(fileURLWithPath: "/usr/local/bin/pamphlet")
+                    task.arguments = ["preprocess", filePath]
+                    let outputPipe = Pipe()
+                    task.standardOutput = outputPipe
+                    try task.run()
+                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(decoding: outputData, as: UTF8.self)
+                    return output
+                } catch {
+                    return "Failed to use /usr/local/bin/pamphlet to preprocess the requested file"
+                }
+            }
             return contents
         }
         return "file not found"
@@ -295,6 +311,23 @@ public struct PamphletFramework {
             } catch {
                     
             }
+        }
+    }
+    
+    public func preprocess(_ inFile: String) {
+        do {
+            var fileContents = try String(contentsOfFile: inFile)
+            
+            if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                // This file wants to use the mcpp preprocessor
+                try fileContents.write(toFile:"/tmp/mcpp.in", atomically: true, encoding: .utf8)
+                mcpp_preprocessFile("/tmp/mcpp.in", "/tmp/mcpp.out")
+                fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
+            }
+            
+            print(fileContents)
+        } catch {
+            print("unable to parse file")
         }
     }
     
