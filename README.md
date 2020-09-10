@@ -2,6 +2,8 @@
 
 Pamphlet turns resource files into Swift code, allowing those resources to be easily embedded into your executable. Resource availability is then checked by the compiler, and will error if the resource is removed from the project.
 
+Regardless of file extension, if the file is can be loaded by String(contentsOfFile:) then it is saved and is accessible as a String or as a gzip'd version of said string.  If the file fails to be loaded as a string, then it is loaded using Data() and accessible as Data().
+
 Pamphlet also includes a built-in C/C++ preprocessor, which can be used for ANY text files processed by pamphlet. This is incredibly powerful, as it allows you to use the power of the preprocessor anywhere.  See the Preprocessor section for more details.
 
 For **DEBUG** builds, Pamphet will load the content from disk and not use the embedded content. This is particularly useful when you want resource reloading during development, but embedded resources during release.
@@ -39,10 +41,13 @@ let logo: Data = Pamphlet.Images.LogoPng()
 or you can look them up dynamically by their file name like this:
 
 ```swift
-if let html: String = Pamphlet[dynamicMember: "/index.html"] {
+if let html = Pamphlet.get(string: "/index.html") {
     // use html
 }
-if let logo: Data = Pamphlet[dynamicMember: "Images/logo.png"] {
+if let gzippedHtml = Pamphlet.get(gzip: "/index.html") {
+    // use gzip'd version of index.html
+}
+if let logo = Pamphlet.get(data: "Images/logo.png") {
     // use logo
 }
 ```
@@ -53,13 +58,8 @@ The files that Pamphlet generates will look like these:
 *Pamphlet.swift*
 
 ```swift
-import Foundation
-
-// swiftlint:disable all
-
-@dynamicMemberLookup
 public enum Pamphlet {
-    static subscript(dynamicMember member: String) -> String? {
+    public static func get(string member: String) -> String? {
         switch member {
         case "/index.html": return Pamphlet.IndexHtml()
         case "/script.js": return Pamphlet.ScriptJs()
@@ -68,7 +68,20 @@ public enum Pamphlet {
         }
         return nil
     }
-    static subscript(dynamicMember member: String) -> Data? {
+    public static func get(gzip member: String) -> Data? {
+        #if DEBUG
+            return nil
+        #else
+            switch member {
+            case "/index.html": return Pamphlet.IndexHtmlGzip()
+            case "/script.js": return Pamphlet.ScriptJsGzip()
+            case "/style.css": return Pamphlet.StyleCssGzip()
+            default: break
+            }
+            return nil
+        #endif
+    }
+    public static func get(data member: String) -> Data? {
         switch member {
         case "/Images/logo.png": return Pamphlet.Images.LogoPng()
         default: break
@@ -76,7 +89,7 @@ public enum Pamphlet {
         return nil
     }
 }
-extension Pamphlet { public enum Images { } }
+public extension Pamphlet { enum Images { } }
 ```
 
 *Pamphlet+index.html.swift*
