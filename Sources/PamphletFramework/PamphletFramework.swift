@@ -270,7 +270,7 @@ public struct PamphletFramework {
             do {
                 let task = Process()
                 task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
-                task.arguments = ["-9"]
+                task.arguments = ["-9", "-n"]
                 let inputPipe = Pipe()
                 let outputPipe = Pipe()
                 task.standardInput = inputPipe
