@@ -657,10 +657,19 @@ static void mcpp_main( void)
             } else if (in_asm && ! no_output) { /* In #asm block    */
                 put_asm();                  /* Put out as it is     */
             } else if (c == '\n') {         /* Blank line           */
-                if (keep_comments)
+                if (keep_spaces) {
+                    char * a = output;
+                    char * b = out_ptr;
+                    while(a < b) {
+                        mcpp_fputc( *a, OUT);
+                        a++;
+                    }
+                }
+                if (keep_comments) {
                     mcpp_fputc( '\n', OUT); /* May flush comments   */
-                else
+                } else {
                     newlines++;             /* Wait for a token     */
+                }
             } else {
                 break;                      /* Actual token         */
             }

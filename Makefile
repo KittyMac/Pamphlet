@@ -27,3 +27,4 @@ release: build
 
 install: build
 	cp .build/release/pamphlet /usr/local/bin/pamphlet
+	cp .build/release/pamphlet ./bin/pamphlet
