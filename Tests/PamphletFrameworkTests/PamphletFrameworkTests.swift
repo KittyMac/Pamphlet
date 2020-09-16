@@ -21,11 +21,6 @@ final class PamphletTests: XCTestCase {
     }
     
     func testPreprocess2() {
-        
-        let result = PamphletFramework().preprocess("/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal/receiptpal_amazon/js/amazon/shopping/scraper.include.js")
-        
-        
-        
         //XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
     }
     
