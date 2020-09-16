@@ -1669,6 +1669,7 @@ com_start:
                     free( temp);            /* End of file with un- */
                     return  NULL;           /*   terminated comment */
                 }
+                skip_blank_line = TRUE;
                 switch (mcpp_mode) {
                 case POST_STD:
                     if (temp < tp && *(tp - 1) != ' ')
