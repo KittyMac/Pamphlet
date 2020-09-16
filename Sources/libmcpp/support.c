@@ -91,7 +91,7 @@ static char *   scan_op( int c, char * out);
                 /* Scan an operator or a punctuator     */
 static char *   parse_line( void);
                 /* Parse a logical line and convert comments    */
-static char *   read_a_comment( char * sp, size_t * sizp);
+static char *   read_a_comment( char * bp, char * sp, size_t * sizp);
                 /* Read over a comment          */
 static char *   get_line( int in_comment);
                 /* Get a logical line from file, handle line-splicing   */
@@ -860,30 +860,8 @@ chk_limit:
                 } else {
                     cerror( unterm_string, skip, 0L, NULL); /* _E_  */
                 }
-            } else if (delim == '\'') {
-                if (mcpp_mode != POST_STD && option_flags.lang_asm) {
-                    /* STD, KR      */
-                    if (warn_level & 1)
-                        cwarn( unterm_char, out, 0L, NULL); /* _W1_ */
-                    goto  done;
-                } else {
-                    cerror( unterm_char, out, 0L, skip);    /* _E_  */
-                }
-            } else {
-                cerror( "Unterminated header name %s%.0ld%s"        /* _E_  */
-                        , out, 0L, skip);
             }
             out_p = NULL;
-        } else if (delim == '\'' && out_p - out <= 2) {
-            if (mcpp_mode != POST_STD && option_flags.lang_asm) {
-                /* STD, KR      */
-                if (warn_level & 1)
-                    cwarn( empty_const, out, 0L, skip);     /* _W1_ */
-            } else {
-                cerror( empty_const, out, 0L, skip);        /* _E_  */
-                out_p = NULL;
-                goto  done;
-            }
         } else if (mcpp_mode == POST_STD && delim == '>' && (warn_level & 2)) {
             cwarn(
         "Header-name enclosed by <, > is an obsolescent feature %s" /* _W2_ */
@@ -1400,8 +1378,6 @@ static char *   scan_op(
             openum = OP_COL;
         break;
     default:                                    /* Never reach here */
-        cfatal( "Bug: Punctuator is mis-implemented %.0s0lx%x"      /* _F_  */
-                , NULL, (long) c, NULL);
         openum = OP_1;
         break;
     }
@@ -1568,7 +1544,7 @@ int     get_ch( void)
                 && ! keep_spaces)
             ) {
             if (*(file->bptr - 2) == ' ')
-                squeezews = TRUE;
+                squeezews = !keep_spaces;
         } else {
             return  c;
         }
@@ -1654,11 +1630,15 @@ static char *   parse_line( void)
     char *      limit;                      /* Buffer end           */
     char *      tp;     /* Current pointer into temporary buffer    */
     char *      sp;                 /* Pointer into input buffer    */
+    char *      bp;     /* pointer to the beginning of the buffer   */
     size_t      com_size;
     int         c;
+    int         skip_blank_line = FALSE;
 
     if ((sp = get_line( FALSE)) == NULL)    /* Next logical line    */
         return  NULL;                       /* End of a file        */
+    bp = sp;
+    
     if (in_asm) {                           /* In #asm block        */
         while (char_type[ *sp++ & UCHARMAX] & SPA)
             ;
@@ -1685,16 +1665,9 @@ static char *   parse_line( void)
             switch (*sp++) {
             case '*':                       /* Start of a comment   */
 com_start:
-                if ((sp = read_a_comment( sp, &com_size)) == NULL) {
+                if ((sp = read_a_comment( bp, sp, &com_size)) == NULL) {
                     free( temp);            /* End of file with un- */
                     return  NULL;           /*   terminated comment */
-                }
-                if (keep_spaces && mcpp_mode != OLD_PREP) {
-                    if (tp + com_size >= limit - 1)     /* Too long comment */
-                        com_size = limit - tp - 1;      /* Truncate */
-                    while (com_size--)
-                        *tp++ = ' ';        /* Spaces of the comment length */
-                    break;
                 }
                 switch (mcpp_mode) {
                 case POST_STD:
@@ -1722,11 +1695,19 @@ com_start:
                     cwarn( "Parsed \"//\" as comment"       /* _W2_ */
                             , NULL, 0L, NULL);
                 if (keep_comments) {
+                    
+                    // we want to output all of the whitespace before this comment
                     sp -= 2;
+                    if (keep_spaces) {
+                        while (sp > bp && (*(sp-1) == ' ' || *(sp-1) == '\t')) {
+                            sp--;
+                        }
+                    }
                     while (*sp != '\n')     /* Until end of line    */
                         mcpp_fputc( *sp++, OUT);
                     mcpp_fputc( '\n', OUT);
                     wrong_line = TRUE;
+                    skip_blank_line = TRUE;
                 }
                 goto  end_line;
             default:                        /* Not a comment        */
@@ -1791,10 +1772,30 @@ not_comment:
     }
 
 end_line:
-    if (temp < tp && (char_type[ *(tp - 1) & UCHARMAX] & HSP))
-        tp--;                       /* Remove trailing white space  */
-    *tp++ = '\n';
-    *tp = EOS;
+    //if (temp < tp && (char_type[ *(tp - 1) & UCHARMAX] & HSP))
+    //    tp--;                       /* Remove trailing white space  */
+    tp = tp;
+    
+    int line_is_empty = TRUE;
+    char * ttp = temp;
+    while (ttp < tp) {
+        char c = *ttp;
+        if (c != ' ' && c != '\n' && c != '\r' && c != '\t') {
+            line_is_empty = FALSE;
+            break;
+        }
+        ttp++;
+    }
+    
+    if (skip_blank_line && line_is_empty) {
+        temp[0] = EOS;
+        *tp = EOS;
+    } else {
+        *tp++ = '\n';
+        *tp = EOS;
+    }
+    skip_blank_line = FALSE;
+    
     infile->bptr = strcpy( infile->buffer, temp);   /* Write back to buffer */
     free( temp);
     if (macro_line != 0 && macro_line != MACRO_ERROR) { /* Expanding macro  */
@@ -1812,6 +1813,7 @@ end_line:
 }
 
 static char *   read_a_comment(
+    char *      bp,                         /* Line start of source */
     char *      sp,                         /* Source               */
     size_t *    sizp                        /* Size of the comment  */
 )
@@ -1825,6 +1827,15 @@ static char *   read_a_comment(
 
     if (keep_spaces) {
         saved_sp = sp - 2;          /* '-2' for beginning / and *   */
+        
+        char * tp = saved_sp;
+        while (tp > bp && (*(tp-1) == ' ' || *(tp-1) == '\t')) {
+            tp--;
+        }
+        while(tp < saved_sp) {
+            mcpp_fputc( *tp, OUT);
+            tp++;
+        }
         *sizp = 0;
     }        
     if (keep_comments)                      /* If writing comments  */
@@ -2142,13 +2153,6 @@ static char *   at_eof(
     cp = infile->buffer;
     len = strlen( cp);
     
-    if (len && *(cp += (len - 1)) != '\n') {
-        *++cp = '\n';                       /* Supplement <newline> */
-        *++cp = EOS;
-        if (mcpp_mode != OLD_PREP && (warn_level & 1))
-            cwarn( format, input, 0L, no_newline);
-        return  infile->bptr = infile->buffer;
-    }
     if (standard && infile->buffer < infile->bptr) {
                             /* No line after <backslash><newline>   */
         cp = infile->bptr;

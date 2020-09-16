@@ -41,7 +41,7 @@ void mcpp_help() {
 void mcpp_preprocessFile(const char * srcFile, const char * outFile) {
     char * argv[] = {
         "mcpp",
-        "-NP",
+        "-NPCk",
         (char *)srcFile,
         (char *)outFile,
         NULL

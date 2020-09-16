@@ -3279,6 +3279,14 @@ search_dirs:
     if (search_dir( filename, searchlocal, next))
         return  TRUE;
 
+    
+    /* convert using real path and try that */
+    char real_path[ PATHMAX] = { EOS, };
+    realpath(filename, real_path);
+        
+    if (open_file( &null, src_dir, real_path, !full_path, FALSE, FALSE))
+        return  TRUE;
+    
     return  FALSE;
 }
 

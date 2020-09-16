@@ -262,8 +262,7 @@ public struct PamphletFramework {
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
                 // This file wants to use the mcpp preprocessor
-                try fileContents.write(toFile:"/tmp/mcpp.in", atomically: true, encoding: .utf8)
-                mcpp_preprocessFile("/tmp/mcpp.in", "/tmp/mcpp.out")
+                mcpp_preprocessFile(inFile, "/tmp/mcpp.out")
                 fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
             }
             
@@ -381,9 +380,7 @@ public struct PamphletFramework {
             var fileContents = try String(contentsOfFile: inFile)
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                // This file wants to use the mcpp preprocessor
-                try fileContents.write(toFile:"/tmp/mcpp.in", atomically: true, encoding: .utf8)
-                mcpp_preprocessFile("/tmp/mcpp.in", "/tmp/mcpp.out")
+                mcpp_preprocessFile(inFile, "/tmp/mcpp.out")
                 fileContents = try String(contentsOfFile: "/tmp/mcpp.out")
             }
             
