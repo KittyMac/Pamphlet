@@ -860,6 +860,11 @@ chk_limit:
                 } else {
                     cerror( unterm_string, skip, 0L, NULL); /* _E_  */
                 }
+            } else if (delim == '\'') {
+                goto  done;
+            } else {
+                cerror( "Unterminated header name %s%.0ld%s"        /* _E_  */
+                        , out, 0L, skip);
             }
             out_p = NULL;
         } else if (mcpp_mode == POST_STD && delim == '>' && (warn_level & 2)) {
