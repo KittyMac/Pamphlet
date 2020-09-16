@@ -2154,6 +2154,11 @@ static char *   at_eof(
     cp = infile->buffer;
     len = strlen( cp);
     
+    if (len && *(cp += (len - 1)) != '\n') {
+        *++cp = '\n';                       /* Supplement <newline> */
+        *++cp = EOS;
+        return  infile->bptr = infile->buffer;
+    }
     if (standard && infile->buffer < infile->bptr) {
                             /* No line after <backslash><newline>   */
         cp = infile->bptr;
