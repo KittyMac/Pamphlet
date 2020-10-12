@@ -21,20 +21,20 @@ final class PamphletTests: XCTestCase {
     }
     
     func testPreprocessUnknownDirective() {
-        
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.css")
-        print(result)
         XCTAssertEqual(result, "\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }
     
-    func testPreprocess2() {
-        //XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
+    func testPreprocessIncludeFromSourcePath() {
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/include1.css")
+        XCTAssertEqual(result, "\n\n\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }
     
 
     static var allTests = [
         ("testProcess", testProcess),
         ("testPreprocess1", testPreprocess1),
-        ("testPreprocess2", testPreprocess2),
+        ("testPreprocessUnknownDirective", testPreprocessUnknownDirective),
+        ("testPreprocessIncludeFromSourcePath", testPreprocessIncludeFromSourcePath),
     ]
 }

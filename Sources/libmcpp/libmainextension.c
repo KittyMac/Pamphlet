@@ -29,6 +29,7 @@
 
 #include    "system.H"
 #include    "internal.H"
+#include <libgen.h>
 
 void mcpp_help() {
     char * argv[] = {
@@ -42,9 +43,11 @@ void mcpp_preprocessFile(const char * srcFile, const char * outFile) {
     char * argv[] = {
         "mcpp",
         "-NPCk",
+        "-I",
+        (char *)dirname((char *) srcFile),
         (char *)srcFile,
         (char *)outFile,
         NULL
     };
-    mcpp_lib_main(4, argv);
+    mcpp_lib_main(6, argv);
 }
