@@ -296,7 +296,6 @@ static char *   esc_mbchar( char * str, char * str_end);
 #endif
 
 
-#if MCPP_LIB
 static void     init_main( void)
 /* Initialize global variables on re-entering.  */
 {
@@ -330,10 +329,7 @@ static void     init_main( void)
     sh_line = 0;
 }
 
-int     mcpp_lib_main
-#else
-int     main
-#endif
+char * mcpp_lib_main
 (
     int argc,
     char ** argv
@@ -380,7 +376,7 @@ int     main
 #if MCPP_LIB
             goto  fatal_error_exit;
 #else
-            return( IO_ERROR);
+            return NULL;
 #endif
         }
     } else {
@@ -394,11 +390,22 @@ int     main
 #if MCPP_LIB
             goto  fatal_error_exit;
 #else
-            return( IO_ERROR);
+            return NULL;
 #endif
         }
         fp_debug = fp_out;
     }
+    
+    // We output to a memstream
+    char * memory_buffer;
+    size_t len;
+
+    fp_out = open_memstream (&memory_buffer, &len);
+    fp_debug = fp_out;
+    if (fp_out == NULL) {
+        goto  fatal_error_exit;
+    }
+    
     if (option_flags.q) {                   /* Redirect diagnostics */
         if ((fp_err = fopen( "mcpp.err", "a")) == NULL) {
             errors++;
@@ -406,7 +413,7 @@ int     main
 #if MCPP_LIB
             goto  fatal_error_exit;
 #else
-            return( IO_ERROR);
+            return NULL;
 #endif
         }
     }
@@ -439,19 +446,19 @@ fatal_error_exit:
 
     if (fp_in != stdin)
         fclose( fp_in);
-    if (fp_out != stdout)
-        fclose( fp_out);
     if (fp_err != stderr)
         fclose( fp_err);
+    
+    fclose( fp_out);
 
     if (mcpp_debug & MEMORY)
         print_heap();
     if (errors > 0 && option_flags.no_source_line == FALSE) {
         mcpp_fprintf( ERR, "%d error%s in preprocessor.\n",
                 errors, (errors == 1) ? "" : "s");
-        return  IO_ERROR;
+        return NULL;
     }
-    return  IO_SUCCESS;                             /* No errors    */
+    return memory_buffer;                             /* No errors    */
 }
 
 /*

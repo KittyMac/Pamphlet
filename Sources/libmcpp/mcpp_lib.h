@@ -19,7 +19,7 @@
 #define DLL_DECL
 #endif
 
-extern DLL_DECL int     mcpp_lib_main( int argc, char ** argv);
+extern DLL_DECL char *  mcpp_lib_main( int argc, char ** argv);
 extern DLL_DECL void    mcpp_reset_def_out_func( void);
 extern DLL_DECL void    mcpp_set_out_func(
                     int (* func_fputc)  ( int c, OUTDEST od),

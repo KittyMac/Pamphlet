@@ -39,15 +39,14 @@ void mcpp_help() {
     };
     mcpp_lib_main(2, argv);
 }
-void mcpp_preprocessFile(const char * srcFile, const char * outFile) {
+char * mcpp_preprocessFile(const char * srcFile) {
     char * argv[] = {
         "mcpp",
         "-NPCk",
         "-I",
         (char *)dirname((char *) srcFile),
         (char *)srcFile,
-        (char *)outFile,
         NULL
     };
-    mcpp_lib_main(6, argv);
+    return mcpp_lib_main(5, argv);
 }
