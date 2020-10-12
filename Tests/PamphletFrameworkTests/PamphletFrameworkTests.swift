@@ -20,6 +20,13 @@ final class PamphletTests: XCTestCase {
         XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
     }
     
+    func testPreprocessUnknownDirective() {
+        
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.css")
+        print(result)
+        XCTAssertEqual(result, "\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
+    }
+    
     func testPreprocess2() {
         //XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
     }
