@@ -1,0 +1,6 @@
+#define PAMPHLET_PREPROCESSOR
+#include <test1.css>
+
+#title {
+    DIALOG_BACKGROUND()
+}
