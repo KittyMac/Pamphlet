@@ -4499,13 +4499,7 @@ void    do_old( void)
         return;
 
     if (compiling) {
-        if (option_flags.lang_asm) {        /* "Assembler" source   */
-            if (warn_level & 1)
-                cwarn( unknown, identifier, 0L, NULL);
-            mcpp_fputs( infile->buffer, OUT);   /* Putout the line  */
-        } else {
-            cerror( unknown, identifier, 0L, NULL);
-        }
+        mcpp_fputs( infile->buffer, OUT);   /* Putout the line  */
     } else if (warn_level & 8) {
         cwarn( unknown, identifier, 0L, " (in skipped block)");
     }

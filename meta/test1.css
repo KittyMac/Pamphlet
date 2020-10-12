@@ -1,0 +1,6 @@
+#define PAMPHLET_PREPROCESSOR
+#define DIALOG_BACKGROUND() border-image-slice: 22 fill;
+
+#title {
+    DIALOG_BACKGROUND()
+}
