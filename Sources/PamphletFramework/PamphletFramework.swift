@@ -251,7 +251,7 @@ public struct PamphletFramework {
         }
     }
     
-    private func processTextFile(_ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+    private func processTextFile(_ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
         
         do {
             
@@ -260,59 +260,90 @@ public struct PamphletFramework {
             
             var fileContents = try String(contentsOfFile: inFile)
             
-            if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                // This file wants to use the mcpp preprocessor
-                if let cPtr = mcpp_preprocessFile(inFile) {
-                    fileContents = String(cString: cPtr)
-                    free(cPtr)
+            if shouldSkip == false {
+                if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                    // This file wants to use the mcpp preprocessor
+                    if let cPtr = mcpp_preprocessFile(inFile) {
+                        fileContents = String(cString: cPtr)
+                        free(cPtr)
+                    }
                 }
-            }
-            
-            do {
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
-                task.arguments = ["-9", "-n"]
-                let inputPipe = Pipe()
-                let outputPipe = Pipe()
-                task.standardInput = inputPipe
-                task.standardOutput = outputPipe
-                try task.run()
-                if let fileContentsAsData = fileContents.data(using: .utf8) {
-                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                    inputPipe.fileHandleForWriting.closeFile()
-                    let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    compressedString = String(ipecac: compressedTemplate,
-                                       path.extensionName,
-                                       path.variableName,
-                                       compressedData.base64EncodedString())
-                    
-                    
-                } else {
-                    throw ""
+                
+                if inFile.hasSuffix(".js") && FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
+                    // If this is a javascript file and closure-compiler is installed
+                    do {
+                        let task = Process()
+                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
+                        let inputPipe = Pipe()
+                        let outputPipe = Pipe()
+                        task.standardInput = inputPipe
+                        task.standardOutput = outputPipe
+                        task.standardError = nil
+                        try task.run()
+                        if let fileContentsAsData = fileContents.data(using: .utf8) {
+                            inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                            inputPipe.fileHandleForWriting.closeFile()
+                            let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                            
+                            fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
+                        } else {
+                            throw ""
+                        }
+                    } catch {
+                        fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+                    }
                 }
-            } catch {
-                fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+                
+                do {
+                    let task = Process()
+                    task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+                    task.arguments = ["-9", "-n"]
+                    let inputPipe = Pipe()
+                    let outputPipe = Pipe()
+                    task.standardInput = inputPipe
+                    task.standardOutput = outputPipe
+                    task.standardError = nil
+                    try task.run()
+                    if let fileContentsAsData = fileContents.data(using: .utf8) {
+                        inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                        inputPipe.fileHandleForWriting.closeFile()
+                        let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                        
+                        compressedString = String(ipecac: compressedTemplate,
+                                           path.extensionName,
+                                           path.variableName,
+                                           compressedData.base64EncodedString())
+                        
+                        
+                    } else {
+                        throw ""
+                    }
+                } catch {
+                    fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+                }
+                
+                uncompressedString = String(ipecac: stringTemplate,
+                                            path.extensionName,
+                                            path.variableName,
+                                            inFile,
+                                            fileContents)
+                
+                
+                let swift = uncompressedString + "\n\n" + compressedString
+                
+                try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
             }
-            
-            uncompressedString = String(ipecac: stringTemplate,
-                                        path.extensionName,
-                                        path.variableName,
-                                        inFile,
-                                        fileContents)
-            
-            
-            let swift = uncompressedString + "\n\n" + compressedString
-            
-            try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
-            
         } catch {
             return false
         }
         return true
     }
     
-    private func processDataFile(_ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+    private func processDataFile(_ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+        if shouldSkip {
+            return true
+        }
+        
         do {
             let fileData = try Data(contentsOf: URL(fileURLWithPath: inFile))
             let swift = String(ipecac: dataTemplate,
@@ -352,25 +383,38 @@ public struct PamphletFramework {
         return true
     }
     
-    private func removeOldFiles(_ outDirectory: String) {
-        let resourceKeys: [URLResourceKey] = [.creationDateKey, .isDirectoryKey]
-        let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: outDirectory),
+    private func removeOldFiles(_ inDirectory: String, _ outDirectory: String) {
+                
+        let resourceKeys: [URLResourceKey] = [.isDirectoryKey]
+        if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: outDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
                                                         options: [.skipsHiddenFiles],
                                                         errorHandler: { (url, error) -> Bool in
                                                             print("directoryEnumerator error at \(url): ", error)
                                                             return true
-        })!
+        }) {
         
-        for case let fileURL as URL in enumerator {
-            do {
-                let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
-                let fileName = fileURL.lastPathComponent
-                if fileName.hasPrefix("Pamphlet+") && resourceValues.isDirectory == false {
-                    try? FileManager.default.removeItem(at: fileURL)
+            for case let fileURL as URL in enumerator {
+                do {
+                    let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
+                    let fileName = fileURL.lastPathComponent
+                    if fileName.hasSuffix(".swift") && resourceValues.isDirectory == false {
+                        let outPath = fileURL.path
+                        let fullOutDirectory = URL(fileURLWithPath: outDirectory).path
+                        
+                        if let outRange = outPath.range(of: fullOutDirectory) {
+                            let inPath = inDirectory + outPath.suffix(from: outRange.upperBound).dropLast(6)
+                            
+                            if FileManager.default.fileExists(atPath: String(inPath)) == false {
+                                try? FileManager.default.removeItem(at: fileURL)
+                            }
+                        } else {
+                            try? FileManager.default.removeItem(at: fileURL)
+                        }
+                    }
+                } catch {
+                        
                 }
-            } catch {
-                    
             }
         }
     }
@@ -421,10 +465,10 @@ public struct PamphletFramework {
         }
         
         if clean {
-            removeOldFiles(generateFilesDirectory)
+            removeOldFiles(inDirectory, generateFilesDirectory)
         }
         
-        let resourceKeys: [URLResourceKey] = [.creationDateKey, .isDirectoryKey]
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
                                                         options: [.skipsHiddenFiles],
@@ -450,8 +494,17 @@ public struct PamphletFramework {
                     let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
                     let filePath = FilePath(partialPath)
                     
-                    if !processTextFile(filePath, fileURL.path, generateFilesDirectory + "/" + filePath.swiftFileName) {
-                        if !processDataFile(filePath, fileURL.path, generateFilesDirectory + "/" + filePath.swiftFileName) {
+                    let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
+                    let outputFile = "\(outputDirectory)/\(filePath.fileName).swift"
+                    try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+                    
+                    var shouldSkip = false
+                    if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
+                        shouldSkip = resourceValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                    }
+                    
+                    if !processTextFile(shouldSkip, filePath, fileURL.path, outputFile) {
+                        if !processDataFile(shouldSkip, filePath, fileURL.path, outputFile) {
                             fatalError("Processing failed for file: \(fileURL.path)")
                         } else {
                             dataPages.append(filePath)
@@ -459,11 +512,9 @@ public struct PamphletFramework {
                     } else {
                         textPages.append(filePath)
                     }
-                    
-                    
                 }
             } catch {
-                    
+                
             }
         }
         
