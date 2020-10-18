@@ -269,11 +269,14 @@ public struct PamphletFramework {
                     }
                 }
                 
-                if inFile.hasSuffix(".js") && FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
+                if inFile.hasSuffix(".js") ||
+                    inFile.hasSuffix(".css") ||
+                    inFile.hasSuffix(".html") &&
+                    FileManager.default.fileExists(atPath: "/usr/local/bin/htmlcompressor") {
                     // If this is a javascript file and closure-compiler is installed
                     do {
                         let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
+                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/htmlcompressor")
                         let inputPipe = Pipe()
                         let outputPipe = Pipe()
                         task.standardInput = inputPipe
@@ -293,6 +296,7 @@ public struct PamphletFramework {
                         fatalError("Failed to use /usr/bin/gzip to compress the requested file")
                     }
                 }
+                
                 
                 do {
                     let task = Process()
@@ -446,7 +450,11 @@ public struct PamphletFramework {
                         _ swiftpm: Bool,
                         _ clean: Bool) {
         
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         var generateFilesDirectory = outDirectory
+        
+        let pamphletExecPath = ProcessInfo.processInfo.arguments[0]
+        guard let pamphletExecPathValues = try? URL(fileURLWithPath: pamphletExecPath).resourceValues(forKeys: Set(resourceKeys)) else { fatalError() }
         
         try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
         
@@ -468,7 +476,6 @@ public struct PamphletFramework {
             removeOldFiles(inDirectory, generateFilesDirectory)
         }
         
-        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
                                                         options: [.skipsHiddenFiles],
@@ -500,7 +507,8 @@ public struct PamphletFramework {
                     
                     var shouldSkip = false
                     if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                        shouldSkip = resourceValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                        shouldSkip = (resourceValues.contentModificationDate! <= outResourceValues.contentModificationDate! &&
+                            pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!)
                     }
                     
                     if !processTextFile(shouldSkip, filePath, fileURL.path, outputFile) {
