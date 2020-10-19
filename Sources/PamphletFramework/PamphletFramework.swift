@@ -2,6 +2,32 @@ import Foundation
 import Ipecac
 import libmcpp
 
+extension String {
+    private func substring(with nsrange: NSRange) -> Substring? {
+        guard let range = Range(nsrange, in: self) else { return nil }
+        return self[range]
+    }
+    
+    func matches(_ pattern: String, _ callback: @escaping ((NSTextCheckingResult, [String]) -> Void)) {
+        do {
+            let body = self
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let nsrange = NSRange(location: Int(0), length: Int(count))
+            regex.enumerateMatches(in: body, options: [], range: nsrange) { (match, _, _) in
+                guard let match = match else { return }
+
+                var groups: [String] = []
+                for iii in 0..<match.numberOfRanges {
+                    if let groupString = body.substring(with: match.range(at: iii)) {
+                        groups.append(String(groupString))
+                    }
+                }
+                callback(match, groups)
+            }
+        } catch { }
+    }
+}
+
 let stringTemplate = ####"""
 import Foundation
 
@@ -537,8 +563,18 @@ public struct PamphletFramework {
                     
                     var shouldSkip = false
                     if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                        shouldSkip = (resourceValues.contentModificationDate! <= outResourceValues.contentModificationDate! &&
-                            pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!)
+                        
+                        // We need to check the main source output file, but also any files which are #include to this one
+                        // and any and all files #included from the dependencies
+                        shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
+                        if !shouldSkip {
+                            print("DATE CHECK FAILED: \(fileURL.path)")
+                        }
+                        
+                        // also check against the modification date of pamphlet itself
+                        if shouldSkip {
+                            shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                        }
                     }
                     
                     if !processTextFile(shouldSkip, filePath, fileURL.path, outputFile) {
@@ -557,6 +593,34 @@ public struct PamphletFramework {
         }
         
         createPamphletFile(textPages, dataPages, generateFilesDirectory + "/Pamphlet.swift")
+    }
+    
+    private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey]
+        
+        let fileURL = URL(fileURLWithPath: filePath)
+        if let values = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
+            if values.contentModificationDate! > date {
+                return false
+            }
+        }
+        
+        // Load the file and find all dependencies
+        if let fileContents = try? String(contentsOfFile: filePath) {
+            var includedFiles:[String] = []
+            fileContents.matches(#"#include\s*<([^>]*)>"#) { (result, groups) in
+                includedFiles.append(groups[1])
+            }
+            
+            for otherFilePath in includedFiles {
+                if !self.shouldSkipFile(date, fileURL.deletingLastPathComponent().appendingPathComponent(otherFilePath).path) {
+                    return false
+                }
+            }
+        }
+        
+        
+        return true
     }
     
 }

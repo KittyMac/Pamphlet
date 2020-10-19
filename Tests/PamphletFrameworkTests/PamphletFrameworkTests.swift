@@ -30,6 +30,15 @@ final class PamphletTests: XCTestCase {
         XCTAssertEqual(result, "\n\n\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }
     
+    func testPreprocessFileDateCompareWithIncludes() {
+        let extensions = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        PamphletFramework().process(extensions,
+                                    "/Volumes/Development/Development/chimerasw2/Pamphlet/meta",
+                                    "/tmp/Pamphlet",
+                                    true,
+                                    false)
+    }
+    
 
     static var allTests = [
         ("testProcess", testProcess),
