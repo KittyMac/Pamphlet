@@ -412,7 +412,9 @@ public struct PamphletFramework {
         return true
     }
     
-    private func removeOldFiles(_ inDirectory: String, _ outDirectory: String) {
+    private func removeOldFiles(_ inDirectory: String,
+                                _ outDirectory: String,
+                                _ removeAll: Bool) {
                 
         let resourceKeys: [URLResourceKey] = [.isDirectoryKey]
         if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: outDirectory),
@@ -431,14 +433,18 @@ public struct PamphletFramework {
                         let outPath = fileURL.path
                         let fullOutDirectory = URL(fileURLWithPath: outDirectory).path
                         
-                        if let outRange = outPath.range(of: fullOutDirectory) {
-                            let inPath = inDirectory + outPath.suffix(from: outRange.upperBound).dropLast(6)
-                            
-                            if FileManager.default.fileExists(atPath: String(inPath)) == false {
+                        if removeAll {
+                            try? FileManager.default.removeItem(at: fileURL)
+                        }else{
+                            if let outRange = outPath.range(of: fullOutDirectory) {
+                                let inPath = inDirectory + outPath.suffix(from: outRange.upperBound).dropLast(6)
+                                
+                                if FileManager.default.fileExists(atPath: String(inPath)) == false {
+                                    try? FileManager.default.removeItem(at: fileURL)
+                                }
+                            } else {
                                 try? FileManager.default.removeItem(at: fileURL)
                             }
-                        } else {
-                            try? FileManager.default.removeItem(at: fileURL)
                         }
                     }
                 } catch {
@@ -497,9 +503,8 @@ public struct PamphletFramework {
             }
         }
         
-        if clean {
-            removeOldFiles(inDirectory, generateFilesDirectory)
-        }
+        
+        removeOldFiles(inDirectory, generateFilesDirectory, clean)
         
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
