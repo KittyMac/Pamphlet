@@ -6,7 +6,8 @@ final class PamphletTests: XCTestCase {
     
     func testProcess() {
         let extensions = ["ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(extensions,
+        PamphletFramework().process(nil,
+                                    extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
                                     "/tmp/Pamphlet",
                                     true,
@@ -16,7 +17,8 @@ final class PamphletTests: XCTestCase {
     
     func testProcessReleaseOnly() {
         let extensions = ["ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(extensions,
+        PamphletFramework().process("Release",
+                                    extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
                                     "/tmp/Pamphlet",
                                     true,
@@ -43,7 +45,8 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocessFileDateCompareWithIncludes() {
         let extensions = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(extensions,
+        PamphletFramework().process(nil,
+                                    extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta",
                                     "/tmp/Pamphlet",
                                     true,

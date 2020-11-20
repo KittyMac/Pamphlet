@@ -33,10 +33,10 @@ import Foundation
 
 // swiftlint:disable all
 
-public extension {?} {
-    static func {?}() -> String {
+public extension {0} {
+    static func {1}() -> String {
 #if DEBUG
-let filePath = "{?}"
+let filePath = "{2}"
 if let contents = try? String(contentsOfFile:filePath) {
     if contents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
         do {
@@ -58,7 +58,7 @@ if let contents = try? String(contentsOfFile:filePath) {
 return "file not found"
 #else
 return ###"""
-{?}
+{3}
 """###
 #endif
 }
@@ -71,11 +71,11 @@ import Foundation
 
 // swiftlint:disable all
 
-public extension {?} {
-    static func {?}() -> String {
-        return ###"""
-        {?}
-        """###
+public extension {0} {
+    static func {1}() -> String {
+return ###"""
+{3}
+"""###
     }
 }
 """####
@@ -86,10 +86,10 @@ import Foundation
 
 // swiftlint:disable all
 
-public extension {?} {
-    static func {?}() -> Data {
+public extension {0} {
+    static func {1}() -> Data {
 #if DEBUG
-if let contents = try? Data(contentsOf:URL(fileURLWithPath: "{?}")) {
+if let contents = try? Data(contentsOf:URL(fileURLWithPath: "{2}")) {
     return contents
 }
 return Data()
@@ -99,7 +99,7 @@ return data!
 }
 }
 
-private let data = Data(base64Encoded:"{?}")
+private let data = Data(base64Encoded:"{3}")
 """####
 
 private let dataTemplateReleaseOnly = ####"""
@@ -107,13 +107,13 @@ import Foundation
 
 // swiftlint:disable all
 
-public extension {?} {
-    static func {?}() -> Data {
+public extension {0} {
+    static func {1}() -> Data {
         return data!
     }
 }
 
-private let data = Data(base64Encoded:"{?}")
+private let data = Data(base64Encoded:"{3}")
 """####
 
 
@@ -160,7 +160,7 @@ struct FilePath {
     let parentExtensionName: String
     let myStructName: String
     
-    init(_ inPath: String) {
+    init(_ pamphletName: String, _ inPath: String) {
         var path = inPath
         if path.hasPrefix("/") == false {
             path = "/" + path
@@ -175,7 +175,7 @@ struct FilePath {
         
         // swift file name
         var scratch = ""
-        scratch.append("Pamphlet+")
+        scratch.append("\(pamphletName)+")
         for part in parts {
             if part.count > 0 {
                 scratch.append(part)
@@ -191,7 +191,7 @@ struct FilePath {
         
         // extensionName
         scratch.removeAll(keepingCapacity: true)
-        scratch.append("Pamphlet.")
+        scratch.append("\(pamphletName).")
         for part in parts.dropLast() {
             scratch.append(part)
             scratch.append(".")
@@ -201,7 +201,7 @@ struct FilePath {
         
         // parentExtensionName
         scratch.removeAll(keepingCapacity: true)
-        scratch.append("Pamphlet.")
+        scratch.append("\(pamphletName).")
         for part in parts.dropLast().dropLast() {
             scratch.append(part)
             scratch.append(".")
@@ -218,7 +218,7 @@ struct FilePath {
         
         // fullVariableName
         scratch.removeAll(keepingCapacity: true)
-        scratch.append("Pamphlet.")
+        scratch.append("\(pamphletName).")
         for part in parts.dropLast() {
             scratch.append(part)
             scratch.append(".")
@@ -241,7 +241,7 @@ public struct PamphletFramework {
     
     
     
-    private func createPamphletFile(_ releaseOnly: Bool, _ textPages: [FilePath], _ dataPages: [FilePath], _ outFile: String) {
+    private func createPamphletFile(_ pamphletName: String, _ releaseOnly: Bool, _ textPages: [FilePath], _ dataPages: [FilePath], _ outFile: String) {
         
         var allDirectoryExtensions = ""
         for page in (textPages + dataPages) {
@@ -261,12 +261,12 @@ public struct PamphletFramework {
         
         
         
-        let template = ####"""
+        let template = """
         import Foundation
         
         // swiftlint:disable all
         
-        public enum Pamphlet {
+        public enum \(pamphletName) {
             public static func get(string member: String) -> String? {
                 switch member {
         {?}
@@ -294,14 +294,14 @@ public struct PamphletFramework {
             }
         }
         {?}
-        """####
+        """
         
-        let templateReleaseOnly = ####"""
+        let templateReleaseOnly = """
         import Foundation
         
         // swiftlint:disable all
         
-        public enum Pamphlet {
+        public enum \(pamphletName) {
             public static func get(string member: String) -> String? {
                 switch member {
         {?}
@@ -325,7 +325,7 @@ public struct PamphletFramework {
             }
         }
         {?}
-        """####
+        """
         
         let textPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
         let compressedPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
@@ -500,22 +500,22 @@ public struct PamphletFramework {
         return true
     }
     
-    private func processPackageSwift(_ outFile: String) -> Bool {
-        let template = ####"""
+    private func processPackageSwift(_ pamphletName: String, _ outFile: String) -> Bool {
+        let template = """
         // swift-tools-version:5.2
         import PackageDescription
         let package = Package(
-            name: "Pamphlet",
+            name: "\(pamphletName)",
             products: [
-                .library(name: "Pamphlet", targets: ["Pamphlet"])
+                .library(name: "\(pamphletName)", targets: ["\(pamphletName)"])
             ],
             targets: [
                 .target(
-                    name: "Pamphlet"
+                    name: "\(pamphletName)"
                 )
             ]
         )
-        """####
+        """
         
         do {
             try template.write(toFile: outFile, atomically: true, encoding: .utf8)
@@ -588,12 +588,15 @@ public struct PamphletFramework {
         return result
     }
     
-    public func process(_ extensions: [String],
+    public func process(_ prefix: String?,
+                        _ extensions: [String],
                         _ inDirectory: String,
                         _ outDirectory: String,
                         _ swiftpm: Bool,
                         _ clean: Bool,
                         _ releaseOnly: Bool) {
+        
+        let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
         
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         var generateFilesDirectory = outDirectory
@@ -607,12 +610,12 @@ public struct PamphletFramework {
             // We assume that the output directory is where we want the Package.swft,
             // so we need to create the Sources/ and Sources/Pamphlet directories
             // and store the generated files in there
-            generateFilesDirectory = outDirectory + "/Sources/Pamphlet"
+            generateFilesDirectory = outDirectory + "/Sources/" + pamphletName
             try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
             
             // Generate a Package.swift
             let packageSwiftPath = outDirectory + "/Package.swift"
-            if !processPackageSwift(packageSwiftPath) {
+            if !processPackageSwift(pamphletName, packageSwiftPath) {
                 fatalError("Unable to create Package.swift at \(packageSwiftPath)")
             }
         }
@@ -643,7 +646,7 @@ public struct PamphletFramework {
                 if (extensions.count == 0 || extensions.contains(pathExtension)) &&
                     resourceValues.isDirectory == false {
                     let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                    let filePath = FilePath(partialPath)
+                    let filePath = FilePath(pamphletName, partialPath)
                     
                     let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
                     let outputFile = "\(outputDirectory)/\(filePath.fileName).swift"
@@ -680,7 +683,7 @@ public struct PamphletFramework {
             }
         }
         
-        createPamphletFile(releaseOnly, textPages, dataPages, generateFilesDirectory + "/Pamphlet.swift")
+        createPamphletFile(pamphletName, releaseOnly, textPages, dataPages, generateFilesDirectory + "/\(pamphletName).swift")
     }
     
     private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
