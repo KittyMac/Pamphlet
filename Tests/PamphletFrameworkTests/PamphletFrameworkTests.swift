@@ -10,6 +10,17 @@ final class PamphletTests: XCTestCase {
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
                                     "/tmp/Pamphlet",
                                     true,
+                                    true,
+                                    false)
+    }
+    
+    func testProcessReleaseOnly() {
+        let extensions = ["ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        PamphletFramework().process(extensions,
+                                    "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
+                                    "/tmp/Pamphlet",
+                                    true,
+                                    true,
                                     true)
     }
     
@@ -36,6 +47,7 @@ final class PamphletTests: XCTestCase {
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta",
                                     "/tmp/Pamphlet",
                                     true,
+                                    false,
                                     false)
     }
     

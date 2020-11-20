@@ -65,6 +65,22 @@ return ###"""
 }
 """####
 
+
+let stringTemplateReleaseOnly = ####"""
+import Foundation
+
+// swiftlint:disable all
+
+public extension {?} {
+    static func {?}() -> String {
+        return ###"""
+        {?}
+        """###
+    }
+}
+"""####
+
+
 private let dataTemplate = ####"""
 import Foundation
 
@@ -85,6 +101,23 @@ return data!
 
 private let data = Data(base64Encoded:"{?}")
 """####
+
+private let dataTemplateReleaseOnly = ####"""
+import Foundation
+
+// swiftlint:disable all
+
+public extension {?} {
+    static func {?}() -> Data {
+        return data!
+    }
+}
+
+private let data = Data(base64Encoded:"{?}")
+"""####
+
+
+
 
 private let compressedTemplate = ####"""
 
@@ -208,7 +241,7 @@ public struct PamphletFramework {
     
     
     
-    private func createPamphletFile(_ textPages: [FilePath], _ dataPages: [FilePath], _ outFile: String) {
+    private func createPamphletFile(_ releaseOnly: Bool, _ textPages: [FilePath], _ dataPages: [FilePath], _ outFile: String) {
         
         var allDirectoryExtensions = ""
         for page in (textPages + dataPages) {
@@ -262,11 +295,43 @@ public struct PamphletFramework {
         }
         {?}
         """####
+        
+        let templateReleaseOnly = ####"""
+        import Foundation
+        
+        // swiftlint:disable all
+        
+        public enum Pamphlet {
+            public static func get(string member: String) -> String? {
+                switch member {
+        {?}
+                default: break
+                }
+                return nil
+            }
+            public static func get(gzip member: String) -> Data? {
+                switch member {
+        {?}
+                default: break
+                }
+                return nil
+            }
+            public static func get(data member: String) -> Data? {
+                switch member {
+        {?}
+                default: break
+                }
+                return nil
+            }
+        }
+        {?}
+        """####
+        
         let textPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
-        let compressedPagesCode = textPages.map { "            case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
+        let compressedPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
         let dataPagesCode = dataPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
         do {
-            let swift = String(ipecac: template,
+            let swift = String(ipecac: (releaseOnly ? templateReleaseOnly : template),
                                textPagesCode,
                                compressedPagesCode,
                                dataPagesCode,
@@ -277,7 +342,7 @@ public struct PamphletFramework {
         }
     }
     
-    private func processTextFile(_ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+    private func processTextFile(_ releaseOnly: Bool, _ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
         
         do {
             
@@ -399,7 +464,7 @@ public struct PamphletFramework {
                     fatalError("Failed to use /usr/bin/gzip to compress the requested file")
                 }
                 
-                uncompressedString = String(ipecac: stringTemplate,
+                uncompressedString = String(ipecac: (releaseOnly ? stringTemplateReleaseOnly : stringTemplate),
                                             path.extensionName,
                                             path.variableName,
                                             inFile,
@@ -416,14 +481,14 @@ public struct PamphletFramework {
         return true
     }
     
-    private func processDataFile(_ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+    private func processDataFile(_ releaseOnly: Bool, _ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
         if shouldSkip {
             return true
         }
         
         do {
             let fileData = try Data(contentsOf: URL(fileURLWithPath: inFile))
-            let swift = String(ipecac: dataTemplate,
+            let swift = String(ipecac: (releaseOnly ? dataTemplateReleaseOnly : dataTemplate),
                                path.extensionName,
                                path.variableName,
                                inFile,
@@ -527,7 +592,8 @@ public struct PamphletFramework {
                         _ inDirectory: String,
                         _ outDirectory: String,
                         _ swiftpm: Bool,
-                        _ clean: Bool) {
+                        _ clean: Bool,
+                        _ releaseOnly: Bool) {
         
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         var generateFilesDirectory = outDirectory
@@ -599,8 +665,8 @@ public struct PamphletFramework {
                         }
                     }
                     
-                    if !processTextFile(shouldSkip, filePath, fileURL.path, outputFile) {
-                        if !processDataFile(shouldSkip, filePath, fileURL.path, outputFile) {
+                    if !processTextFile(releaseOnly, shouldSkip, filePath, fileURL.path, outputFile) {
+                        if !processDataFile(releaseOnly, shouldSkip, filePath, fileURL.path, outputFile) {
                             fatalError("Processing failed for file: \(fileURL.path)")
                         } else {
                             dataPages.append(filePath)
@@ -614,7 +680,7 @@ public struct PamphletFramework {
             }
         }
         
-        createPamphletFile(textPages, dataPages, generateFilesDirectory + "/Pamphlet.swift")
+        createPamphletFile(releaseOnly, textPages, dataPages, generateFilesDirectory + "/Pamphlet.swift")
     }
     
     private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
