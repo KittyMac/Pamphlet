@@ -181,3 +181,20 @@ Results in:
 ```
 "'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'"
 ```
+
+## Additional Processing
+
+Pamphlet will perform the following additional pre-processing steps on specific file formats (if the associative tool is found to be installed on the system.)
+
+**.css** **.html**  
+/usr/local/bin/htmlcompressor - minifies html and css content
+
+**.ts**  
+/usr/local/bin/tsc - transpiles individual TypeScript files to JavaScript
+
+**.js** **.ts**  
+/usr/local/bin/closure-compiler - minifies JavaScript
+
+**.json**    
+/usr/local/bin/jj - minifies JSON content using [jj](https://github.com/tidwall/jj)
+
