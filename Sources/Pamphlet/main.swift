@@ -11,6 +11,9 @@ struct Pamphlet: ParsableCommand {
     struct Generate: ParsableCommand {
         static var configuration = CommandConfiguration(abstract: "Generate Swift code from file resources")
         
+        @Argument(help: "Prefix to prepend to Pamphlet class name")
+        var prefix: String?
+        
         @Flag(help: "Only generate release code (no dynamic loading when in Debug")
         var release: Bool = false
 
@@ -30,7 +33,7 @@ struct Pamphlet: ParsableCommand {
         var extensions: [String] = []
         
         mutating func run() throws {
-            PamphletFramework().process(extensions, inDirectory, outDirectory, swiftpm, clean, release)
+            PamphletFramework().process(prefix, extensions, inDirectory, outDirectory, swiftpm, clean, release)
         }
     }
 
