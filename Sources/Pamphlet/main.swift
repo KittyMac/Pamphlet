@@ -11,7 +11,7 @@ struct Pamphlet: ParsableCommand {
     struct Generate: ParsableCommand {
         static var configuration = CommandConfiguration(abstract: "Generate Swift code from file resources")
         
-        @Argument(help: "Prefix to prepend to Pamphlet class name")
+        @Option(help: "Prefix to prepend to Pamphlet class name")
         var prefix: String?
         
         @Flag(help: "Only generate release code (no dynamic loading when in Debug")
