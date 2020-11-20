@@ -1,0 +1,124 @@
+{
+    "attributes": [
+        { "uuid": "farming1", "title": "Inadequate Farmers", "cost": -3, "modifier": -1, "group": "FARMING" },
+        { "uuid": "farming2", "title": "Proficient Farmers", "cost": 3, "modifier": 1.5, "group": "FARMING" },
+        { "uuid": "farming3", "title": "Plant Whisperers", "cost": 6, "modifier": 6, "group": "FARMING" },
+        
+        { "uuid": "industry1", "title": "Slow as Sloths", "cost": -3, "modifier": -0.5, "group": "INDUSTRY" },
+        { "uuid": "industry2", "title": "Industrious Individuals", "cost": 3, "modifier": 1, "group": "INDUSTRY" },
+        { "uuid": "industry3", "title": "Amazing Industrialists", "cost": 6, "modifier": 2, "group": "INDUSTRY" },
+        
+        { "uuid": "research1", "title": "Slow Thinkers", "cost": -3, "modifier": -0.5, "group": "RESEARCH" },
+        { "uuid": "research2", "title": "Quick Thinkers", "cost": 3, "modifier": 1.5, "group": "RESEARCH" },
+        { "uuid": "research3", "title": "Borderline Genius", "cost": 6, "modifier": 3, "group": "RESEARCH" },
+        
+        { "uuid": "money1", "title": "Thrift Spenders", "cost": -3, "modifier": -0.5, "group": "FINANCE" },
+        { "uuid": "money2", "title": "Prosperous Businessmen", "cost": 3, "modifier": 0.75, "group": "FINANCE" },
+        { "uuid": "money3", "title": "Money Lenders", "cost": 6, "modifier": 1.5, "group": "FINANCE" },
+        
+        { "uuid": "growth1", "title": "Old Fashioned", "cost": -3, "modifier": -0.5, "group": "POPULATION" },
+        { "uuid": "growth2", "title": "Fertile Biology", "cost": 3, "modifier": 0.5, "group": "POPULATION" },
+        { "uuid": "growth3", "title": "Baby Boomers", "cost": 6, "modifier": 1, "group": "POPULATION" },
+        
+        { "uuid": "lowGravityHomeworld", "title": "Low Gravity Affinity", "cost": -3, "group": "GRAVITATIONAL AFFINITY" },
+        { "uuid": "highGravityHomeworld", "title": "High Gravity Affinity", "cost": 1, "group": "GRAVITATIONAL AFFINITY" },
+        
+        { "uuid": "hugeHomeworld", "title": "Huge Homeworld", "cost": 2, "group": "HOMEWORLD SIZE" },
+        { "uuid": "mediumHomeworld", "title": "Medium Homeworld", "cost": -3, "group": "HOMEWORLD SIZE" },
+        { "uuid": "smallHomeworld", "title": "Small Homeworld", "cost": -4, "group": "HOMEWORLD SIZE" },
+        
+        { "uuid": "richHomeworld", "title": "Rich Homeworld", "cost": 2, "group": "HOMEWORLD MINERAL" },
+        { "uuid": "poorHomeworld", "title": "Poor Homeworld", "cost": -2, "group": "HOMEWORLD MINERAL" },
+        
+        { "uuid": "naturalTinkers", "title": "Natural Tinkers", "cost": 2, "group": "NATIONAL HOBBY" },
+        { "uuid": "robustTechies", "title": "Robust Techies", "cost": 2, "group": "NATIONAL HOBBY" },
+        
+        { "uuid": "broadFieldExperimentalists", "title": "Broad Field Experimentalists", "cost": 1, "group": "SCIENTIFIC IMPERATIVE" },
+        { "uuid": "highlyFocusedScientists", "title": "Highly Focused Scientists", "cost": 1, "group": "SCIENTIFIC IMPERATIVE" },
+        
+        { "uuid": "freethinking", "title": "Freethinking", "cost": 2, "group": "UNIVERSAL QUIRK" },
+        { "uuid": "persnickety", "title": "Persnickety", "cost": 4, "group": "UNIVERSAL QUIRK" },
+        { "uuid": "sharedIntelligence", "title": "Shared Intelligence", "cost": 6, "group": "UNIVERSAL QUIRK" },
+        
+        { "uuid": "charismatic", "title": "Charismatic", "cost": 2, "group": "BEAUTY & BEAST" },
+        { "uuid": "repulsive", "title": "Repulsive", "cost": -2, "group": "BEAUTY & BEAST" },
+        
+        { "uuid": "galacticNavigators", "title": "Galactic Navigators", "cost": 2 },
+        
+        { "uuid": "combatPilots", "title": "Combat Pilots", "cost": 2 },
+        
+        { "uuid": "tolerant", "title": "Tolerant", "cost": 1 },
+        
+        { "uuid": "brilliantResearchers", "title": "Brilliant Researchers", "cost": 6 },
+        
+        { "uuid": "battleHardened", "title": "Battle Hardened", "cost": 2 },
+        
+        { "uuid": "fantasticEngineers", "title": "Fantastic Engineers", "cost": 2 },
+        
+        { "uuid": "highlyTrainedSmugglers", "title": "Highly Trained Smugglers", "cost": 2 },
+        
+        { "uuid": "sanctionedPiracy", "title": "Sanctioned Piracy", "cost": 2 },
+        
+        
+        
+    ],
+    
+    "races": [
+        { "uuid": "waitingForPlayer", "title":"Unknown" },
+        
+        { "uuid": "amoeba", "title":"Amoeba" },
+        { "uuid": "serpent", "title":"Serpent" },
+        { "uuid": "crystal", "title":"Crystal" },
+        { "uuid": "energy", "title":"Energy" },
+                
+        { "uuid": "human", "title":"Human", "longTitle":"The Human Coalition", "attributes": [ 
+            "RACE_FREETHINKING", 
+            "RACE_CHARISMATIC", 
+            "RACE_HIGHLY_TRAINED_SMUGGLERS", 
+            "RACE_MONEY_II"
+        ]},
+        { "uuid": "isather", "title":"Isather", "longTitle":"The Isather Dominion", "attributes": [ 
+            "RACE_RESEARCH_I", 
+            "RACE_REPULSIVE", 
+            "RACE_GROWTH_II", 
+            "RACE_INDUSTRY_III", 
+            "RACE_BATTLE_HARDENED", 
+            "RACE_SANCTIONED_PIRACY", 
+            "RACE_NATURAL_TINKERS"
+        ]},
+        { "uuid": "draske", "title":"Draske", "longTitle":"The Draske Hegemony", "attributes": [ 
+            "RACE_MONEY_I", 
+            "RACE_GROWTH_I", 
+            "RACE_RICH_HOMEWORLD", 
+            "RACE_FARMING_II", 
+            "RACE_GALACTIC_NAVIGATORS", 
+            "RACE_COMBAT_PILOTS", 
+            "RACE_PERSNICKETY", 
+            "RACE_BROAD_FIELD_EXPERIMENTALISTS"
+        ]},
+        { "uuid": "cyban", "title":"Cyban", "longTitle":"The Community of Cybans", "attributes": [ 
+            "RACE_GROWTH_I", 
+            "RACE_POOR_HOMEWORLD", 
+            "RACE_RESEARCH_II", 
+            "RACE_TOLERANT", 
+            "RACE_ROBUST_TECHIES", 
+            "RACE_BRILLIANT_RESEARCHERS", 
+            "RACE_HIGHLY_FOCUSED_SCIENTISTS", 
+            "RACE_FANTASTIC_ENGINEERS"
+        ]},
+        { "uuid": "vass", "title":"Vass", "longTitle":"The Vass Collective", "attributes": [ 
+            "RACE_INDUSTRY_I", 
+            "RACE_REPULSIVE", 
+            "RACE_LARGE_HOMEWORLD", 
+            "RACE_SHARED_INTELLIGENCE", 
+            "RACE_RESEARCH_III"
+        ]},
+        { "uuid": "uggathaaa", "title":"Uggathaaa", "longTitle":"The Uggathaaa Commune", "attributes": [ 
+            "RACE_INDUSTRY_I"
+        ]},
+        { "uuid": "taku", "title":"T'aku", "longTitle":"The T'Aku Junta", "attributes": [ 
+            "RACE_INDUSTRY_I"
+        ]}
+        
+    ]
+}

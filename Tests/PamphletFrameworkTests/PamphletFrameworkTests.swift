@@ -5,7 +5,7 @@ import PamphletFramework
 final class PamphletTests: XCTestCase {
     
     func testProcess() {
-        let extensions = ["ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(nil,
                                     extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
@@ -16,7 +16,7 @@ final class PamphletTests: XCTestCase {
     }
     
     func testProcessReleaseOnly() {
-        let extensions = ["ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process("Release",
                                     extensions,
                                     "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
