@@ -2026,9 +2026,11 @@ static char *   rescan(
                                                 /* Macro is enabled */
                             && ((!compat_mode && (warn_level & 1))
                                 || (compat_mode && (warn_level & 8)))) {
+                        /*
                         diag_macro( CWARN,
-"Replacement text \"%s\" of macro %.0ld\"%s\" involved subsequent text" /* _W1_ */
+"Replacement text \"%s\" of macro %.0ld\"%s\" involved subsequent text"
                             , in, 0L, outer->name, outer, inner);
+                         */
                     }
                 }
             }                       /* Else remove RT_END           */
