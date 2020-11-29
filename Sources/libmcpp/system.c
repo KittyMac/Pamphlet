@@ -104,6 +104,8 @@
 #endif
 #endif
 
+#include <libgen.h>
+
 static void     version( void);
                 /* Print version message            */
 static void     usage( int opt);
@@ -3073,6 +3075,7 @@ static const char *     excess_token =
         "Excessive token sequence \"%s\"";          /* _E_, _W1_    */
 
 int     do_include(
+    FILEINFO * parentFile,
     int     next        /* TRUE if the directive is #include_next   */
 )
 /*
@@ -3165,18 +3168,31 @@ found_name:
     bsl2sl( fname);
 #endif
     filename = fname;
-#if NO_DIR                              /* Unofficial feature           */
-    if (no_dir) {                       /* Strip directory components   */
-        char    src_dir[ PATHMAX] = { EOS, };
-        if (has_directory( fname, src_dir))
-            filename = fname + strlen( src_dir);
-        delim = '"';    /* Even a system header is handled as a local one   */
-    }
-#endif
-    if (open_include( filename, (delim == '"'), next)) {
-        /* 'fname' should not be free()ed, it is used as file->         */
-        /*      real_fname and has been registered into fnamelist[]     */
-        return  TRUE;
+    
+    if (parentFile != NULL) {
+        // Add the directory for the parent file to the include list
+        char * parentFileName = dirname(parentFile->filename);
+        //set_a_dir(parentFileName);
+        
+        int combinedLen = strlen(parentFileName) + strlen(filename) + 10;
+        char * combined = malloc(combinedLen);
+        strncpy(combined, parentFileName, combinedLen);
+        strncat(combined, "/", combinedLen);
+        strncat(combined, filename, combinedLen);
+        
+        if (open_include( combined, (delim == '"'), next)) {
+            /* 'fname' should not be free()ed, it is used as file->         */
+            /*      real_fname and has been registered into fnamelist[]     */
+            return  TRUE;
+        }
+        
+        free(combined);
+    }else{
+        if (open_include( filename, (delim == '"'), next)) {
+            /* 'fname' should not be free()ed, it is used as file->         */
+            /*      real_fname and has been registered into fnamelist[]     */
+            return  TRUE;
+        }
     }
 
     cerror( "Can't open include file \"%s\"", filename, 0L, NULL);  /* _E_  */
@@ -4433,7 +4449,7 @@ void    do_old( void)
         if (! compiling)
             return;
         in_include = TRUE;
-        do_include( TRUE);
+        do_include(NULL, TRUE);
         in_include = FALSE;
         return;
     } else if (str_eq( identifier, "warning")) {
@@ -4489,7 +4505,7 @@ void    do_old( void)
         if (! compiling)
             return;
         in_import = in_include = TRUE;
-        do_include( FALSE);
+        do_include(NULL, FALSE);
         in_import = in_include = FALSE;
         return;
     }
