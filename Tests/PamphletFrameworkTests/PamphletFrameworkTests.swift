@@ -26,6 +26,12 @@ final class PamphletTests: XCTestCase {
                                     true)
     }
     
+    func testPreprocessFollow1() {
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/includeFollow1.css")
+                
+        XCTAssertEqual(result, "\n\n\n\n\n\n#Follow3 { }\n\n#Follow2 { }\n\n#Follow1 { }\n")
+    }
+    
     func testPreprocess1() {
         
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.html")

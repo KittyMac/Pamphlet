@@ -515,7 +515,7 @@ extern void     at_start( void);
                 /* Commands prior to main input */
 extern void     put_depend( const char * filename);
                 /* Output source dependency line*/
-extern int      do_include( int next);
+extern int      do_include( FILEINFO * file, int next);
                 /* Process #include directive   */
 extern void     add_file( FILE * fp, const char * src_dir
         , const char * filename, const char * fullname, int include_opt);

@@ -321,7 +321,7 @@ ifdo:
 
     case L_include:
         in_include = TRUE;
-        if (do_include( FALSE) == TRUE && file != infile)
+        if (do_include(file, FALSE) == TRUE && file != infile)
             newlines = -1;  /* File has been included. Clear blank lines    */
         in_include = FALSE;
         break;
