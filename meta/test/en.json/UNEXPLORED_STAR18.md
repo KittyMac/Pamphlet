@@ -1,0 +1,1 @@
+Class G stars are yellow in color. They are often surrounded by planets with moderate mineral resources and also capabale for supporting life. Habitable planets in binary systems often take advantage of the increased radiation exposure to provide a more fertaile environment.

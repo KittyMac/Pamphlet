@@ -1,0 +1,1 @@
+Class K stars have the best chance of containing habitable planets, but those planets are often poor in mineral resources. Dwarf stars are older and cooler with decreased likelihood of habitable planets.

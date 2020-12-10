@@ -1982,8 +1982,8 @@ static char *   get_line(
             *(ptr + len - 2) = '\n';
             *(ptr + --len) = EOS;
             if (! cr_converted && (warn_level & cr_warn_level)) {
-                cwarn( "Converted [CR+LF] to [LF]"  /* _W1_ _W2_    */
-                        , NULL, 0L, NULL);
+                //cwarn( "Converted [CR+LF] to [LF]"  /* _W1_ _W2_    */
+                //        , NULL, 0L, NULL);
                 cr_converted = TRUE;
             }
         }
