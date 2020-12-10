@@ -2,6 +2,10 @@ import Foundation
 import Ipecac
 import libmcpp
 
+class JsonDirectory: Codable {
+    var files:[String:String] = [:]
+}
+
 extension String {
     private func substring(with nsrange: NSRange) -> Substring? {
         guard let range = Range(nsrange, in: self) else { return nil }
@@ -342,189 +346,218 @@ public struct PamphletFramework {
         }
     }
     
-    private func processTextFile(_ releaseOnly: Bool, _ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
+    private func fileContentsForTextFile(_ inFile: String) -> String? {
+        guard var fileContents = try? String(contentsOfFile: inFile) else { return nil }
         
-        do {
-            
-            var uncompressedString = ""
-            var compressedString = ""
-            
-            var fileContents = try String(contentsOfFile: inFile)
-            
-            if shouldSkip == false {
-                if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                    // This file wants to use the mcpp preprocessor
-                    if let cPtr = mcpp_preprocessFile(inFile) {
-                        fileContents = String(cString: cPtr)
-                        free(cPtr)
-                    }
-                }
-                
-                if inFile.hasSuffix(".css") ||
-                    inFile.hasSuffix(".html") &&
-                    FileManager.default.fileExists(atPath: "/usr/local/bin/htmlcompressor") {
-                    // If this is a javascript file and closure-compiler is installed
-                    do {
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/htmlcompressor")
-                        let inputPipe = Pipe()
-                        let outputPipe = Pipe()
-                        task.standardInput = inputPipe
-                        task.standardOutput = outputPipe
-                        task.standardError = nil
-                        try task.run()
-                        if let fileContentsAsData = fileContents.data(using: .utf8) {
-                            inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                            inputPipe.fileHandleForWriting.closeFile()
-                            let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                            
-                            fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                        } else {
-                            throw ""
-                        }
-                    } catch {
-                        fatalError("Failed to use /usr/local/bin/htmlcompressor to compress the requested file")
-                    }
-                }
-                
-                if inFile.hasSuffix(".ts") &&
-                    FileManager.default.fileExists(atPath: "/usr/local/bin/tsc") {
-                    do {
-                        // as insane as it is to contemplate, typescript (tsc) has NO CAPABILITY to
-                        // just write output to stdout.  using --outFile /dev/stdout does not appear to
-                        // work properly (I just get empty string). So we're going to have to write this
-                        // to a file.
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/node")
-                        let outputPipe = Pipe()
-                        task.standardOutput = outputPipe
-                        task.arguments = ["/usr/local/bin/tsc", "--outFile", "/dev/stdout", inFile]
-                        try task.run()
-                        let compiledData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                        fileContents = String(data: compiledData, encoding: .utf8) ?? fileContents
-                        
-                        print(fileContents)
-                    } catch {
-                        fatalError("Failed to use /usr/local/bin/tsc to compile the typescript file")
-                    }
-                }
-                
-                if (inFile.hasSuffix(".js") || inFile.hasSuffix(".ts")) &&
-                    FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
-                    // If this is a javascript file and closure-compiler is installed
-                    do {
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
-                        let inputPipe = Pipe()
-                        let outputPipe = Pipe()
-                        task.standardInput = inputPipe
-                        task.standardOutput = outputPipe
-                        task.standardError = nil
-                        try task.run()
-                        if let fileContentsAsData = fileContents.data(using: .utf8) {
-                            inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                            inputPipe.fileHandleForWriting.closeFile()
-                            let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                            
-                            fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                        } else {
-                            throw ""
-                        }
-                    } catch {
-                        fatalError("Failed to use /usr/local/bin/closure-compiler to compress the requested file")
-                    }
-                }
-                
-                if (inFile.hasSuffix(".json")) &&
-                    FileManager.default.fileExists(atPath: "/usr/local/bin/jj") {
-                    // If this is a javascript file and closure-compiler is installed
-                    do {
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "/usr/local/bin/jj")
-                        let inputPipe = Pipe()
-                        let outputPipe = Pipe()
-                        task.standardInput = inputPipe
-                        task.standardOutput = outputPipe
-                        task.standardError = nil
-                        task.arguments = ["-u"]
-                        try task.run()
-                        if let fileContentsAsData = fileContents.data(using: .utf8) {
-                            inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                            inputPipe.fileHandleForWriting.closeFile()
-                            let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                            
-                            fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                        } else {
-                            throw ""
-                        }
-                    } catch {
-                        fatalError("Failed to use /usr/local/bin/jj to compress the requested file")
-                    }
-                }
-                
-                
-                do {
-                    let task = Process()
-                    task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
-                    task.arguments = ["-9", "-n"]
-                    let inputPipe = Pipe()
-                    let outputPipe = Pipe()
-                    task.standardInput = inputPipe
-                    task.standardOutput = outputPipe
-                    task.standardError = nil
-                    try task.run()
-                    if let fileContentsAsData = fileContents.data(using: .utf8) {
-                        inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                        inputPipe.fileHandleForWriting.closeFile()
-                        let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                        
-                        compressedString = String(ipecac: compressedTemplate,
-                                           path.extensionName,
-                                           path.variableName,
-                                           compressedData.base64EncodedString())
-                        
-                        
-                    } else {
-                        throw ""
-                    }
-                } catch {
-                    fatalError("Failed to use /usr/bin/gzip to compress the requested file")
-                }
-                
-                uncompressedString = String(ipecac: (releaseOnly ? stringTemplateReleaseOnly : stringTemplate),
-                                            path.extensionName,
-                                            path.variableName,
-                                            inFile,
-                                            fileContents)
-                
-                
-                let swift = uncompressedString + "\n\n" + compressedString
-                
-                try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
+        if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+            // This file wants to use the mcpp preprocessor
+            if let cPtr = mcpp_preprocessFile(inFile) {
+                fileContents = String(cString: cPtr)
+                free(cPtr)
             }
-        } catch {
-            return false
         }
-        return true
+        
+        if inFile.hasSuffix(".css") ||
+            inFile.hasSuffix(".html") &&
+            FileManager.default.fileExists(atPath: "/usr/local/bin/htmlcompressor") {
+            // If this is a javascript file and closure-compiler is installed
+            do {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/htmlcompressor")
+                let inputPipe = Pipe()
+                let outputPipe = Pipe()
+                task.standardInput = inputPipe
+                task.standardOutput = outputPipe
+                task.standardError = nil
+                try task.run()
+                if let fileContentsAsData = fileContents.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                    inputPipe.fileHandleForWriting.closeFile()
+                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
+                } else {
+                    throw ""
+                }
+            } catch {
+                fatalError("Failed to use /usr/local/bin/htmlcompressor to compress the requested file")
+            }
+        }
+        
+        if inFile.hasSuffix(".ts") &&
+            FileManager.default.fileExists(atPath: "/usr/local/bin/tsc") {
+            do {
+                // as insane as it is to contemplate, typescript (tsc) has NO CAPABILITY to
+                // just write output to stdout.  using --outFile /dev/stdout does not appear to
+                // work properly (I just get empty string). So we're going to have to write this
+                // to a file.
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/node")
+                let outputPipe = Pipe()
+                task.standardOutput = outputPipe
+                task.arguments = ["/usr/local/bin/tsc", "--outFile", "/dev/stdout", inFile]
+                try task.run()
+                let compiledData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                fileContents = String(data: compiledData, encoding: .utf8) ?? fileContents
+                
+                print(fileContents)
+            } catch {
+                fatalError("Failed to use /usr/local/bin/tsc to compile the typescript file")
+            }
+        }
+        
+        if (inFile.hasSuffix(".js") || inFile.hasSuffix(".ts")) &&
+            FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
+            // If this is a javascript file and closure-compiler is installed
+            do {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
+                let inputPipe = Pipe()
+                let outputPipe = Pipe()
+                task.standardInput = inputPipe
+                task.standardOutput = outputPipe
+                task.standardError = nil
+                try task.run()
+                if let fileContentsAsData = fileContents.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                    inputPipe.fileHandleForWriting.closeFile()
+                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
+                } else {
+                    throw ""
+                }
+            } catch {
+                fatalError("Failed to use /usr/local/bin/closure-compiler to compress the requested file")
+            }
+        }
+        
+        if (inFile.hasSuffix(".json")) &&
+            FileManager.default.fileExists(atPath: "/usr/local/bin/jj") {
+            // If this is a javascript file and closure-compiler is installed
+            do {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/jj")
+                let inputPipe = Pipe()
+                let outputPipe = Pipe()
+                task.standardInput = inputPipe
+                task.standardOutput = outputPipe
+                task.standardError = nil
+                task.arguments = ["-u"]
+                try task.run()
+                if let fileContentsAsData = fileContents.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                    inputPipe.fileHandleForWriting.closeFile()
+                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
+                } else {
+                    throw ""
+                }
+            } catch {
+                fatalError("Failed to use /usr/local/bin/jj to compress the requested file")
+            }
+        }
+        
+        return fileContents
     }
     
-    private func processDataFile(_ releaseOnly: Bool, _ shouldSkip: Bool, _ path: FilePath, _ inFile: String, _ outFile: String) -> Bool {
-        if shouldSkip {
-            return true
-        }
+    private func processStringAsFile(_ releaseOnly: Bool, _ path: FilePath, _ fileContents: String) -> String? {
+        var uncompressedString = ""
+        var compressedString = ""
         
         do {
-            let fileData = try Data(contentsOf: URL(fileURLWithPath: inFile))
-            let swift = String(ipecac: (releaseOnly ? dataTemplateReleaseOnly : dataTemplate),
-                               path.extensionName,
-                               path.variableName,
-                               inFile,
-                               fileData.base64EncodedString())
-            try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+            task.arguments = ["-9", "-n"]
+            let inputPipe = Pipe()
+            let outputPipe = Pipe()
+            task.standardInput = inputPipe
+            task.standardOutput = outputPipe
+            task.standardError = nil
+            try task.run()
+            if let fileContentsAsData = fileContents.data(using: .utf8) {
+                inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                inputPipe.fileHandleForWriting.closeFile()
+                let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                
+                compressedString = String(ipecac: compressedTemplate,
+                                   path.extensionName,
+                                   path.variableName,
+                                   compressedData.base64EncodedString())
+            } else {
+                throw ""
+            }
         } catch {
-            return false
+            fatalError("Failed to use /usr/bin/gzip to compress the requested file")
         }
-        return true
+        
+        uncompressedString = String(ipecac: stringTemplateReleaseOnly,
+                                    path.extensionName,
+                                    path.variableName,
+                                    "",
+                                    fileContents)
+        
+        return uncompressedString + "\n\n" + compressedString
+    }
+    
+    private func processTextFile(_ releaseOnly: Bool, _ path: FilePath, _ inFile: String) -> String? {
+        var uncompressedString = ""
+        var compressedString = ""
+        
+        if let fileContents = fileContentsForTextFile(inFile) {
+            do {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+                task.arguments = ["-9", "-n"]
+                let inputPipe = Pipe()
+                let outputPipe = Pipe()
+                task.standardInput = inputPipe
+                task.standardOutput = outputPipe
+                task.standardError = nil
+                try task.run()
+                if let fileContentsAsData = fileContents.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
+                    inputPipe.fileHandleForWriting.closeFile()
+                    let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    compressedString = String(ipecac: compressedTemplate,
+                                       path.extensionName,
+                                       path.variableName,
+                                       compressedData.base64EncodedString())
+                } else {
+                    throw ""
+                }
+            } catch {
+                fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+            }
+            
+            uncompressedString = String(ipecac: (releaseOnly ? stringTemplateReleaseOnly : stringTemplate),
+                                        path.extensionName,
+                                        path.variableName,
+                                        inFile,
+                                        fileContents)
+            
+            return uncompressedString + "\n\n" + compressedString
+        }
+
+        return nil
+    }
+    
+    private func fileContentsForDataFile(_ inFile: String) -> Data? {
+        guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
+        return fileData
+    }
+    
+    private func processDataFile(_ releaseOnly: Bool, _ path: FilePath, _ inFile: String) -> String? {
+        if let fileData = fileContentsForDataFile(inFile) {
+            return String(ipecac: (releaseOnly ? dataTemplateReleaseOnly : dataTemplate),
+                          path.extensionName,
+                          path.variableName,
+                          inFile,
+                          fileData.base64EncodedString())
+        }
+        return nil
     }
     
     private func processPackageSwift(_ pamphletName: String, _ outFile: String) -> Bool {
@@ -665,44 +698,112 @@ public struct PamphletFramework {
         //print("out: " + generateFilesDirectory)
         
         let inDirectoryFullPath = URL(fileURLWithPath: inDirectory).path
+        
+        var jsonDirectoryInputPath: String = ""
+        var jsonDirectoryOutputPath: String = ""
+        var jsonDirectoryFilePath: FilePath?
+    
+        var jsonDirectory: JsonDirectory?
 
         for case let fileURL as URL in enumerator {
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
                 let pathExtension = (fileURL.path as NSString).pathExtension
-                if (extensions.count == 0 || extensions.contains(pathExtension)) &&
-                    resourceValues.isDirectory == false {
+                if (extensions.count == 0 || extensions.contains(pathExtension)) {
                     let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
                     let filePath = FilePath(pamphletName, partialPath)
                     
                     let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
                     let outputFile = "\(outputDirectory)/\(filePath.fileName).swift"
-                    try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
                     
-                    var shouldSkip = false
-                    if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                        
-                        // We need to check the main source output file, but also any files which are #include to this one
-                        // and any and all files #included from the dependencies
-                        shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                        if !shouldSkip {
-                            print("DATE CHECK FAILED: \(fileURL.path)")
+                    if jsonDirectory != nil && fileURL.path.hasPrefix(jsonDirectoryInputPath) == false {
+                        if let jsonDirectoryFilePath = jsonDirectoryFilePath, let jsonDirectoryEncoded = try? jsonDirectory?.json() {
+                            if let fileContent = processStringAsFile(releaseOnly, jsonDirectoryFilePath, jsonDirectoryEncoded) {
+                                try fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
+                                textPages.append(jsonDirectoryFilePath)
+                            }
                         }
                         
-                        // also check against the modification date of pamphlet itself
-                        if shouldSkip {
-                            shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                        }
+                        jsonDirectory = nil
+                        jsonDirectoryInputPath = ""
+                        jsonDirectoryOutputPath = ""
+                        jsonDirectoryFilePath = nil
+                        //print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
                     }
                     
-                    if !processTextFile(releaseOnly, shouldSkip, filePath, fileURL.path, outputFile) {
-                        if !processDataFile(releaseOnly, shouldSkip, filePath, fileURL.path, outputFile) {
-                            fatalError("Processing failed for file: \(fileURL.path)")
-                        } else {
-                            dataPages.append(filePath)
+                    //print("\(fileURL.path)")
+                    
+                    if let isDirectory = resourceValues.isDirectory, isDirectory == true {
+                        
+                        if pathExtension == "json" {
+                            // Pamphlet has a rule that if a directory ends in ".json", the files in said directory should be
+                            // preprocessed but then stored in a pamphlet file named the same as the directory itself.
+                            // For example:
+                            // en.json -|
+                            //          - main.md
+                            //          - supplemental.md
+                            //
+                            // Will generate one pamphlet entry called EnJson.  That entry itself will have json content like this:
+                            //
+                            // { "main.md": "<content of main.md>", "supplemental.md": "<content of supplemental.md>" }
+                            
+                            //print("VVVVVVVVVVV \(fileURL.path) VVVVVVVVVVV")
+                            jsonDirectoryInputPath = fileURL.path
+                            jsonDirectoryOutputPath = outputFile
+                            jsonDirectoryFilePath = filePath
+                            jsonDirectory = JsonDirectory()
                         }
+                        
                     } else {
-                        textPages.append(filePath)
+                        
+                        if let jsonDirectory = jsonDirectory {
+                            
+                            if let fileContent = fileContentsForTextFile(fileURL.path) {
+                                jsonDirectory.files[filePath.fileName] = fileContent
+                            } else if let fileContent = fileContentsForDataFile(fileURL.path) {
+                                jsonDirectory.files[filePath.fileName] = fileContent.base64EncodedString()
+                            } else {
+                                fatalError("Processing failed for file: \(fileURL.path)")
+                            }
+                            
+                        } else {
+                            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+                            
+                            var shouldSkip = false
+                            if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
+                                
+                                // We need to check the main source output file, but also any files which are #include to this one
+                                // and any and all files #included from the dependencies
+                                shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
+                                if !shouldSkip {
+                                    print("DATE CHECK FAILED: \(fileURL.path)")
+                                }
+                                
+                                // also check against the modification date of pamphlet itself
+                                if shouldSkip {
+                                    shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                                }
+                            }
+                            
+                            if shouldSkip == false {
+                                if let fileContent = processTextFile(releaseOnly, filePath, fileURL.path) {
+                                    try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                                    textPages.append(filePath)
+                                } else if let fileContent = processDataFile(releaseOnly, filePath, fileURL.path) {
+                                    try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                                    dataPages.append(filePath)
+                                } else {
+                                    fatalError("Processing failed for file: \(fileURL.path)")
+                                }
+                            } else {
+                                // Even if we skip, we still need to add to the textPages and dataPages...
+                                if let _ = try? String(contentsOfFile: fileURL.path) {
+                                    textPages.append(filePath)
+                                } else {
+                                    dataPages.append(filePath)
+                                }
+                            }
+                        }
                     }
                 }
             } catch {

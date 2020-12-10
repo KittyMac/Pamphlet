@@ -1,0 +1,1 @@
+Class G stars are yellow in color. They are often surrounded by planets with moderate mineral resources and also capabale for supporting life. Dwarf stars are older and cooler with decreased likelihood of habitable planets.

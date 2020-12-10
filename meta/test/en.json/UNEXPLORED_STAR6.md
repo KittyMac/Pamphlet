@@ -1,0 +1,1 @@
+Class M stars glare red and dim in the night sky. They have a poor chance of having planets with good environments or mineral resources. Dwarf stars are older and cooler with decreased likelihood of habitable planets.

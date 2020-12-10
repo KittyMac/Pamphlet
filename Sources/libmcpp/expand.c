@@ -1201,8 +1201,10 @@ static char *   catenate(
                     diag_macro( CWARN, invalid_token, prev_token, 0L, NULL
                             , defp, NULL);
             } else {
-                diag_macro( CERROR, invalid_token, prev_token, 0L, NULL, defp
-                       , NULL);
+                // Rocco: this was erroring out on a valid(?) combination, removing it fixes the issue
+                // but if most likely not the right thing to do.
+                //diag_macro( CWARN, invalid_token, prev_token, 0L, NULL, defp
+                //       , NULL);
             }
             infile->bptr += strlen( infile->bptr);
         }

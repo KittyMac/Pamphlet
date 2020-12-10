@@ -114,7 +114,9 @@ void    directive( void)
 
     in_directive = TRUE;
     if (keep_comments) {
-        mcpp_fputc( '\n', OUT);     /* Possibly flush out comments  */
+        // Rocco: Removing this as it replaces the directives with a new line, and I would prefer
+        // that the directive simply not exist instead of adding hundreds of new lines.
+        //mcpp_fputc( '\n', OUT);     /* Possibly flush out comments  */
         newlines--;
     }
     c = skip_ws();

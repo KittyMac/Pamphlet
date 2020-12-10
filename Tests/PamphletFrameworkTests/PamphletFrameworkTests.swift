@@ -4,6 +4,28 @@ import PamphletFramework
 
 final class PamphletTests: XCTestCase {
     
+    /*
+    func testProcessSOPedia() {
+        PamphletFramework().process("SOPedia",
+                                    [],
+                                    "/Volumes/Development/Development/chimerasw2/SOPedia/Resources",
+                                    "/Volumes/Development/Development/chimerasw2/SOPedia/Sources/SOPediaPamphlet",
+                                    false,
+                                    false,
+                                    true)
+    }
+    
+    func testProcessSO() {
+        PamphletFramework().process(nil,
+                                    [],
+                                    "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Resources",
+                                    "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Sources/Pamphlet",
+                                    true,
+                                    true,
+                                    false)
+    }
+    */
+    
     func testProcess() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(nil,
@@ -29,24 +51,31 @@ final class PamphletTests: XCTestCase {
     func testPreprocessFollow1() {
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/includeFollow1.css")
                 
-        XCTAssertEqual(result, "\n\n\n\n\n\n#Follow3 { }\n\n#Follow2 { }\n\n#Follow1 { }\n")
+        XCTAssertEqual(result, "#Follow3 { }\n#Follow2 { }\n#Follow1 { }\n")
     }
     
     func testPreprocess1() {
         
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.html")
         
-        XCTAssertEqual(result, "\n\n\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
+        XCTAssertEqual(result, "\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
+    }
+    
+    func testNotAValidPreprocessingToken() {
+        
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2.js")
+                
+        XCTAssertEqual(result, "\n\nvar x = 5\n`width:${x}em;height:${x}em;`\n")
     }
     
     func testPreprocessUnknownDirective() {
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test1.css")
-        XCTAssertEqual(result, "\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
+        XCTAssertEqual(result, "\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }
     
     func testPreprocessIncludeFromSourcePath() {
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/include1.css")
-        XCTAssertEqual(result, "\n\n\n\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
+        XCTAssertEqual(result, "\n#title {\n    border-image-slice: 22 fill;\n}\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }
     
     func testPreprocessFileDateCompareWithIncludes() {
