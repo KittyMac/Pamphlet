@@ -32,23 +32,23 @@ struct Pamphlet: ParsableCommand {
         @Flag(help: "Only generate release code (no dynamic loading when in Debug)")
         var release: Bool = false
         
-        @Flag(help: "Include the original file content")
-        var includeOriginal: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Include the original file content")
+        var original: Bool = true
         
-        @Flag(help: "Include the gzip'd file content")
-        var includeGzip: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Include the gzip'd file content")
+        var gzip: Bool = true
         
-        @Flag(help: "Minify html content (if htmlcompressor found)")
-        var minifyHtml: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify html content (if htmlcompressor found)")
+        var html: Bool = true
         
-        @Flag(help: "Minify javascript content (if closure-compiler found)")
-        var minifyJs: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content (if closure-compiler found)")
+        var js: Bool = true
         
-        @Flag(help: "Compile typescript content (if tsc found)")
-        var minifyTs: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Compile typescript content (if tsc found)")
+        var ts: Bool = true
         
-        @Flag(help: "Minify JSON content (if jj found)")
-        var minifyJson: Bool = true
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content (if jj found)")
+        var json: Bool = true
                 
         mutating func run() throws {
             var options = PamphletOptions()
@@ -56,12 +56,12 @@ struct Pamphlet: ParsableCommand {
             if release { options.insert(.releaseOnly) }
             if clean { options.insert(.clean) }
             if swiftpm { options.insert(.swiftpm) }
-            if includeOriginal { options.insert(.includeOriginal) }
-            if includeGzip { options.insert(.includeGzip) }
-            if minifyHtml { options.insert(.minifyHtml) }
-            if minifyJs { options.insert(.minifyJs) }
-            if minifyTs { options.insert(.minifyTs) }
-            if minifyJson { options.insert(.minifyJson) }
+            if original { options.insert(.includeOriginal) }
+            if gzip { options.insert(.includeGzip) }
+            if html { options.insert(.minifyHtml) }
+            if js { options.insert(.minifyJs) }
+            if ts { options.insert(.minifyTs) }
+            if json { options.insert(.minifyJson) }
             
             PamphletFramework().process(prefix: prefix,
                                         extensions: extensions,
