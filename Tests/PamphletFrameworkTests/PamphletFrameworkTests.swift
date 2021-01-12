@@ -4,13 +4,6 @@ import PamphletFramework
 
 final class PamphletTests: XCTestCase {
     
-    func testProcessRandom() {
-        PamphletFramework().process(prefix: nil,
-                                    extensions: [],
-                                    inDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal/receiptpal_amazon/iOS/Scrape/Resources",
-                                    outDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal/receiptpal_amazon/iOS/Scrape/Sources/Pamphlet",
-                                    options: [.clean, .releaseOnly, .includeGzip])
-    }
     /*
     func testProcessSOPedia() {
         PamphletFramework().process(prefix: "SOPedia",
