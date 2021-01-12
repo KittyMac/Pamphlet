@@ -255,9 +255,15 @@ public class PamphletFramework {
         {?}
         """
         
-        let textPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
-        let compressedPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
-        let dataPagesCode = dataPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
+        let textPagesCode = textPages.filter { _ in options.contains(.includeOriginal) }.map {
+            "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+        }.joined(separator: "\n")
+        let compressedPagesCode = textPages.filter { _ in options.contains(.includeGzip) }.map {
+            "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()"
+        }.joined(separator: "\n")
+        let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
+            "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+        }.joined(separator: "\n")
         do {
             let swift = String(ipecac: (options.contains(.releaseOnly) ? templateReleaseOnly : template),
                                textPagesCode,
