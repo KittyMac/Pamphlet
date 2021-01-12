@@ -311,7 +311,27 @@ public class PamphletFramework {
                         
             if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
                 scratch.append("    #if DEBUG\n")
-                scratch.append("        if let contents = try? \(dataType)(contentsOf:URL(fileURLWithPath: \"\(fileOnDisk)\")) {\n")
+                scratch.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
+                scratch.append("        if let contents = try? \(dataType)(contentsOf:URL(fileURLWithPath: fileOnDiskPath)) {\n")
+                
+                if dataType == "String" {
+                    scratch.append("            if contents.hasPrefix(\"#define PAMPHLET_PREPROCESSOR\") {\n")
+                    scratch.append("                do {\n")
+                    scratch.append("                    let task = Process()\n")
+                    scratch.append("                    task.executableURL = URL(fileURLWithPath: \"/usr/local/bin/pamphlet\")\n")
+                    scratch.append("                    task.arguments = [\"preprocess\", fileOnDiskPath]\n")
+                    scratch.append("                    let outputPipe = Pipe()\n")
+                    scratch.append("                    task.standardOutput = outputPipe\n")
+                    scratch.append("                    try task.run()\n")
+                    scratch.append("                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()\n")
+                    scratch.append("                    let output = String(decoding: outputData, as: UTF8.self)\n")
+                    scratch.append("                    return output\n")
+                    scratch.append("                } catch {\n")
+                    scratch.append("                    return \"Failed to use /usr/local/bin/pamphlet to preprocess the requested file\"\n")
+                    scratch.append("                }\n")
+                    scratch.append("            }\n")
+                }
+                
                 scratch.append("            return contents\n")
                 scratch.append("        }\n")
                 scratch.append("        return \(dataType)()\n")
