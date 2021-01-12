@@ -4,48 +4,46 @@ import PamphletFramework
 
 final class PamphletTests: XCTestCase {
     
+    func testProcessRandom() {
+        PamphletFramework().process(prefix: nil,
+                                    extensions: [],
+                                    inDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal/receiptpal_amazon/iOS/Scrape/Resources",
+                                    outDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal/receiptpal_amazon/iOS/Scrape/Sources/Pamphlet",
+                                    options: [.clean, .releaseOnly, .includeGzip])
+    }
     /*
     func testProcessSOPedia() {
-        PamphletFramework().process("SOPedia",
-                                    [],
-                                    "/Volumes/Development/Development/chimerasw2/SOPedia/Resources",
-                                    "/Volumes/Development/Development/chimerasw2/SOPedia/Sources/SOPediaPamphlet",
-                                    false,
-                                    false,
-                                    true)
+        PamphletFramework().process(prefix: "SOPedia",
+                                    extensions: [],
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/SOPedia/Resources",
+                                    outDirectory: "/Volumes/Development/Development/chimerasw2/SOPedia/Sources/SOPediaPamphlet",
+                                    options:PamphletOptions.default)
     }
     
     func testProcessSO() {
-        PamphletFramework().process(nil,
-                                    [],
-                                    "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Resources",
-                                    "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Sources/Pamphlet",
-                                    true,
-                                    true,
-                                    false)
+        PamphletFramework().process(prefix: nil,
+                                    extensions: [],
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Resources",
+                                    outDirectory: "/Volumes/Development/Development/chimerasw2/starbaseorion10/Server/Sources/Pamphlet",
+                                    options:PamphletOptions.default)
     }
     */
-    
     func testProcess() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(nil,
-                                    extensions,
-                                    "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
-                                    "/tmp/Pamphlet",
-                                    true,
-                                    true,
-                                    false)
+        PamphletFramework().process(prefix: nil,
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
+                                    outDirectory: "/tmp/Pamphlet",
+                                    options:PamphletOptions.default)
     }
     
     func testProcessReleaseOnly() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process("Release",
-                                    extensions,
-                                    "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
-                                    "/tmp/Pamphlet",
-                                    true,
-                                    true,
-                                    true)
+        PamphletFramework().process(prefix: "Release",
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
+                                    outDirectory: "/tmp/Pamphlet",
+                                    options:PamphletOptions.default)
     }
     
     func testPreprocessFollow1() {
@@ -80,13 +78,11 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocessFileDateCompareWithIncludes() {
         let extensions = ["txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(nil,
-                                    extensions,
-                                    "/Volumes/Development/Development/chimerasw2/Pamphlet/meta",
-                                    "/tmp/Pamphlet",
-                                    true,
-                                    false,
-                                    false)
+        PamphletFramework().process(prefix: nil,
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta",
+                                    outDirectory: "/tmp/Pamphlet",
+                                    options:PamphletOptions.default)
     }
     
 
