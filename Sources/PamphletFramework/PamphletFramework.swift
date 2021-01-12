@@ -32,114 +32,12 @@ extension String {
     }
 }
 
-let stringTemplate = ####"""
-import Foundation
-
-// swiftlint:disable all
-
-public extension {0} {
-    static func {1}() -> String {
-#if DEBUG
-let filePath = "{2}"
-if let contents = try? String(contentsOfFile:filePath) {
-    if contents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-        do {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/local/bin/pamphlet")
-            task.arguments = ["preprocess", filePath]
-            let outputPipe = Pipe()
-            task.standardOutput = outputPipe
-            try task.run()
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(decoding: outputData, as: UTF8.self)
-            return output
-        } catch {
-            return "Failed to use /usr/local/bin/pamphlet to preprocess the requested file"
-        }
-    }
-    return contents
-}
-return "file not found"
-#else
-return ###"""
-{3}
-"""###
-#endif
-}
-}
-"""####
-
-
-let stringTemplateReleaseOnly = ####"""
-import Foundation
-
-// swiftlint:disable all
-
-public extension {0} {
-    static func {1}() -> String {
-return ###"""
-{3}
-"""###
-    }
-}
-"""####
-
-
-private let dataTemplate = ####"""
-import Foundation
-
-// swiftlint:disable all
-
-public extension {0} {
-    static func {1}() -> Data {
-#if DEBUG
-if let contents = try? Data(contentsOf:URL(fileURLWithPath: "{2}")) {
-    return contents
-}
-return Data()
-#else
-return data!
-#endif
-}
-}
-
-private let data = Data(base64Encoded:"{3}")
-"""####
-
-private let dataTemplateReleaseOnly = ####"""
-import Foundation
-
-// swiftlint:disable all
-
-public extension {0} {
-    static func {1}() -> Data {
-        return data!
-    }
-}
-
-private let data = Data(base64Encoded:"{3}")
-"""####
-
-
-
-
-private let compressedTemplate = ####"""
-
-public extension {?} {
-    static func {?}Gzip() -> Data {
-        return gzip_data!
-    }
-}
-
-private let gzip_data = Data(base64Encoded:"{?}")
-"""####
-
 private func toVariableName(_ source: String) -> String {
     var scratch = ""
     scratch.reserveCapacity(source.count)
     var capitalize = true
     for c in source {
-        if c == "." || c == "/" {
+        if c == "." || c == "/" || c == "-" || c == "_" {
             capitalize = true
         } else {
             if capitalize {
@@ -237,7 +135,29 @@ struct FilePath {
     }
 }
 
-public struct PamphletFramework {
+public struct PamphletOptions: OptionSet {
+    public let rawValue: Int
+    
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+    
+    public static let clean = PamphletOptions(rawValue:  1 << 0)
+    public static let swiftpm = PamphletOptions(rawValue:  1 << 1)
+    public static let releaseOnly = PamphletOptions(rawValue:  1 << 2)
+    public static let includeOriginal = PamphletOptions(rawValue:  1 << 3)
+    public static let includeGzip = PamphletOptions(rawValue:  1 << 4)
+    public static let minifyHtml = PamphletOptions(rawValue:  1 << 5)
+    public static let minifyJs = PamphletOptions(rawValue:  1 << 6)
+    public static let minifyTs = PamphletOptions(rawValue:  1 << 7)
+    public static let minifyJson = PamphletOptions(rawValue:  1 << 8)
+    
+    public static let `default`: PamphletOptions = [.clean, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson]
+}
+
+public class PamphletFramework {
+    
+    var options = PamphletOptions.default
     
     public init() {
         
@@ -245,7 +165,11 @@ public struct PamphletFramework {
     
     
     
-    private func createPamphletFile(_ pamphletName: String, _ releaseOnly: Bool, _ textPages: [FilePath], _ dataPages: [FilePath], _ outFile: String) {
+    private func createPamphletFile(_ pamphletName: String,
+                                    _ textPages: [FilePath],
+                                    _ dataPages: [FilePath],
+                                    _ outFile: String) {
+        
         
         var allDirectoryExtensions = ""
         for page in (textPages + dataPages) {
@@ -335,7 +259,7 @@ public struct PamphletFramework {
         let compressedPagesCode = textPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()" }.joined(separator: "\n")
         let dataPagesCode = dataPages.map { "        case \"\($0.fullPath)\": return \($0.fullVariableName)()" }.joined(separator: "\n")
         do {
-            let swift = String(ipecac: (releaseOnly ? templateReleaseOnly : template),
+            let swift = String(ipecac: (options.contains(.releaseOnly) ? templateReleaseOnly : template),
                                textPagesCode,
                                compressedPagesCode,
                                dataPagesCode,
@@ -357,207 +281,92 @@ public struct PamphletFramework {
             }
         }
         
-        if inFile.hasSuffix(".css") ||
-            inFile.hasSuffix(".html") &&
-            FileManager.default.fileExists(atPath: "/usr/local/bin/htmlcompressor") {
-            // If this is a javascript file and closure-compiler is installed
-            do {
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/htmlcompressor")
-                let inputPipe = Pipe()
-                let outputPipe = Pipe()
-                task.standardInput = inputPipe
-                task.standardOutput = outputPipe
-                task.standardError = nil
-                try task.run()
-                if let fileContentsAsData = fileContents.data(using: .utf8) {
-                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                    inputPipe.fileHandleForWriting.closeFile()
-                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                } else {
-                    throw ""
-                }
-            } catch {
-                fatalError("Failed to use /usr/local/bin/htmlcompressor to compress the requested file")
-            }
-        }
-        
-        if inFile.hasSuffix(".ts") &&
-            FileManager.default.fileExists(atPath: "/usr/local/bin/tsc") {
-            do {
-                // as insane as it is to contemplate, typescript (tsc) has NO CAPABILITY to
-                // just write output to stdout.  using --outFile /dev/stdout does not appear to
-                // work properly (I just get empty string). So we're going to have to write this
-                // to a file.
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/node")
-                let outputPipe = Pipe()
-                task.standardOutput = outputPipe
-                task.arguments = ["/usr/local/bin/tsc", "--outFile", "/dev/stdout", inFile]
-                try task.run()
-                let compiledData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                fileContents = String(data: compiledData, encoding: .utf8) ?? fileContents
-                
-                print(fileContents)
-            } catch {
-                fatalError("Failed to use /usr/local/bin/tsc to compile the typescript file")
-            }
-        }
-        
-        if (inFile.hasSuffix(".js") || inFile.hasSuffix(".ts")) &&
-            FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
-            // If this is a javascript file and closure-compiler is installed
-            do {
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
-                let inputPipe = Pipe()
-                let outputPipe = Pipe()
-                task.standardInput = inputPipe
-                task.standardOutput = outputPipe
-                task.standardError = nil
-                try task.run()
-                if let fileContentsAsData = fileContents.data(using: .utf8) {
-                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                    inputPipe.fileHandleForWriting.closeFile()
-                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                } else {
-                    throw ""
-                }
-            } catch {
-                fatalError("Failed to use /usr/local/bin/closure-compiler to compress the requested file")
-            }
-        }
-        
-        if (inFile.hasSuffix(".json")) &&
-            FileManager.default.fileExists(atPath: "/usr/local/bin/jj") {
-            // If this is a javascript file and closure-compiler is installed
-            do {
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/local/bin/jj")
-                let inputPipe = Pipe()
-                let outputPipe = Pipe()
-                task.standardInput = inputPipe
-                task.standardOutput = outputPipe
-                task.standardError = nil
-                task.arguments = ["-u"]
-                try task.run()
-                if let fileContentsAsData = fileContents.data(using: .utf8) {
-                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                    inputPipe.fileHandleForWriting.closeFile()
-                    let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                } else {
-                    throw ""
-                }
-            } catch {
-                fatalError("Failed to use /usr/local/bin/jj to compress the requested file")
-            }
-        }
+        minifyHtml(inFile: inFile, fileContents: &fileContents)
+        minifyTs(inFile: inFile, fileContents: &fileContents)
+        minifyJs(inFile: inFile, fileContents: &fileContents)
+        minifyJson(inFile: inFile, fileContents: &fileContents)
         
         return fileContents
     }
     
-    private func processStringAsFile(_ releaseOnly: Bool, _ path: FilePath, _ fileContents: String) -> String? {
-        var uncompressedString = ""
-        var compressedString = ""
+    private func generateFile(_ path: FilePath,
+                              _ fileOnDisk: String?,
+                              _ uncompressed: String?,
+                              _ compressed: String?,
+                              _ dataType: String) -> String? {
+        var scratch = ""
         
-        do {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
-            task.arguments = ["-9", "-n"]
-            let inputPipe = Pipe()
-            let outputPipe = Pipe()
-            task.standardInput = inputPipe
-            task.standardOutput = outputPipe
-            task.standardError = nil
-            try task.run()
-            if let fileContentsAsData = fileContents.data(using: .utf8) {
-                inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                inputPipe.fileHandleForWriting.closeFile()
-                let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                
-                compressedString = String(ipecac: compressedTemplate,
-                                   path.extensionName,
-                                   path.variableName,
-                                   compressedData.base64EncodedString())
+        scratch.append("import Foundation\n\n")
+        scratch.append("// swiftlint:disable all\n\n")
+        scratch.append("public extension \(path.extensionName) {\n")
+        
+        if uncompressed != nil && options.contains(.includeOriginal) {
+            scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
+            
+            if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
+                scratch.append("    #if DEBUG\n")
+                scratch.append("        if let contents = try? Data(contentsOf:URL(fileURLWithPath: \"\(fileOnDisk)\")) {\n")
+                scratch.append("            return contents\n")
+                scratch.append("        }\n")
+                scratch.append("        return Data()\n")
+                scratch.append("    #else\n")
+                scratch.append("        return uncompressed\n")
+                scratch.append("    #endif\n")
             } else {
-                throw ""
+                scratch.append("        return uncompressed\n")
             }
-        } catch {
-            fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+            scratch.append("    }\n")
         }
         
-        uncompressedString = String(ipecac: stringTemplateReleaseOnly,
-                                    path.extensionName,
-                                    path.variableName,
-                                    "",
-                                    fileContents)
+        if compressed != nil && options.contains(.includeGzip) {
+            scratch.append("    static func \(path.variableName)Gzip() -> Data {\n")
+            scratch.append("        return compressed\n")
+            scratch.append("    }\n")
+        }
         
-        return uncompressedString + "\n\n" + compressedString
+        scratch.append("}\n")
+        scratch.append("\n")
+        
+        if let uncompressed = uncompressed, options.contains(.includeOriginal) {
+            if dataType == "String" {
+                scratch.append("private let uncompressed = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
+            } else {
+                scratch.append("private let uncompressed = Data(base64Encoded:\"\(uncompressed)\")!\n")
+            }
+        }
+        if let compressed = compressed, options.contains(.includeGzip) {
+            scratch.append("private let compressed = Data(base64Encoded:\"\(compressed)\")!\n")
+        }
+        
+        return scratch
     }
     
-    private func processTextFile(_ releaseOnly: Bool, _ path: FilePath, _ inFile: String) -> String? {
-        var uncompressedString = ""
-        var compressedString = ""
-        
+    private func processStringAsFile(_ path: FilePath, _ fileContents: String) -> String? {
+        return generateFile(path,
+                            nil,
+                            fileContents,
+                            gzip(fileContents: fileContents),
+                            "String")
+    }
+    
+    private func processTextFile(_ path: FilePath, _ inFile: String) -> String? {
         if let fileContents = fileContentsForTextFile(inFile) {
-            do {
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
-                task.arguments = ["-9", "-n"]
-                let inputPipe = Pipe()
-                let outputPipe = Pipe()
-                task.standardInput = inputPipe
-                task.standardOutput = outputPipe
-                task.standardError = nil
-                try task.run()
-                if let fileContentsAsData = fileContents.data(using: .utf8) {
-                    inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                    inputPipe.fileHandleForWriting.closeFile()
-                    let compressedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    compressedString = String(ipecac: compressedTemplate,
-                                       path.extensionName,
-                                       path.variableName,
-                                       compressedData.base64EncodedString())
-                } else {
-                    throw ""
-                }
-            } catch {
-                fatalError("Failed to use /usr/bin/gzip to compress the requested file")
-            }
-            
-            uncompressedString = String(ipecac: (releaseOnly ? stringTemplateReleaseOnly : stringTemplate),
-                                        path.extensionName,
-                                        path.variableName,
-                                        inFile,
-                                        fileContents)
-            
-            return uncompressedString + "\n\n" + compressedString
+            return processStringAsFile(path, fileContents)
         }
-
         return nil
     }
     
-    private func fileContentsForDataFile(_ inFile: String) -> Data? {
+    private func fileContentsForDataFile(_ inFile: String) -> String? {
         guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
-        return fileData
+        return fileData.base64EncodedString()
     }
     
-    private func processDataFile(_ releaseOnly: Bool, _ path: FilePath, _ inFile: String) -> String? {
-        if let fileData = fileContentsForDataFile(inFile) {
-            return String(ipecac: (releaseOnly ? dataTemplateReleaseOnly : dataTemplate),
-                          path.extensionName,
-                          path.variableName,
-                          inFile,
-                          fileData.base64EncodedString())
-        }
-        return nil
+    private func processDataFile(_ path: FilePath, _ inFile: String) -> String? {
+        return generateFile(path,
+                            inFile,
+                            fileContentsForDataFile(inFile),
+                            nil,
+                            "Data")
     }
     
     private func processPackageSwift(_ pamphletName: String, _ outFile: String) -> Bool {
@@ -648,13 +457,13 @@ public struct PamphletFramework {
         return result
     }
     
-    public func process(_ prefix: String?,
-                        _ extensions: [String],
-                        _ inDirectory: String,
-                        _ outDirectory: String,
-                        _ swiftpm: Bool,
-                        _ clean: Bool,
-                        _ releaseOnly: Bool) {
+    public func process(prefix: String?,
+                        extensions: [String],
+                        inDirectory: String,
+                        outDirectory: String,
+                        options: PamphletOptions) {
+        
+        self.options = options
         
         let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
         
@@ -666,7 +475,7 @@ public struct PamphletFramework {
         
         try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
         
-        if swiftpm {
+        if options.contains(.swiftpm) {
             // We assume that the output directory is where we want the Package.swft,
             // so we need to create the Sources/ and Sources/Pamphlet directories
             // and store the generated files in there
@@ -681,7 +490,7 @@ public struct PamphletFramework {
         }
         
         
-        removeOldFiles(inDirectory, generateFilesDirectory, clean)
+        removeOldFiles(inDirectory, generateFilesDirectory, options.contains(.clean))
         
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
@@ -718,7 +527,7 @@ public struct PamphletFramework {
                     
                     if jsonDirectory != nil && fileURL.path.hasPrefix(jsonDirectoryInputPath) == false {
                         if let jsonDirectoryFilePath = jsonDirectoryFilePath, let jsonDirectoryEncoded = try? jsonDirectory?.json() {
-                            if let fileContent = processStringAsFile(releaseOnly, jsonDirectoryFilePath, jsonDirectoryEncoded) {
+                            if let fileContent = processStringAsFile(jsonDirectoryFilePath, jsonDirectoryEncoded) {
                                 try fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
                                 textPages.append(jsonDirectoryFilePath)
                             }
@@ -761,7 +570,7 @@ public struct PamphletFramework {
                             if let fileContent = fileContentsForTextFile(fileURL.path) {
                                 jsonDirectory.files[filePath.fileName] = fileContent
                             } else if let fileContent = fileContentsForDataFile(fileURL.path) {
-                                jsonDirectory.files[filePath.fileName] = fileContent.base64EncodedString()
+                                jsonDirectory.files[filePath.fileName] = fileContent
                             } else {
                                 fatalError("Processing failed for file: \(fileURL.path)")
                             }
@@ -786,10 +595,10 @@ public struct PamphletFramework {
                             }
                             
                             if shouldSkip == false {
-                                if let fileContent = processTextFile(releaseOnly, filePath, fileURL.path) {
+                                if let fileContent = processTextFile(filePath, fileURL.path) {
                                     try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
                                     textPages.append(filePath)
-                                } else if let fileContent = processDataFile(releaseOnly, filePath, fileURL.path) {
+                                } else if let fileContent = processDataFile(filePath, fileURL.path) {
                                     try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
                                     dataPages.append(filePath)
                                 } else {
@@ -811,7 +620,7 @@ public struct PamphletFramework {
             }
         }
         
-        createPamphletFile(pamphletName, releaseOnly, textPages, dataPages, generateFilesDirectory + "/\(pamphletName).swift")
+        createPamphletFile(pamphletName, textPages, dataPages, generateFilesDirectory + "/\(pamphletName).swift")
     }
     
     private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
