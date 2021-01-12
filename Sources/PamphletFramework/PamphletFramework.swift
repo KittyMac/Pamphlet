@@ -308,13 +308,13 @@ public class PamphletFramework {
         
         if uncompressed != nil && options.contains(.includeOriginal) {
             scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
-            
+                        
             if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
                 scratch.append("    #if DEBUG\n")
-                scratch.append("        if let contents = try? Data(contentsOf:URL(fileURLWithPath: \"\(fileOnDisk)\")) {\n")
+                scratch.append("        if let contents = try? \(dataType)(contentsOf:URL(fileURLWithPath: \"\(fileOnDisk)\")) {\n")
                 scratch.append("            return contents\n")
                 scratch.append("        }\n")
-                scratch.append("        return Data()\n")
+                scratch.append("        return \(dataType)()\n")
                 scratch.append("    #else\n")
                 scratch.append("        return uncompressed\n")
                 scratch.append("    #endif\n")
