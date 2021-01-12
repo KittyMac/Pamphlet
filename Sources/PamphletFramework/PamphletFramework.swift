@@ -347,9 +347,9 @@ public class PamphletFramework {
         return scratch
     }
     
-    private func processStringAsFile(_ path: FilePath, _ fileContents: String) -> String? {
+    private func processStringAsFile(_ path: FilePath, _ inFile: String?, _ fileContents: String) -> String? {
         return generateFile(path,
-                            nil,
+                            inFile,
                             fileContents,
                             gzip(fileContents: fileContents),
                             "String")
@@ -357,7 +357,7 @@ public class PamphletFramework {
     
     private func processTextFile(_ path: FilePath, _ inFile: String) -> String? {
         if let fileContents = fileContentsForTextFile(inFile) {
-            return processStringAsFile(path, fileContents)
+            return processStringAsFile(path, inFile, fileContents)
         }
         return nil
     }
@@ -533,7 +533,7 @@ public class PamphletFramework {
                     
                     if jsonDirectory != nil && fileURL.path.hasPrefix(jsonDirectoryInputPath) == false {
                         if let jsonDirectoryFilePath = jsonDirectoryFilePath, let jsonDirectoryEncoded = try? jsonDirectory?.json() {
-                            if let fileContent = processStringAsFile(jsonDirectoryFilePath, jsonDirectoryEncoded) {
+                            if let fileContent = processStringAsFile(jsonDirectoryFilePath, nil, jsonDirectoryEncoded) {
                                 try fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
                                 textPages.append(jsonDirectoryFilePath)
                             }
