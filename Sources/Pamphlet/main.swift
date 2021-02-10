@@ -23,6 +23,9 @@ struct Pamphlet: ParsableCommand {
         @Argument(help: "List of valid file extensions (empty means all)")
         var extensions: [String] = []
         
+        @Flag(help: "Collapse files in directory into a single .swift file")
+        var collapse: Bool = false
+        
         @Flag(help: "Delete existing Pamphlet files in the output directories before processing")
         var clean: Bool = false
         
@@ -62,6 +65,7 @@ struct Pamphlet: ParsableCommand {
             if js { options.insert(.minifyJs) }
             if ts { options.insert(.minifyTs) }
             if json { options.insert(.minifyJson) }
+            if collapse { options.insert(.collapse) }
             
             PamphletFramework().process(prefix: prefix,
                                         extensions: extensions,

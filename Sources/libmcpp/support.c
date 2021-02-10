@@ -2173,14 +2173,6 @@ static char *   at_eof(
             cwarn( format, input, 0L, backsl);
         return  infile->bptr = infile->buffer;
     }
-    if (in_comment) {               /* End of file within a comment */
-        if (mcpp_mode != OLD_PREP && (warn_level & 1))
-            cwarn( format, input, 0L, unterm_com);
-        /* The partial comment line has been already read by        */
-        /* read_a_comment(), so supplement the  next line.          */
-        strcpy( infile->buffer, "*/\n");
-        return  infile->bptr = infile->buffer;
-    }
 
     if (infile->initif < ifptr) {
         IFINFO *    ifp = infile->initif + 1;
