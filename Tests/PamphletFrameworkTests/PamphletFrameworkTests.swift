@@ -30,6 +30,15 @@ final class PamphletTests: XCTestCase {
                                     options:PamphletOptions.default)
     }
     
+    func testProcessCollpased() {
+        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        PamphletFramework().process(prefix: nil,
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
+                                    outDirectory: "/tmp/Pamphlet",
+                                    options:[.clean, .collapse, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson])
+    }
+    
     func testProcessReleaseOnly() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: "Release",
