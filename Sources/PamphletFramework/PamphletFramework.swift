@@ -153,7 +153,7 @@ public struct PamphletOptions: OptionSet {
     public static let minifyJson = PamphletOptions(rawValue:  1 << 8)
     public static let collapse = PamphletOptions(rawValue:  1 << 9)
     
-    public static let `default`: PamphletOptions = [.clean, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson]
+    public static let `default`: PamphletOptions = [.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson]
 }
 
 public class PamphletFramework {
@@ -461,6 +461,10 @@ public class PamphletFramework {
                         if removeAll {
                             try? FileManager.default.removeItem(at: fileURL)
                         }else{
+                            if outPath.contains(".collapsed.swift") {
+                                continue
+                            }
+                            
                             if let outRange = outPath.range(of: fullOutDirectory) {
                                 let inPath = inDirectory + outPath.suffix(from: outRange.upperBound).dropLast(6)
                                 
