@@ -167,12 +167,21 @@ public class PamphletFramework {
     
     
     private func createPamphletFile(_ pamphletName: String,
-                                    _ textPages: [FilePath],
-                                    _ dataPages: [FilePath],
+                                    _ inTextPages: [FilePath],
+                                    _ inDataPages: [FilePath],
                                     _ outFile: String) {
         
         
         var allDirectoryExtensions = ""
+        
+        let textPages = inTextPages.sorted { (lhs, rhs) -> Bool in
+            return lhs.fullPath > rhs.fullPath
+        }
+        
+        let dataPages = inDataPages.sorted { (lhs, rhs) -> Bool in
+            return lhs.fullPath > rhs.fullPath
+        }
+        
         for page in (textPages + dataPages) {
             if page.parts.count > 1 {
                 let template = ####"""
