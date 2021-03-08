@@ -175,11 +175,11 @@ public class PamphletFramework {
         var allDirectoryExtensions = ""
         
         let textPages = inTextPages.sorted { (lhs, rhs) -> Bool in
-            return lhs.fullPath > rhs.fullPath
+            return lhs.fileName < rhs.fileName
         }
         
         let dataPages = inDataPages.sorted { (lhs, rhs) -> Bool in
-            return lhs.fullPath > rhs.fullPath
+            return lhs.fileName < rhs.fileName
         }
         
         for page in (textPages + dataPages) {
@@ -596,77 +596,6 @@ public class PamphletFramework {
                     textPages: textPages,
                     dataPages: dataPages)
         }
-
-        /*
-        for case let fileURL as URL in enumerator {
-            do {
-                let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
-                let pathExtension = (fileURL.path as NSString).pathExtension
-                if (extensions.count == 0 || extensions.contains(pathExtension)) {
-                    let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                    let filePath = FilePath(pamphletName, partialPath)
-                    
-                    let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
-                    let outputFile = "\(outputDirectory)/\(filePath.fileName).swift"
-                    
-                    if jsonDirectory != nil && fileURL.path.hasPrefix(jsonDirectoryInputPath) == false {
-                        if let jsonDirectoryFilePath = jsonDirectoryFilePath, let jsonDirectoryEncoded = try? jsonDirectory?.json() {
-                            if let fileContent = processStringAsFile(jsonDirectoryFilePath, nil, jsonDirectoryEncoded) {
-                                try fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
-                                textPages.append(jsonDirectoryFilePath)
-                            }
-                        }
-                        
-                        jsonDirectory = nil
-                        jsonDirectoryInputPath = ""
-                        jsonDirectoryOutputPath = ""
-                        jsonDirectoryFilePath = nil
-                        //print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                    }
-                    
-                    //print("\(fileURL.path)")
-                    
-                        try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-                        
-                        var shouldSkip = false
-                        if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                            
-                            // We need to check the main source output file, but also any files which are #include to this one
-                            // and any and all files #included from the dependencies
-                            shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                            if !shouldSkip {
-                                print("DATE CHECK FAILED: \(fileURL.path)")
-                            }
-                            
-                            // also check against the modification date of pamphlet itself
-                            if shouldSkip {
-                                shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                            }
-                        }
-                        
-                        if shouldSkip == false {
-                            if let fileContent = processTextFile(filePath, fileURL.path) {
-                                try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                                textPages.append(filePath)
-                            } else if let fileContent = processDataFile(filePath, fileURL.path) {
-                                try fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                                dataPages.append(filePath)
-                            } else {
-                                fatalError("Processing failed for file: \(fileURL.path)")
-                            }
-                        } else {
-                            // Even if we skip, we still need to add to the textPages and dataPages...
-                            if let _ = try? String(contentsOfFile: fileURL.path) {
-                                textPages.append(filePath)
-                            } else {
-                                dataPages.append(filePath)
-                            }
-                        }
-                }
-            } catch {
-                
-            }
-        }*/
         
         createPamphletFile(pamphletName, textPages.array, dataPages.array, generateFilesDirectory + "/\(pamphletName).swift")
     }
