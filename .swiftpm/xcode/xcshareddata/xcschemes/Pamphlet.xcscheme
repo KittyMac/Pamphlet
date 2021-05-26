@@ -77,6 +77,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "--clean"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--collapse"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
