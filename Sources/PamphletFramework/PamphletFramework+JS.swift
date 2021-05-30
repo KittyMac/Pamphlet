@@ -5,6 +5,7 @@ import libmcpp
 extension PamphletFramework {
     func minifyJs(inFile: String, fileContents: inout String) {
         if options.contains(.minifyJs) {
+            guard inFile.hasSuffix(".min.js") == false else { return }
             if (inFile.hasSuffix(".js") || inFile.hasSuffix(".ts")) &&
                 FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
                 // If this is a javascript file and closure-compiler is installed
@@ -23,16 +24,17 @@ extension PamphletFramework {
                             inputPipe.fileHandleForWriting.write(fileContentsAsData)
                             inputPipe.fileHandleForWriting.closeFile()
                         }
-                        let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                        let minifiedErrors = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                        
-                        if let minifiedErrorsString = String(data: minifiedErrors, encoding: .utf8),
-                            minifiedErrorsString.contains("ERROR") ||
-                            minifiedErrorsString.contains("WARNING") {
-                            print("closure-compiler results for \(inFile)")
-                            print(minifiedErrorsString)
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let minifiedErrors = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                            if let minifiedErrorsString = String(data: minifiedErrors, encoding: .utf8),
+                                minifiedErrorsString.contains("ERROR") ||
+                                minifiedErrorsString.contains("WARNING") {
+                                print("closure-compiler results for \(inFile)")
+                                print(minifiedErrorsString)
+                            }
                         }
                         
+                        let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                         fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
                     } else {
                         throw ""
