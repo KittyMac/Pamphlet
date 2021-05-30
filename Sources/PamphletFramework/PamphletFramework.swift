@@ -296,7 +296,9 @@ public class PamphletFramework {
                 free(cPtr)
             }
         } else {
-            print("warning: \(inFile) is missing PAMPHLET_PREPROCESSOR")
+            if fileContents.contains("#define") || fileContents.contains("#if") {
+                print("warning: \(inFile) is missing PAMPHLET_PREPROCESSOR")
+            }
         }
         
         minifyHtml(inFile: inFile, fileContents: &fileContents)
