@@ -26,5 +26,6 @@ release: build
 	cp .build/release/pamphlet ./bin/pamphlet
 
 install: build
-	cp .build/release/pamphlet /usr/local/bin/pamphlet
+	-cp .build/release/pamphlet /opt/homebrew/bin/pamphlet
+	-cp .build/release/pamphlet /usr/local/bin/pamphlet
 	cp .build/release/pamphlet ./bin/pamphlet
