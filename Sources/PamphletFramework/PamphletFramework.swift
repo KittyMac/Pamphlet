@@ -326,7 +326,17 @@ public class PamphletFramework {
         
         if uncompressed != nil && options.contains(.includeOriginal) {
             scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
-                        
+            
+            let possiblePaths = [
+                "/usr/local/bin/pamphlet",
+                "/opt/homebrew/bin/pamphlet"
+            ]
+            
+            var pamphletPath = ""
+            for path in possiblePaths where FileManager.default.fileExists(atPath: path) {
+                pamphletPath = path
+            }
+            
             if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
                 scratch.append("    #if DEBUG\n")
                 scratch.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
@@ -336,7 +346,7 @@ public class PamphletFramework {
                     scratch.append("            if contents.hasPrefix(\"#define PAMPHLET_PREPROCESSOR\") {\n")
                     scratch.append("                do {\n")
                     scratch.append("                    let task = Process()\n")
-                    scratch.append("                    task.executableURL = URL(fileURLWithPath: \"/usr/local/bin/pamphlet\")\n")
+                    scratch.append("                    task.executableURL = URL(fileURLWithPath: \"\(pamphletPath)\")\n")
                     scratch.append("                    task.arguments = [\"preprocess\", fileOnDiskPath]\n")
                     scratch.append("                    let outputPipe = Pipe()\n")
                     scratch.append("                    task.standardOutput = outputPipe\n")
@@ -345,7 +355,7 @@ public class PamphletFramework {
                     scratch.append("                    let output = String(decoding: outputData, as: UTF8.self)\n")
                     scratch.append("                    return output\n")
                     scratch.append("                } catch {\n")
-                    scratch.append("                    return \"Failed to use /usr/local/bin/pamphlet to preprocess the requested file\"\n")
+                    scratch.append("                    return \"Failed to use \(pamphletPath) to preprocess the requested file\"\n")
                     scratch.append("                }\n")
                     scratch.append("            }\n")
                 }
