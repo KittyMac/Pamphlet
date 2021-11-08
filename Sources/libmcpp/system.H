@@ -259,7 +259,7 @@ typedef long            expr_t;
  */
 
 #ifndef IDMAX
-#define IDMAX               0x400
+#define IDMAX               65536
 #endif
 #ifndef NMACPARS
 #define NMACPARS            0xFF

@@ -662,6 +662,8 @@ public class PamphletFramework {
             }
             if let jsonDirectoryEncoded = try? jsonDirectory.json() {
                 let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + directoryPartialPath).deletingLastPathComponent().path
+                try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+
                 let jsonDirectoryOutputPath = "\(outputDirectory)/\(directoryFilePath.fileName).swift"
                 if let fileContent = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, true) {
                     try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)

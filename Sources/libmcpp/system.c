@@ -43,6 +43,8 @@
 #include    "internal.H"
 #endif
 
+#include "b64.h"
+
 #if     HOST_SYS_FAMILY == SYS_UNIX
 #include    "unistd.h"              /* For getcwd(), readlink() */
 #elif   HOST_COMPILER == MSC || HOST_COMPILER == LCC
@@ -3497,6 +3499,51 @@ search:
 
     if (! include_opt)
         sharp( NULL, 0);    /* Print includer's line num and fname  */
+    
+    
+    // Is this an alternative file (ie is it a image file we're going to base64 encode)?
+    // If so, create the alt file next to it and include that instead
+    
+    int extensionIdx = strlen(filename) - 4;
+    if (strncmp(filename + extensionIdx, ".png", 4) == 0 ||
+        strncmp(filename + extensionIdx, ".jpg", 4) == 0) {
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        
+        char * raw = xmalloc(size + 1);
+        fread(raw, 1, size, fp);
+        
+        fseek(fp, 0, SEEK_SET);
+        
+        char * encoded = b64_encode ((const unsigned char *)raw, size);
+        
+        fclose(fp);
+        
+        char newfilename[ PATHMAX + 1 ] = {0};
+        
+        snprintf(newfilename, PATHMAX, "%s.base64", filename);
+        
+        fp = fopen(newfilename, "wb");
+        if (fp != NULL) {
+            char variable_name[ PATHMAX + 1 ] = {0};
+            strncpy(variable_name, basename((char *)filename), PATHMAX);
+            for (int i = 0; i < PATHMAX; i++) {
+                if (variable_name[i] == 0) {
+                    break;
+                }
+                if (isalnum(variable_name[i]) == 0) {
+                    variable_name[i] = '_';
+                }
+            }
+            fprintf(fp, "let %s = \"%s\"", variable_name, encoded);
+            fclose(fp);
+        }
+        
+        return open_file(dirp, src_dir, newfilename, local, include_opt, sys_frame);
+    }
+    
+    
     add_file( fp, src_dir, filename, fullname, include_opt);
     /* Add file-info to the linked list.  'infile' has been just renewed    */
     /*
