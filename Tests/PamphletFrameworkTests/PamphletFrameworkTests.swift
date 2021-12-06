@@ -4,6 +4,16 @@ import PamphletFramework
 
 final class PamphletTests: XCTestCase {
     
+    func testProcessResourcesKotlin() {
+        var options: PamphletOptions = [.includeGzip, .kotlin]
+        options.kotlinPackage = "com.receiptpalapp.scrapeframework"
+        PamphletFramework().process(prefix: "",
+                                    extensions: [],
+                                    inDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal_iOS/receiptpal_amazon/swift/ScrapeFramework/Resources",
+                                    outDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal_iOS/receiptpal_amazon/kotlin/ScrapeFramework/ScrapeFramework/src/main/java/com/receiptpalapp/scrapeframework/pamphlet",
+                                    options: options)
+    }
+    
     /*
     func testProcessSOPedia() {
         PamphletFramework().process(prefix: "SOPedia",
@@ -29,6 +39,15 @@ final class PamphletTests: XCTestCase {
                                     inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
                                     outDirectory: "/tmp/Pamphlet",
                                     options:PamphletOptions.default)
+    }
+    
+    func testProcessKotlin() {
+        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        PamphletFramework().process(prefix: nil,
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test",
+                                    outDirectory: "/tmp/Pamphlet",
+                                    options:[.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson, .kotlin])
     }
     
     func testProcessCollpased() {

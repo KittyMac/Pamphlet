@@ -9,7 +9,7 @@ struct Pamphlet: ParsableCommand {
         defaultSubcommand: Generate.self)
     
     struct Generate: ParsableCommand {
-        static var configuration = CommandConfiguration(abstract: "Generate Swift code from file resources")
+        static var configuration = CommandConfiguration(abstract: "Generate Swift (or Kotlin) code from file resources")
         
         @Option(help: "Prefix to prepend to Pamphlet class name")
         var prefix: String?
@@ -25,6 +25,12 @@ struct Pamphlet: ParsableCommand {
         
         @Flag(help: "Collapse files in directory into a single .swift file")
         var collapse: Bool = false
+        
+        @Flag(help: "Generate Kotlin code instead of Swift code")
+        var kotlin: Bool = false
+        
+        @Option(help: "Package path for Kotlin code generation (ie com.app.main)")
+        var kotlinPackage: String?
         
         @Flag(help: "Delete existing Pamphlet files in the output directories before processing")
         var clean: Bool = false
@@ -66,6 +72,8 @@ struct Pamphlet: ParsableCommand {
             if ts { options.insert(.minifyTs) }
             if json { options.insert(.minifyJson) }
             if collapse { options.insert(.collapse) }
+            if kotlin { options.insert(.kotlin) }
+            if let kotlinPackage = kotlinPackage { options.kotlinPackage = kotlinPackage }
             
             PamphletFramework().process(prefix: prefix,
                                         extensions: extensions,
