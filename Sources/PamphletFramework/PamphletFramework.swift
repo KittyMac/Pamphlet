@@ -313,7 +313,7 @@ public class PamphletFramework {
         let templateReleaseOnlyKotlin = """
         {?}
         
-        class \(pamphletName) {
+        object \(pamphletName) {
             fun getAsString(member: String): String? {
                 return when (member) {
         {?}
