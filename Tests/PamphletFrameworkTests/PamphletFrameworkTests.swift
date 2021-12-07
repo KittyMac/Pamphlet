@@ -3,17 +3,7 @@ import XCTest
 import PamphletFramework
 
 final class PamphletTests: XCTestCase {
-    
-    func testProcessResourcesKotlin() {
-        var options: PamphletOptions = [.includeGzip, .kotlin]
-        options.kotlinPackage = "com.receiptpalapp.scrapeframework"
-        PamphletFramework().process(prefix: "",
-                                    extensions: [],
-                                    inDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal_iOS/receiptpal_amazon/swift/ScrapeFramework/Resources",
-                                    outDirectory: "/Volumes/Development/Development/smallplanet/planetios/npd_ReceiptPal_iOS/receiptpal_amazon/kotlin/ScrapeFramework/ScrapeFramework/src/main/java/com/receiptpalapp/scrapeframework/pamphlet",
-                                    options: options)
-    }
-    
+        
     /*
     func testProcessSOPedia() {
         PamphletFramework().process(prefix: "SOPedia",

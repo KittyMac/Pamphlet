@@ -211,9 +211,7 @@ public class PamphletFramework {
         // ------------- Swift -------------
         
         let templateSwift = """
-        import Foundation
-        
-        // swiftlint:disable all
+        {?}
         
         public enum \(pamphletName) {
             public static func get(string member: String) -> String? {
@@ -246,9 +244,7 @@ public class PamphletFramework {
         """
         
         let templateReleaseOnlySwift = """
-        import Foundation
-        
-        // swiftlint:disable all
+        {?}
         
         public enum \(pamphletName) {
             public static func get(string member: String) -> String? {
@@ -336,15 +332,16 @@ public class PamphletFramework {
         {?}
         """
         
-        var kotlinHeader = ""
+        var fileHeader = "import Foundation\n\n// swiftlint:disable all\n\n"
         var template = templateSwift
         var templateReleaseOnly = templateReleaseOnlySwift
         if options.contains(.kotlin) {
             template = templateKotlin
             templateReleaseOnly = templateReleaseOnlyKotlin
             
+            fileHeader = ""
             if let packagePath = options.kotlinPackage {
-                kotlinHeader += "package \(packagePath)\n\n"
+                fileHeader += "package \(packagePath)\n\n"
                 if options.contains(.releaseOnly) == false {
                     //kotlinHeader += "import \(packagePath).BuildConfig\n"
                 }
@@ -374,7 +371,7 @@ public class PamphletFramework {
         }.joined(separator: "\n")
         do {
             let swift = String(ipecac: (options.contains(.releaseOnly) ? templateReleaseOnly : template),
-                               kotlinHeader,
+                               fileHeader,
                                textPagesCode,
                                compressedPagesCode,
                                dataPagesCode,
@@ -828,7 +825,7 @@ public class PamphletFramework {
                     // and any and all files #included from the dependencies
                     shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
                     if !shouldSkip {
-                        print("DATE CHECK FAILED: \(fileURL.path)")
+                        //print("DATE CHECK FAILED: \(fileURL.path)")
                     }
                     // also check against the modification date of pamphlet itself
                     if shouldSkip {
@@ -898,7 +895,7 @@ public class PamphletFramework {
                 // and any and all files #included from the dependencies
                 shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
                 if !shouldSkip {
-                    print("DATE CHECK FAILED: \(fileURL.path)")
+                    //print("DATE CHECK FAILED: \(fileURL.path)")
                 }
                 // also check against the modification date of pamphlet itself
                 if shouldSkip {
