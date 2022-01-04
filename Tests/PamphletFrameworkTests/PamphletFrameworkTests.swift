@@ -71,6 +71,13 @@ final class PamphletTests: XCTestCase {
         XCTAssertEqual(result, "\"'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'\"\n")
     }
     
+    func testPreprocess2() {
+        
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2.html")
+        
+        XCTAssertEqual(result, "\"Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit,\nsed do eiusmod tempor incididunt\nut labore et dolore magna aliqua.\"\n")
+    }
+    
     func testNotAValidPreprocessingToken() {
         
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2.js")

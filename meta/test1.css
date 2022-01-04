@@ -1,6 +1,9 @@
 #define PAMPHLET_PREPROCESSOR
 #define DIALOG_BACKGROUND() border-image-slice: 22 fill;
+#macro DIALOG_MACRO2()
+border-image-slice: 22 fill;
+#endmacro
 
 #title {
-    DIALOG_BACKGROUND()
+    DIALOG_MACRO2()
 }

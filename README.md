@@ -166,7 +166,10 @@ The preprocessed file is then stored in the generated Swift code.
 
 For **DEBUG** builds, Pamphet dynamically loaded content relies on the pamphlet existing on the development system at ```/usr/local/bin/pamphlet``` or .  When the resource is requested, its contents will be preprocessed using the CLI tool like this ```pamphlet preprocess /path/to/index.html```.
 
-**NOTE: Since pamphlet preprocessing is meant to be used with any text resource (and not just C/C++ source code), the preprocessor has been modified to process all string and character literals. This allows you to put macros in strings and have them processed.**
+### Differences from standard C Preprocessor
+
+#### Macros are processed inside of strings
+Since pamphlet preprocessing is meant to be used with any text resource (and not just C/C++ source code), the preprocessor has been modified to process all string and character literals. This allows you to put macros in strings and have them processed.
 
 **Example**
 
@@ -180,6 +183,32 @@ Results in:
 
 ```
 "'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'"
+```
+
+#### #macro / #endmacro
+Multi-line #defines are annoying to use due to the **trailing backslash (\\)** required. Pamphlet adds the #macro and #endmacro pairing to allow for multi-line definitions which do not require such escaping.
+
+**Example**
+
+```
+#define PAMPHLET_PREPROCESSOR
+#macro MULTILINE_MACRO()
+Lorem ipsum dolor sit amet,
+consectetur adipiscing elit,
+sed do eiusmod tempor incididunt
+ut labore et dolore magna aliqua. 
+#endmacro
+"MULTILINE_MACRO()"
+
+```
+
+Results in:
+
+```
+"Lorem ipsum dolor sit amet,
+consectetur adipiscing elit,
+sed do eiusmod tempor incididunt
+ut labore et dolore magna aliqua."
 ```
 
 ## Additional Processing

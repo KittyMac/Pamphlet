@@ -30,5 +30,5 @@ char* b64_buf_realloc(unsigned char* ptr, size_t size)
 		return buf;
 	}
 
-	return ptr;
+	return (char *)ptr;
 }
