@@ -401,7 +401,7 @@ extern void     un_predefine( int clearall);
 /* directive.c  */
 extern void     directive( void);
                 /* Process #directive line      */
-extern DEFBUF * do_define( int ignore_redef, int predefine);
+extern DEFBUF * do_define( int ignore_redef, int predefine, int ismacro);
                 /* Do #define directive         */
 extern DEFBUF * look_id( const char * name);
                 /* Look for a #define'd thing   */

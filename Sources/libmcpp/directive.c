@@ -42,7 +42,6 @@
 #include    "internal.H"
 #endif
 
-static DEFBUF * do_macro();
                 /* #macro      */
 static int      do_if( int hash, const char * directive_name);
                 /* #if, #elif, #ifdef, #ifndef      */
@@ -310,11 +309,11 @@ ifdo:
 
             
     case L_macro:
-        do_macro();
+        do_define( FALSE, 0, TRUE);
         break;
             
     case L_define:
-        do_define( FALSE, 0);
+        do_define( FALSE, 0, FALSE);
         break;
 
     case L_undef:
@@ -660,7 +659,8 @@ static int      gcc2_va_arg;        /* GCC2-spec variadic macro     */
 
 DEFBUF *    do_define(
     int     ignore_redef,       /* Do not redefine   */
-    int     predefine           /* Predefine compiler-specific name */
+    int     predefine,           /* Predefine compiler-specific name */
+    int     ismacro             /* Predefine compiler-specific name */
     /*
      * Note: The value of 'predefine' should be one of 0, DEF_NOARGS_PREDEF
      *      or DEF_NOARGS_PREDEF_OLD, the other values cause errors.
@@ -778,7 +778,7 @@ DEFBUF *    do_define(
         in_define = FALSE;
         return  NULL;                       /* Syntax error         */
     }
-    if (get_repl( macroname, FALSE) == FALSE) {    /* Get replacement text */
+    if (get_repl( macroname, ismacro) == FALSE) {    /* Get replacement text */
         in_define = FALSE;
         return  NULL;                       /* Syntax error         */
     }
@@ -808,150 +808,21 @@ DEFBUF *    do_define(
             return  defp;
         }
     }                                   /* Else new or re-definition*/
+    
+    if (ismacro) {
+        if (nargs == DEF_NOARGS ||
+            nargs == DEF_NOARGS_STANDARD ||
+            nargs == DEF_NOARGS_PREDEF ||
+            nargs == DEF_NOARGS_DYNAMIC) {
+            cerror("\"%s\" macros must be in the form of NAME(PARAMS)", identifier, 0L, NULL);   /* _E_  */
+            return  NULL;
+        }
+    }
+    
     defp = install_macro( macroname, nargs, work_buf, repl_list, prevp, cmp
             , predefine);
     if ((mcpp_debug & MACRO_CALL) && src_line) {
                                     /* Get location on source file  */        
-        LINE_COL    s_line_col, e_line_col;
-        s_line_col.line = src_line;
-        s_line_col.col = def_start;
-        get_src_location( & s_line_col);
-                            /* Convert to pre-line-splicing data    */
-        e_line_col.line = src_line;
-        e_line_col.col = def_end;
-        get_src_location( & e_line_col);
-        /* Putout the macro definition information embedded in comment  */
-        mcpp_fprintf( OUT, "/*m%s %ld:%d-%ld:%d*/\n", defp->name
-                , s_line_col.line, s_line_col.col
-                , e_line_col.line, e_line_col.col);
-        wrong_line = TRUE;                      /* Need #line later */
-    }
-    if (mcpp_mode == STD && cplus_val && id_operator( macroname)
-            && (warn_level & 1))
-        /* These are operators, not identifiers, in C++98   */
-        cwarn( "\"%s\" is defined as macro", macroname      /* _W1_ */
-                , 0L, NULL);
-    return  defp;
-}
-
-static DEFBUF * do_macro()
-/*
- * Process an #macro / #endmacro pair.  #macro is just like #define MACRO()
- * but allows it to stretch across multiple lines without requiring trailing \
- */
-{
-    const char * const  predef = "\"%s\" shouldn't be redefined";   /* _E_  */
-    char    repl_list[ NMACWORK + IDMAX];   /* Replacement text     */
-    char    macroname[ IDMAX + 1];  /* Name of the macro defining   */
-    DEFBUF *    defp;               /* -> Old definition            */
-    DEFBUF **   prevp;      /* -> Pointer to previous def in list   */
-    int     c;
-    int     redefined;                      /* TRUE if redefined    */
-    int     dnargs = 0;                     /* defp->nargs          */
-    int     cmp;                    /* Result of name comparison    */
-    size_t  def_start, def_end;     /* Column of macro definition   */
-
-    repl_base = repl_list;
-    repl_end = & repl_list[ NMACWORK];
-    c = skip_ws();
-    if ((mcpp_debug & MACRO_CALL) && src_line)      /* Start of definition  */
-        def_start = infile->bptr - infile->buffer - 1;
-    if (c == '\n') {
-        cerror( no_ident, NULL, 0L, NULL);
-        unget_ch();
-        return  NULL;
-    } else if (scan_token( c, (workp = work_buf, &workp), work_end) != NAM) {
-        cerror( not_ident, work_buf, 0L, NULL);
-        return  NULL;
-    } else {
-        prevp = look_prev( identifier, &cmp);
-                /* Find place in the macro list to insert the definition    */
-        defp = *prevp;
-        if (standard) {
-            if (cmp || defp->push) {    /* Not known or 'pushed' macro      */
-                if (str_eq( identifier, "defined")
-                        || ((stdc_val || cplus_val)
-                            &&  str_eq( identifier, "__VA_ARGS__"))) {
-                    cerror(
-            "\"%s\" shouldn't be defined", identifier, 0L, NULL);   /* _E_  */
-                    return  NULL;
-                }
-                redefined = FALSE;          /* Quite new definition */
-            } else {                        /* It's known:          */
-                dnargs = (defp->nargs == DEF_NOARGS_STANDARD
-                            || defp->nargs == DEF_NOARGS_PREDEF
-                            || defp->nargs == DEF_NOARGS_PREDEF_OLD)
-                        ? DEF_NOARGS : defp->nargs;
-                if (dnargs <= DEF_NOARGS_DYNAMIC    /* __FILE__ and such    */
-                        || dnargs == DEF_PRAGMA /* _Pragma() pseudo-macro   */
-                        ) {
-                    cerror( predef, identifier, 0L, NULL);
-                    return  NULL;
-                } else {
-                    redefined = TRUE;       /* Remember this fact   */
-                }
-            }
-        } else {
-            if (cmp) {
-                redefined = FALSE;          /* Quite new definition */
-            } else {                        /* It's known:          */
-                dnargs = (defp->nargs == DEF_NOARGS_STANDARD
-                            || defp->nargs == DEF_NOARGS_PREDEF
-                            || defp->nargs == DEF_NOARGS_PREDEF_OLD)
-                        ? DEF_NOARGS : defp->nargs;
-                redefined = TRUE;
-            }
-        }
-    }
-    strcpy( macroname, identifier);         /* Remember the name    */
-
-    in_define = TRUE;                       /* Recognize '#', '##'  */
-    if (get_parm() == FALSE) {              /* Get parameter list   */
-        in_define = FALSE;
-        return  NULL;                       /* Syntax error         */
-    }
-    if (get_repl( macroname, TRUE) == FALSE) {    /* Get replacement text */
-        in_define = FALSE;
-        return  NULL;                       /* Syntax error         */
-    }
-    if ((mcpp_debug & MACRO_CALL) && src_line) {
-                                    /* Remember location on source  */
-        char *  cp;
-        cp = infile->bptr - 1;              /* Before '\n'          */
-        while (char_type[ *cp & UCHARMAX] & HSP)
-            cp--;                           /* Trailing space       */
-        cp++;                       /* Just after the last token    */
-        def_end = cp - infile->buffer;      /* End of definition    */
-    }
-
-    in_define = FALSE;
-    if (redefined) {
-        if (dnargs != nargs || ! str_eq( defp->repl, repl_list)
-                || (mcpp_mode == STD && ! str_eq( defp->parmnames, work_buf))
-                ) {             /* Warn if differently redefined    */
-            if (warn_level & 1) {
-                cwarn(
-            "The macro is redefined", NULL, 0L, NULL);      /* _W1_ */
-                if (! option_flags.no_source_line)
-                    dump_a_def( "    previously macro", defp, FALSE, TRUE
-                            , fp_err);
-            }
-        } else {                        /* Identical redefinition   */
-            return  defp;
-        }
-    }                                   /* Else new or re-definition*/
-    
-    if (nargs == DEF_NOARGS ||
-        nargs == DEF_NOARGS_STANDARD ||
-        nargs == DEF_NOARGS_PREDEF ||
-        nargs == DEF_NOARGS_DYNAMIC) {
-        cerror("\"%s\" macros must be in the form of NAME(PARAMS)", identifier, 0L, NULL);   /* _E_  */
-        return  NULL;
-    }
-    
-    defp = install_macro( macroname, nargs, work_buf, repl_list, prevp, cmp, 0);
-    if ((mcpp_debug & MACRO_CALL) && src_line) {
-                                    /* Get location on source file  */
         LINE_COL    s_line_col, e_line_col;
         s_line_col.line = src_line;
         s_line_col.col = def_start;
@@ -1292,8 +1163,15 @@ static int  get_repl(
         }
     }
 
-    while (repl_base < repl_cur
-            && (*(repl_cur - 1) == ' ' || *(repl_cur - 1) == '\t'))
+    char *  repl_ptr = repl_base;
+    while (repl_ptr < repl_cur) {
+        if (*repl_ptr == '\n') {
+            *repl_ptr = DEF_MAGIC;
+        }
+        repl_ptr++;
+    }
+    
+    while (repl_base < repl_cur && (*(repl_cur - 1) == ' ' || *(repl_cur - 1) == '\t'))
         repl_cur--;                     /* Remove trailing spaces   */
     *repl_cur = EOS;                        /* Terminate work       */
 

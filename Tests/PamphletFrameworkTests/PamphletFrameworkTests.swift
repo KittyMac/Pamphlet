@@ -73,9 +73,25 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocess2() {
         
-        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2.html")
+        let resultA = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2.html")
+        XCTAssertEqual(resultA, "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\"\n")
         
-        XCTAssertEqual(result, "\"Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit,\nsed do eiusmod tempor incididunt\nut labore et dolore magna aliqua.\"\n")
+        let resultB = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test2b.html")
+        XCTAssertEqual(resultB, "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\"\n")
+    }
+    
+    func testPreprocess3() {
+        
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test3.html")
+        
+        XCTAssertEqual(result, "{ command: 'external', progress: progressCurrent, provider: 'Some', storeId: 11, state: \"STATE_SOME\", tag: `Some ${11}` }\n")
+    }
+    
+    func testPreprocess4() {
+        
+        let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test4.html")
+        
+        XCTAssertEqual(result, "{ command: 'external', progress: progressCurrent, provider: 'Some', storeId: 11, state: \"STATE_SOME\", tag: `Some ${11}` }\n")
     }
     
     func testNotAValidPreprocessingToken() {

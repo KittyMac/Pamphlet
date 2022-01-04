@@ -1731,7 +1731,7 @@ static void def_a_macro(
     *cp = i;
     /* Now, save the definition.    */
     unget_string( definition, NULL);
-    if (do_define( FALSE, 0) == NULL)       /* Define a macro       */
+    if (do_define( FALSE, 0, FALSE) == NULL)       /* Define a macro       */
         usage( opt);
     *cp = EOS;
     if (str_eq( definition, "__STDC__")) {
@@ -4729,7 +4729,7 @@ static void do_preprocessed( void)
         cur_fname = set_fname( dir + strlen( *inc_dirp));
         strcpy( comment - 2, "\n");         /* Remove the comment   */
         unget_string( lbuf + 8, NULL);
-        do_define( FALSE, 0);
+        do_define( FALSE, 0, FALSE);
         get_ch();                               /* '\n' */
         get_ch();                               /* Clear the "file" */
         unget_ch();                             /* infile == file   */

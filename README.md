@@ -180,35 +180,43 @@ Since pamphlet preprocessing is meant to be used with any text resource (and not
 ```
 
 Results in:
-
+	
 ```
 "'Hello dog!''Hello cat!''Hello pineapple!''Hello world!'"
 ```
 
 #### #macro / #endmacro
-Multi-line #defines are annoying to use due to the **trailing backslash (\\)** required. Pamphlet adds the #macro and #endmacro pairing to allow for multi-line definitions which do not require such escaping.
+Multi-line #defines are annoying to use due to the **trailing backslash (\\)** required. Pamphlet adds the #macro and #endmacro pairing to allow for multi-line definitions which do not require such escaping. Note that the lines are collapsed, just as if you had used #define with **trailing backslash (\\)**.
 
 **Example**
 
 ```
 #define PAMPHLET_PREPROCESSOR
+#define MULTILINE_MACRO()            \
+Lorem ipsum dolor sit amet,          \
+consectetur adipiscing elit,         \
+sed do eiusmod tempor incididunt     \
+ut labore et dolore magna aliqua.    \
+"MULTILINE_MACRO()"
+
+```
+
+```
+#define PAMPHLET_PREPROCESSOR
 #macro MULTILINE_MACRO()
-Lorem ipsum dolor sit amet,
-consectetur adipiscing elit,
-sed do eiusmod tempor incididunt
+Lorem ipsum dolor sit amet, 
+consectetur adipiscing elit, 
+sed do eiusmod tempor incididunt 
 ut labore et dolore magna aliqua. 
 #endmacro
 "MULTILINE_MACRO()"
 
 ```
 
-Results in:
+Both result in:
 
 ```
-"Lorem ipsum dolor sit amet,
-consectetur adipiscing elit,
-sed do eiusmod tempor incididunt
-ut labore et dolore magna aliqua."
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 ```
 
 ## Additional Processing
