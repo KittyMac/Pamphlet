@@ -1073,7 +1073,6 @@ static int  get_repl(
                     
                     if (macroDidEnd == TRUE) {
                         repl_cur--;
-                        repl_cur--;
                         break;
                     }
                 }
@@ -1166,7 +1165,7 @@ static int  get_repl(
     char *  repl_ptr = repl_base;
     while (repl_ptr < repl_cur) {
         if (*repl_ptr == '\n') {
-            *repl_ptr = DEF_MAGIC;
+            *repl_ptr = ' ';
         }
         repl_ptr++;
     }
