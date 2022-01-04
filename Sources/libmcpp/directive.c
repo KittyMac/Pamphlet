@@ -393,7 +393,7 @@ ifdo:
          *          #endif  foo
          */
             ;
-        } else if (skip_ws() != '\n') {
+        } else if (infile != NULL && skip_ws() != '\n') {
 #if COMPILER == GNUC
             if (standard && hash != L_endif)
 #else
@@ -1020,7 +1020,7 @@ static int  get_repl(
     
     // skip leading new line
     int macroDidEnd = FALSE;
-    while (macroDidEnd == FALSE) {
+    while (c != CHAR_EOF && macroDidEnd == FALSE) {
         if (c == '\n' && ismacro == FALSE) {
             break;
         }
@@ -1161,11 +1161,16 @@ static int  get_repl(
                 ;                   /* Skip excessive spaces        */
         }
     }
+    
+    if (ismacro && macroDidEnd == FALSE && c == CHAR_EOF) {
+        cerror("Unterminated macro", NULL, 0L, NULL);
+        return FALSE;
+    }
 
     char *  repl_ptr = repl_base;
-    while (repl_ptr < repl_cur) {
-        if (*repl_ptr == '\n') {
-            *repl_ptr = ' ';
+    while (repl_ptr < repl_cur - 1) {
+        if (repl_ptr[0] != MAC_PARM && repl_ptr[1] == '\n') {
+            repl_ptr[1] = ' ';
         }
         repl_ptr++;
     }

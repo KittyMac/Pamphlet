@@ -1,0 +1,12 @@
+#define PAMPHLET_PREPROCESSOR
+
+#macro COMMAND1(SOMEID)
+{
+    command: 'external',
+    progress: progressCurrent,
+	provider: 'Some',
+	storeId: SOMEID,
+    tag: `Some ${SOMEID}`
+}
+
+COMMAND1(11)
