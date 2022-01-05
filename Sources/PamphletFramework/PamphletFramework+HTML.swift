@@ -8,7 +8,6 @@ extension PamphletFramework {
             if inFile.hasSuffix(".css") ||
                 inFile.hasSuffix(".html") &&
                 FileManager.default.fileExists(atPath: "/usr/local/bin/htmlcompressor") {
-                // If this is a javascript file and closure-compiler is installed
                 do {
                     let task = Process()
                     task.executableURL = URL(fileURLWithPath: "/usr/local/bin/htmlcompressor")

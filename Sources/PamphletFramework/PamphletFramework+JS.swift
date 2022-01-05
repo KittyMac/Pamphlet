@@ -6,41 +6,33 @@ extension PamphletFramework {
     func minifyJs(inFile: String, fileContents: inout String) {
         if options.contains(.minifyJs) {
             guard inFile.hasSuffix(".min.js") == false else { return }
-            if (inFile.hasSuffix(".js") || inFile.hasSuffix(".ts")) &&
-                FileManager.default.fileExists(atPath: "/usr/local/bin/closure-compiler") {
-                // If this is a javascript file and closure-compiler is installed
+            if (inFile.hasSuffix(".js")) &&
+                FileManager.default.fileExists(atPath: "/usr/local/bin/node") &&
+                FileManager.default.fileExists(atPath: "/usr/local/bin/terser") {
                 do {
                     let task = Process()
-                    task.executableURL = URL(fileURLWithPath: "/usr/local/bin/closure-compiler")
+                    task.executableURL = URL(fileURLWithPath: "/usr/local/bin/node")
                     let inputPipe = Pipe()
                     let outputPipe = Pipe()
-                    let errorPipe = Pipe()
+                    
+                    task.environment = ProcessInfo.processInfo.environment
                     task.standardInput = inputPipe
                     task.standardOutput = outputPipe
-                    task.standardError = errorPipe
+                    task.arguments = ["/usr/local/bin/terser", "--compress", "--mangle"]
+                    
                     try task.run()
                     if let fileContentsAsData = fileContents.data(using: .utf8) {
                         DispatchQueue.global(qos: .userInitiated).async {
                             inputPipe.fileHandleForWriting.write(fileContentsAsData)
                             inputPipe.fileHandleForWriting.closeFile()
                         }
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let minifiedErrors = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                            if let minifiedErrorsString = String(data: minifiedErrors, encoding: .utf8),
-                                minifiedErrorsString.contains("ERROR") ||
-                                minifiedErrorsString.contains("WARNING") {
-                                print("closure-compiler results for \(inFile)")
-                                print(minifiedErrorsString)
-                            }
-                        }
-                        
                         let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                         fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
                     } else {
                         throw ""
                     }
                 } catch {
-                    fatalError("Failed to use /usr/local/bin/closure-compiler to compress the requested file")
+                    fatalError("Failed to use /usr/local/bin/terser to compress the requested file")
                 }
             }
         }

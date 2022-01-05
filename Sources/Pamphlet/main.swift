@@ -50,7 +50,7 @@ struct Pamphlet: ParsableCommand {
         @Flag(inversion: .prefixedEnableDisable, help: "Minify html content (if htmlcompressor found)")
         var html: Bool = true
         
-        @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content (if closure-compiler found)")
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content (if terser found)")
         var js: Bool = true
         
         @Flag(inversion: .prefixedEnableDisable, help: "Compile typescript content (if tsc found)")

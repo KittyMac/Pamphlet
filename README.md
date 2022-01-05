@@ -230,7 +230,7 @@ Pamphlet will perform the following additional pre-processing steps on specific 
 /usr/local/bin/tsc - transpiles individual TypeScript files to JavaScript
 
 **.js** **.ts**  
-/usr/local/bin/closure-compiler - minifies JavaScript
+/usr/local/bin/terser - minifies JavaScript using [terser](https://github.com/terser/terser)
 
 **.json**    
 /usr/local/bin/jj - minifies JSON content using [jj](https://github.com/tidwall/jj)

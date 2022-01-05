@@ -40,7 +40,7 @@ final class PamphletTests: XCTestCase {
                                     options:[.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson, .kotlin])
     }
     
-    func testProcessCollpased() {
+    func testProcessCollapsed() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,
                                     extensions: extensions,
@@ -92,6 +92,14 @@ final class PamphletTests: XCTestCase {
         let result = PamphletFramework().preprocess("/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test4.html")
         
         XCTAssertEqual(result, "{ command: 'external', progress: progressCurrent, provider: 'Some', storeId: 11, state: \"STATE_SOME\", tag: `Some ${11}` }\n")
+    }
+    
+    func testPreprocess5() {
+        // Unterminated macro error
+        let filepath = "/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test5.html"
+        let result = PamphletFramework().preprocess(filepath)
+        
+        XCTAssertEqual(result, try! String(contentsOfFile: filepath))
     }
     
     func testNotAValidPreprocessingToken() {
