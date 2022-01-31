@@ -4,6 +4,15 @@ import PamphletFramework
 
 final class PamphletTests: XCTestCase {
         
+    func testProcessSextant() {
+        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        PamphletFramework().process(prefix: "SOPedia",
+                                    extensions: extensions,
+                                    inDirectory: "/Volumes/Development/Development/chimerasw2/SextantSite/Resources",
+                                    outDirectory: "/Volumes/Development/Development/chimerasw2/SextantSite/Sources/Pamphlet",
+                                    options:[.clean, .collapse, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson])
+    }
+    
     /*
     func testProcessSOPedia() {
         PamphletFramework().process(prefix: "SOPedia",

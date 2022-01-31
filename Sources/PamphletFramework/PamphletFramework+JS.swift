@@ -18,7 +18,7 @@ extension PamphletFramework {
                     task.environment = ProcessInfo.processInfo.environment
                     task.standardInput = inputPipe
                     task.standardOutput = outputPipe
-                    task.arguments = ["/usr/local/bin/terser", "--compress", "--mangle"]
+                    task.arguments = ["/usr/local/bin/terser", "--compress", "--mangle", "--format", "ascii_only=true"]
                     
                     try task.run()
                     if let fileContentsAsData = fileContents.data(using: .utf8) {
