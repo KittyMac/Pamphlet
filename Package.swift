@@ -13,21 +13,21 @@ let package = Package(
 		.library(name: "libmcpp", targets: ["libmcpp"])
     ],
     dependencies: [
-		.package(url: "https://github.com/KittyMac/Ipecac.git", .branch("master")),
+		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.0"),
     ],
     targets: [
         .target(
             name: "Pamphlet",
             dependencies: [
-                "Ipecac",
+                "Hitch",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 "PamphletFramework"
             ]
         ),
         .target(
             name: "PamphletFramework",
-            dependencies: ["Ipecac", "libmcpp"]),
+            dependencies: ["Hitch", "libmcpp"]),
         .target(
             name: "libmcpp"),
         .testTarget(

@@ -2,12 +2,12 @@
   "object": {
     "pins": [
       {
-        "package": "Ipecac",
-        "repositoryURL": "https://github.com/KittyMac/Ipecac.git",
+        "package": "Hitch",
+        "repositoryURL": "https://github.com/KittyMac/Hitch.git",
         "state": {
-          "branch": "master",
-          "revision": "d32093cffcd1c23ace9e6d65f93ae817b1bb0d45",
-          "version": null
+          "branch": null,
+          "revision": "c0b47bc1f1cb4bd2d777ab2be2b58e8df356e1dc",
+          "version": "0.4.8"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
           "branch": null,
-          "revision": "15351c1cd009eba0b6e438bfef55ea9847a8dc4a",
-          "version": "0.3.0"
+          "revision": "6b2aa2748a7881eebb9f84fb10c01293e15b52ca",
+          "version": "0.5.0"
         }
       }
     ]

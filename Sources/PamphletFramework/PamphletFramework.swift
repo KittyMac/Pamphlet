@@ -1,6 +1,6 @@
 import Foundation
-import Ipecac
 import libmcpp
+import Hitch
 
 class JsonDirectory: Codable {
     var files:[String:String] = [:]
@@ -195,15 +195,12 @@ public class PamphletFramework {
         
         for page in (textPages + dataPages) {
             if page.parts.count > 1 {
-                let template = ####"""
-                public extension {?} { enum {?} { } }
-                
-                """####
-                let code = String(ipecac: template,
-                                  page.parentExtensionName,
-                                  page.myStructName)
-                if allDirectoryExtensions.contains(code) == false {
-                    allDirectoryExtensions.append(code)
+                let code = ####"""
+                    public extension {?} { enum {?} { } }
+                    
+                    """#### << [page.parentExtensionName, page.myStructName]
+                if allDirectoryExtensions.contains(code.description) == false {
+                    allDirectoryExtensions.append(code.description)
                 }
             }
         }
@@ -370,13 +367,15 @@ public class PamphletFramework {
             }
         }.joined(separator: "\n")
         do {
-            let swift = String(ipecac: (options.contains(.releaseOnly) ? templateReleaseOnly : template),
-                               fileHeader,
-                               textPagesCode,
-                               compressedPagesCode,
-                               dataPagesCode,
-                               allDirectoryExtensions)
-            try swift.write(toFile: outFile, atomically: true, encoding: .utf8)
+            let template = options.contains(.releaseOnly) ? templateReleaseOnly : template
+            let swift = template << [
+                fileHeader,
+                textPagesCode,
+                compressedPagesCode,
+                dataPagesCode,
+                allDirectoryExtensions
+            ]
+            try swift.description.write(toFile: outFile, atomically: true, encoding: .utf8)
         } catch {
             fatalError("Processing failed for file: \(outFile)")
         }
@@ -504,7 +503,7 @@ public class PamphletFramework {
                 if options.contains(.kotlin) {
                     scratch.append("private val uncompressed\(path.variableName) = \"\n\(uncompressed)\n\"\n")
                 } else {
-                    scratch.append("private let uncompressed\(path.variableName) = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
+                    scratch.append("private let uncompressed\(path.variableName): StaticString = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
                 }
             } else {
                 if options.contains(.kotlin) {

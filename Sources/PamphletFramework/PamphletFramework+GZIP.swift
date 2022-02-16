@@ -1,5 +1,4 @@
 import Foundation
-import Ipecac
 import libmcpp
 
 extension PamphletFramework {
