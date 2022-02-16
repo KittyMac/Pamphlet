@@ -208,22 +208,32 @@ public class PamphletFramework {
         // ------------- Swift -------------
         
         let templateSwift = """
-        {?}
+        {0}
         
         public enum \(pamphletName) {
+            #if DEBUG
             public static func get(string member: String) -> String? {
                 switch member {
-        {?}
+        {1}
                 default: break
                 }
                 return nil
             }
+            #else
+            public static func get(string member: String) -> StaticString? {
+                switch member {
+        {1}
+                default: break
+                }
+                return nil
+            }
+            #endif
             public static func get(gzip member: String) -> Data? {
                 #if DEBUG
                     return nil
                 #else
                     switch member {
-        {?}
+        {2}
                     default: break
                     }
                     return nil
@@ -231,53 +241,63 @@ public class PamphletFramework {
             }
             public static func get(data member: String) -> Data? {
                 switch member {
-        {?}
+        {3}
                 default: break
                 }
                 return nil
             }
         }
-        {?}
+        {4}
         """
         
         let templateReleaseOnlySwift = """
-        {?}
+        {0}
         
         public enum \(pamphletName) {
+            #if DEBUG
             public static func get(string member: String) -> String? {
                 switch member {
-        {?}
+        {1}
                 default: break
                 }
                 return nil
             }
+            #else
+            public static func get(string member: String) -> StaticString? {
+                switch member {
+        {1}
+                default: break
+                }
+                return nil
+            }
+            #endif
             public static func get(gzip member: String) -> Data? {
                 switch member {
-        {?}
+        {2}
                 default: break
                 }
                 return nil
             }
             public static func get(data member: String) -> Data? {
                 switch member {
-        {?}
+        {3}
                 default: break
                 }
                 return nil
             }
         }
-        {?}
+        {4}
         """
         
         // ------------- KOTLIN -------------
         
         let templateKotlin = """
-        {?}
+        {0}
         
         object \(pamphletName) {
             fun getAsString(member: String): String? {
                 return when (member) {
-        {?}
+        {1}
                     else -> null
                 }
             }
@@ -286,47 +306,47 @@ public class PamphletFramework {
                     return null
                 } else {
                     return when (member) {
-        {?}
+        {2}
                         else -> null
                     }
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
                 return when (member) {
-        {?}
+        {3}
                     else -> null
                 }
             }
         }
-        {?}
+        {4}
         """
         
         
         
         let templateReleaseOnlyKotlin = """
-        {?}
+        {0}
         
         object \(pamphletName) {
             fun getAsString(member: String): String? {
                 return when (member) {
-        {?}
+        {1}
                     else -> null
                 }
             }
             fun getAsGzip(member: String): ByteArray? {
                 return when (member) {
-        {?}
+        {2}
                     else -> null
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
                 return when (member) {
-        {?}
+        {3}
                     else -> null
                 }
             }
         }
-        {?}
+        {4}
         """
         
         var fileHeader = "import Foundation\n\n// swiftlint:disable all\n\n"
@@ -432,8 +452,6 @@ public class PamphletFramework {
         }
         
         if uncompressed != nil && options.contains(.includeOriginal) {
-            scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
-            
             let possiblePaths = [
                 "/usr/local/bin/pamphlet",
                 "/opt/homebrew/bin/pamphlet"
@@ -444,8 +462,14 @@ public class PamphletFramework {
                 pamphletPath = path
             }
             
+            var reifiedDataType = dataType
+            if dataType == "String" {
+                reifiedDataType = "StaticString"
+            }
+            
             if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
                 scratch.append("    #if DEBUG\n")
+                scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
                 scratch.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
                 scratch.append("        if let contents = try? \(dataType)(contentsOf:URL(fileURLWithPath: fileOnDiskPath)) {\n")
                 
@@ -470,13 +494,21 @@ public class PamphletFramework {
                 scratch.append("            return contents\n")
                 scratch.append("        }\n")
                 scratch.append("        return \(dataType)()\n")
+                scratch.append("    }\n")
+                
                 scratch.append("    #else\n")
+                scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
                 scratch.append("        return uncompressed\(path.variableName)\n")
+                scratch.append("    }\n")
                 scratch.append("    #endif\n")
+                
             } else {
+                
+                scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
                 scratch.append("        return uncompressed\(path.variableName)\n")
+                scratch.append("    }\n")
             }
-            scratch.append("    }\n")
+            
         }
         
         if compressed != nil && options.contains(.includeGzip) {
