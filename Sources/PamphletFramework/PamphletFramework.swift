@@ -254,15 +254,6 @@ public class PamphletFramework {
         {0}
         
         public enum \(pamphletName) {
-            #if DEBUG
-            public static func get(string member: String) -> String? {
-                switch member {
-        {1}
-                default: break
-                }
-                return nil
-            }
-            #else
             public static func get(string member: String) -> StaticString? {
                 switch member {
         {1}
@@ -270,7 +261,6 @@ public class PamphletFramework {
                 }
                 return nil
             }
-            #endif
             public static func get(gzip member: String) -> Data? {
                 switch member {
         {2}
