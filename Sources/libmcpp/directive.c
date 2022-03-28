@@ -798,11 +798,11 @@ DEFBUF *    do_define(
                 || (mcpp_mode == STD && ! str_eq( defp->parmnames, work_buf))
                 ) {             /* Warn if differently redefined    */
             if (warn_level & 1) {
-                cwarn(
-            "The macro is redefined", NULL, 0L, NULL);      /* _W1_ */
-                if (! option_flags.no_source_line)
-                    dump_a_def( "    previously macro", defp, FALSE, TRUE
-                            , fp_err);
+                //cwarn(
+            //"The macro is redefined", NULL, 0L, NULL);      /* _W1_ */
+                //if (! option_flags.no_source_line)
+                //    dump_a_def( "    previously macro", defp, FALSE, TRUE
+                //            , fp_err);
             }
         } else {                        /* Identical redefinition   */
             return  defp;
