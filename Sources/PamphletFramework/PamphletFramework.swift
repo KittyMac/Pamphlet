@@ -2,6 +2,8 @@ import Foundation
 import libmcpp
 import Hitch
 
+var userBinPath = "/usr/local/bin"
+
 class JsonDirectory: Codable {
     var files:[String:String] = [:]
 }
@@ -159,12 +161,11 @@ public struct PamphletOptions: OptionSet {
     public static let includeGzip = PamphletOptions(rawValue:  1 << 4)
     public static let minifyHtml = PamphletOptions(rawValue:  1 << 5)
     public static let minifyJs = PamphletOptions(rawValue:  1 << 6)
-    public static let minifyTs = PamphletOptions(rawValue:  1 << 7)
-    public static let minifyJson = PamphletOptions(rawValue:  1 << 8)
-    public static let collapse = PamphletOptions(rawValue:  1 << 9)
-    public static let kotlin = PamphletOptions(rawValue:  1 << 10)
+    public static let minifyJson = PamphletOptions(rawValue:  1 << 7)
+    public static let collapse = PamphletOptions(rawValue:  1 << 8)
+    public static let kotlin = PamphletOptions(rawValue:  1 << 9)
     
-    public static let `default`: PamphletOptions = [.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyTs, .minifyJson]
+    public static let `default`: PamphletOptions = [.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson]
 }
 
 public class PamphletFramework {
@@ -172,10 +173,10 @@ public class PamphletFramework {
     var options = PamphletOptions.default
     
     public init() {
-        
+        if FileManager.default.fileExists(atPath: "/opt/homebrew/bin") {
+            userBinPath = "/opt/homebrew/bin"
+        }
     }
-    
-    
     
     private func createPamphletFile(_ pamphletName: String,
                                     _ inTextPages: [FilePath],
@@ -407,7 +408,6 @@ public class PamphletFramework {
         }
         
         minifyHtml(inFile: inFile, fileContents: &fileContents)
-        minifyTs(inFile: inFile, fileContents: &fileContents)
         minifyJs(inFile: inFile, fileContents: &fileContents)
         minifyJson(inFile: inFile, fileContents: &fileContents)
         

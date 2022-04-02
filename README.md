@@ -221,17 +221,20 @@ Both result in:
 
 ## Additional Processing
 
-Pamphlet will perform the following additional pre-processing steps on specific file formats (if the associative tool is found to be installed on the system.)
+Pamphlet will perform the following additional pre-processing steps on specific file formats (if the associative tool is found to be installed on the system in either /usr/local/bin or /opt/homebrew/bin/).
 
 **.css** **.html**  
-/usr/local/bin/htmlcompressor - minifies html and css content
-
-**.ts**  
-/usr/local/bin/tsc - transpiles individual TypeScript files to JavaScript
+htmlcompressor - minifies html and css content  
+```brew install htmlcompressor```
 
 **.js** **.ts**  
-/usr/local/bin/terser - minifies JavaScript using [terser](https://github.com/terser/terser)
+terser - minifies JavaScript using [terser](https://github.com/terser/terser)  
+```
+brew install node
+npm install terser -g
+```
 
 **.json**    
-/usr/local/bin/jj - minifies JSON content using [jj](https://github.com/tidwall/jj)
+jj - minifies JSON content using [jj](https://github.com/tidwall/jj)  
+```brew install tidwall/jj/jj```
 

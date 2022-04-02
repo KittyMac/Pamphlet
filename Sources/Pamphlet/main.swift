@@ -69,7 +69,6 @@ struct Pamphlet: ParsableCommand {
             if gzip { options.insert(.includeGzip) }
             if html { options.insert(.minifyHtml) }
             if js { options.insert(.minifyJs) }
-            if ts { options.insert(.minifyTs) }
             if json { options.insert(.minifyJson) }
             if collapse { options.insert(.collapse) }
             if kotlin { options.insert(.kotlin) }
