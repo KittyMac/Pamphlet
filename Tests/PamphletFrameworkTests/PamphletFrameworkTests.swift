@@ -6,11 +6,11 @@ final class PamphletTests: XCTestCase {
         
     func testProcessSextant() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(prefix: "SOPedia",
+        PamphletFramework().process(prefix: nil,
                                     extensions: extensions,
                                     inDirectory: "/Users/rjbowli/Development/chimerasw/SextantSite/Resources",
                                     outDirectory: "/Users/rjbowli/Development/chimerasw/SextantSite/Sources/Pamphlet",
-                                    options:[.clean, .collapse, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+                                    options:PamphletOptions.default)
     }
     
     func testProcessSOPedia() {

@@ -207,11 +207,14 @@ public class PamphletFramework {
         }
         
         // ------------- Swift -------------
+        let version = git() ?? "v0.0.0"
         
         let templateSwift = """
         {0}
         
         public enum \(pamphletName) {
+            public static let version = "\(version)"
+            
             #if DEBUG
             public static func get(string member: String) -> String? {
                 switch member {
@@ -255,6 +258,8 @@ public class PamphletFramework {
         {0}
         
         public enum \(pamphletName) {
+            public static let version = "\(version)"
+
             public static func get(string member: String) -> StaticString? {
                 switch member {
         {1}
@@ -286,6 +291,8 @@ public class PamphletFramework {
         {0}
         
         object \(pamphletName) {
+            val version = "\(version)"
+        
             fun getAsString(member: String): String? {
                 return when (member) {
         {1}
