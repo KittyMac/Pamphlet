@@ -39,6 +39,11 @@ install: build
 	
 	cp .build/${PROJECTNAME} ./bin/pamphlet
 
+.PHONY: install
+tools: install
+	make -C Tools
+	./bin/pamphlet --prefix=Tools --collapse-all ./Tools/Pamphlet ./Sources/Pamphlet/Tools
+
 docker:
 	-docker buildx create --name local_builder
 	-DOCKER_HOST=tcp://192.168.1.198:2376 docker buildx create --name local_builder --platform linux/amd64 --append

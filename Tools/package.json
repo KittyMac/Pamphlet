@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "rollup": "^2.77.2",
+    "terser": "^5.14.2"
+  }
+}
