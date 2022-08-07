@@ -3,32 +3,15 @@ import XCTest
 import PamphletFramework
 
 final class PamphletTests: XCTestCase {
+    
+    private func path(to: String) -> String {
+        return URL(fileURLWithPath: #file)
+            .deletingLastPathComponent()
+            .appendingPathComponent(to, isDirectory: true)
+            .path
+    }
+    
     /*
-    func testProcessSextant() {
-        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(prefix: nil,
-                                    extensions: extensions,
-                                    inDirectory: "/Users/rjbowli/Development/chimerasw/SextantSite/Resources",
-                                    outDirectory: "/Users/rjbowli/Development/chimerasw/SextantSite/Sources/Pamphlet",
-                                    options:PamphletOptions.default)
-    }
-    
-    func testProcessSOPedia() {
-        PamphletFramework().process(prefix: "SOPedia",
-                                    extensions: [],
-                                    inDirectory: "/Users/rjbowli/Development/chimerasw/SOPedia/Resources",
-                                    outDirectory: "/Users/rjbowli/Development/chimerasw/SOPedia/Sources/SOPediaPamphlet",
-                                    options:[.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson, .releaseOnly])
-    }
-    
-    func testProcessSO() {
-        PamphletFramework().process(prefix: nil,
-                                    extensions: [],
-                                    inDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Resources",
-                                    outDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Sources/Pamphlet",
-                                    options:PamphletOptions.default)
-    }
-    */
     func testProcess() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,
@@ -55,16 +38,16 @@ final class PamphletTests: XCTestCase {
                                     outDirectory: "/tmp/Pamphlet",
                                     options:[.clean, .collapse, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
-    
+    */
     func testProcessCollapseAll() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,
                                     extensions: extensions,
-                                    inDirectory: "/Users/rjbowli/Development/chimerasw/Pamphlet/Tests/PamphletFrameworkTests/Pamphlet",
+                                    inDirectory: path(to: "Pamphlet"),
                                     outDirectory: "/tmp/Pamphlet",
-                                    options:[.clean, .collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+                                    options:[.clean, .collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])        
     }
-    
+    /*
     func testProcessReleaseOnly() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: "Release",
@@ -148,12 +131,5 @@ final class PamphletTests: XCTestCase {
                                     outDirectory: "/tmp/Pamphlet",
                                     options:PamphletOptions.default)
     }
-    
-
-    static var allTests = [
-        ("testProcess", testProcess),
-        ("testPreprocess1", testPreprocess1),
-        ("testPreprocessUnknownDirective", testPreprocessUnknownDirective),
-        ("testPreprocessIncludeFromSourcePath", testPreprocessIncludeFromSourcePath),
-    ]
+     */
 }

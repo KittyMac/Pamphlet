@@ -40,11 +40,14 @@ void mcpp_help() {
     mcpp_lib_main(2, argv);
 }
 char * mcpp_preprocessFile(const char * srcFile) {
+    
+    char * directory = dirname(strdup(srcFile));
+    
     char * argv[] = {
         "mcpp",
         "-NPCk",
         "-I",
-        (char *)dirname((char *) srcFile),
+        (char *)directory,
         (char *)srcFile,
         NULL
     };

@@ -29,10 +29,6 @@ run:
 test:
 	swift test --configuration debug
 
-.PHONY: xcode
-xcode:
-	swift package generate-xcodeproj
-
 .PHONY: install
 install: build
 	-rm /opt/homebrew/bin/pamphlet
@@ -42,3 +38,14 @@ install: build
 	-cp .build/${PROJECTNAME} /usr/local/bin/pamphlet
 	
 	cp .build/${PROJECTNAME} ./bin/pamphlet
+
+docker:
+	-docker buildx create --name local_builder
+	-DOCKER_HOST=tcp://192.168.1.198:2376 docker buildx create --name local_builder --platform linux/amd64 --append
+	-docker buildx use local_builder
+	-docker buildx inspect --bootstrap
+	-docker login
+	docker buildx build --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet .
+
+docker-shell:
+	docker run --rm -it --entrypoint bash kittymac/pamphlet

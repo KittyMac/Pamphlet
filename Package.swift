@@ -42,7 +42,7 @@ let package = Package(
                 "PamphletFramework"
             ],
             plugins: [
-                .plugin(name: "PamphletPlugin")
+                //.plugin(name: "PamphletPlugin")
             ]),
     ]
 )
