@@ -12164,7 +12164,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 })));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":68,"timers":72}],4:[function(require,module,exports){
+},{"_process":69,"timers":73}],4:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -15871,7 +15871,7 @@ env.parse = function parse(query) {
 module.exports = env;
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":68}],36:[function(require,module,exports){
+},{"_process":69}],36:[function(require,module,exports){
 'use strict';
 
 var GetIntrinsic = require('get-intrinsic');
@@ -18547,7 +18547,7 @@ Stream.prototype._write = function(chunk, encoding, cb) {
     cb();
 };
 
-},{"./Parser.js":48,"buffer":7,"inherits":60,"readable-stream":6,"string_decoder":70}],53:[function(require,module,exports){
+},{"./Parser.js":48,"buffer":7,"inherits":60,"readable-stream":6,"string_decoder":71}],53:[function(require,module,exports){
 var Parser = require("./Parser.js");
 var DomHandler = require("domhandler");
 
@@ -18988,6 +18988,114 @@ module.exports = function isTypedArray(value) {
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"available-typed-arrays":4,"call-bind/callBound":8,"es-abstract/helpers/getOwnPropertyDescriptor":36,"for-each":38,"has-tostringtag/shams":44}],65:[function(require,module,exports){
+/*! JSON.minify()
+    v0.2.0 (c) Kyle Simpson
+    MIT License
+*/
+/**
+ * @name minify.json.js
+ * @author Kei Funagayama <kei.topaz@gmail.com>
+ * @overview JSON.minify
+ */
+
+/**
+ * @namespace JSON
+ */
+ (function(global){
+
+    /**
+     * @function
+     * @memberof JSON
+     * @param {Object} Transformed data. format) json-like
+     * @return {String}
+     *
+     * @example
+     * var json = { // hoge
+     *     "foo": "bar",// this is cool
+     *     "bar": [
+     *         "baz", "bum", "zam"   // this is cool
+     *     ]
+     * } // hoge
+     *
+     */
+    var minify = function (json) {
+
+        var tokenizer = /"|(\/\*)|(\*\/)|(\/\/)|\n|\r|\[|]/g,
+            in_string = false,
+            in_multiline_comment = false,
+            in_singleline_comment = false,
+            tmp, tmp2, new_str = [], ns = 0, from = 0, lc, rc,
+            prevFrom
+        ;
+
+        tokenizer.lastIndex = 0;
+
+        while ( tmp = tokenizer.exec(json) ) {
+            lc = RegExp.leftContext;
+            rc = RegExp.rightContext;
+            if (!in_multiline_comment && !in_singleline_comment) {
+                tmp2 = lc.substring(from);
+                if (!in_string) {
+                    tmp2 = tmp2.replace(/(\n|\r|\s)*/g,"");
+                }
+                new_str[ns++] = tmp2;
+            }
+            prevFrom = from;
+            from = tokenizer.lastIndex;
+
+            // found a " character, and we're not currently in
+            // a comment? check for previous `\` escaping immediately
+            // leftward adjacent to this match
+            if (tmp[0] === "\"" && !in_multiline_comment && !in_singleline_comment) {
+                // limit left-context matching to only go back
+                // to the position of the last token match
+                //
+                // see: https://github.com/getify/JSON.minify/issues/64
+                lc.lastIndex = prevFrom;
+
+                // perform leftward adjacent escaping match
+                tmp2 = lc.match(/(\\)*$/);
+                // start of string with ", or unescaped " character found to end string?
+                if (!in_string || !tmp2 || (tmp2[0].length % 2) === 0) {
+                    in_string = !in_string;
+                }
+                from--; // include " character in next catch
+                rc = json.substring(from);
+            }
+            else if (tmp[0] === "/*" && !in_string && !in_multiline_comment && !in_singleline_comment) {
+                in_multiline_comment = true;
+            }
+            else if (tmp[0] === "*/" && !in_string && in_multiline_comment && !in_singleline_comment) {
+                in_multiline_comment = false;
+            }
+            else if (tmp[0] === "//" && !in_string && !in_multiline_comment && !in_singleline_comment) {
+                in_singleline_comment = true;
+            }
+            else if ((tmp[0] === "\n" || tmp[0] === "\r") && !in_string && !in_multiline_comment && in_singleline_comment) {
+                in_singleline_comment = false;
+            }
+            else if (!in_multiline_comment && !in_singleline_comment && !(/\n|\r|\s/.test(tmp[0]))) {
+                new_str[ns++] = tmp[0];
+            }
+        }
+        new_str[ns++] = rc;
+        return new_str.join("");
+    };
+
+    if (typeof module !== 'undefined' && module.exports) {
+        // node
+        module.exports = minify;
+        JSON.minify = minify;
+    } else {
+        // others, export global
+        if (typeof global.JSON === "undefined" || !global.JSON) {
+            global.JSON = {};
+        }
+        global.JSON.minify = minify;
+    }
+})(this);
+
+},{}],66:[function(require,module,exports){
 'use strict';
 
 //
@@ -19299,7 +19407,7 @@ Helpers.prototype.style = Helpers.prototype.tag;
 //
 module.exports = Helpers;
 
-},{"./list":66}],66:[function(require,module,exports){
+},{"./list":67}],67:[function(require,module,exports){
 //
 // List of inline elements, br is left out deliberatly so it is treated as block
 // level element. Spaces around br elements are redundant.
@@ -19464,7 +19572,7 @@ exports.attributes = {
   'sortable': ['table'],
   'spellcheck': '*'
 };
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 (function (setImmediate){(function (){
 'use strict';
 
@@ -19800,7 +19908,7 @@ Minimize.prototype.use = function use(id, plugin) {
 //
 module.exports = Minimize;
 }).call(this)}).call(this,require("timers").setImmediate)
-},{"./helpers":65,"async":3,"diagnostics":10,"emits":33,"events":37,"htmlparser2":53,"timers":72,"util":75,"uuid":76}],68:[function(require,module,exports){
+},{"./helpers":66,"async":3,"diagnostics":10,"emits":33,"events":37,"htmlparser2":53,"timers":73,"util":76,"uuid":77}],69:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -19986,7 +20094,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
@@ -20053,7 +20161,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":7}],70:[function(require,module,exports){
+},{"buffer":7}],71:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -20350,7 +20458,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":69}],71:[function(require,module,exports){
+},{"safe-buffer":70}],72:[function(require,module,exports){
 (function (process,global,Buffer){(function (){
 (function (global, factory) {
 typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@jridgewell/source-map')) :
@@ -50453,7 +50561,7 @@ exports.minify = minify;
 })));
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"@jridgewell/source-map":1,"_process":68,"acorn":2,"buffer":7}],72:[function(require,module,exports){
+},{"@jridgewell/source-map":1,"_process":69,"acorn":2,"buffer":7}],73:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -50532,14 +50640,14 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":68,"timers":72}],73:[function(require,module,exports){
+},{"process/browser.js":69,"timers":73}],74:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 // Currently in sync with Node.js lib/internal/util/types.js
 // https://github.com/nodejs/node/commit/112cc7c27551254aa2b17098fb774867f05ed0d9
 
@@ -50875,7 +50983,7 @@ exports.isAnyArrayBuffer = isAnyArrayBuffer;
   });
 });
 
-},{"is-arguments":61,"is-generator-function":63,"is-typed-array":64,"which-typed-array":81}],75:[function(require,module,exports){
+},{"is-arguments":61,"is-generator-function":63,"is-typed-array":64,"which-typed-array":82}],76:[function(require,module,exports){
 (function (process){(function (){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -51594,7 +51702,7 @@ function callbackify(original) {
 exports.callbackify = callbackify;
 
 }).call(this)}).call(this,require('_process'))
-},{"./support/isBuffer":73,"./support/types":74,"_process":68,"inherits":60}],76:[function(require,module,exports){
+},{"./support/isBuffer":74,"./support/types":75,"_process":69,"inherits":60}],77:[function(require,module,exports){
 var v1 = require('./v1');
 var v4 = require('./v4');
 
@@ -51604,7 +51712,7 @@ uuid.v4 = v4;
 
 module.exports = uuid;
 
-},{"./v1":79,"./v4":80}],77:[function(require,module,exports){
+},{"./v1":80,"./v4":81}],78:[function(require,module,exports){
 /**
  * Convert array of 16 byte values to UUID string format of the form:
  * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
@@ -51632,7 +51740,7 @@ function bytesToUuid(buf, offset) {
 
 module.exports = bytesToUuid;
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 // Unique ID creation requires a high quality random # generator.  In the
 // browser this is a little complicated due to unknown quality of Math.random()
 // and inconsistent support for the `crypto` API.  We do the best we can via
@@ -51668,7 +51776,7 @@ if (getRandomValues) {
   };
 }
 
-},{}],79:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -51779,7 +51887,7 @@ function v1(options, buf, offset) {
 
 module.exports = v1;
 
-},{"./lib/bytesToUuid":77,"./lib/rng":78}],80:[function(require,module,exports){
+},{"./lib/bytesToUuid":78,"./lib/rng":79}],81:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -51810,7 +51918,7 @@ function v4(options, buf, offset) {
 
 module.exports = v4;
 
-},{"./lib/bytesToUuid":77,"./lib/rng":78}],81:[function(require,module,exports){
+},{"./lib/bytesToUuid":78,"./lib/rng":79}],82:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -51869,10 +51977,11 @@ module.exports = function whichTypedArray(value) {
 };
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"available-typed-arrays":4,"call-bind/callBound":8,"es-abstract/helpers/getOwnPropertyDescriptor":36,"for-each":38,"has-tostringtag/shams":44,"is-typed-array":64}],82:[function(require,module,exports){
+},{"available-typed-arrays":4,"call-bind/callBound":8,"es-abstract/helpers/getOwnPropertyDescriptor":36,"for-each":38,"has-tostringtag/shams":44,"is-typed-array":64}],83:[function(require,module,exports){
 (function (global){(function (){
 const { minify } = require('terser');
 const Minimize = require('minimize');
+const jsonminify = require("jsonminify");
 
 const minifyHTML = new Minimize();
 
@@ -51894,5 +52003,9 @@ global.toolTerserJS = function(content, callback) {
 global.toolTerserHTML = function(content) {
     return minifyHTML.parse(content);
 }
+
+global.toolTerserJSON = function(content) {
+    return jsonminify(content);
+}
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"minimize":67,"terser":71}]},{},[82]);
+},{"jsonminify":65,"minimize":68,"terser":72}]},{},[83]);

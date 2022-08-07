@@ -55,10 +55,7 @@ struct Pamphlet: ParsableCommand {
         
         @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content")
         var js: Bool = true
-        
-        @Flag(inversion: .prefixedEnableDisable, help: "Compile typescript content")
-        var ts: Bool = true
-        
+                
         @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content")
         var json: Bool = true
                 

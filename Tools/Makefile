@@ -6,6 +6,7 @@ install:
     
 	npm i terser
 	npm i minimize
+	npm i jsonminify
 	npm i browserify
 	
 	npm update

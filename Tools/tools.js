@@ -1,5 +1,6 @@
 const { minify } = require('terser');
 const Minimize = require('minimize');
+const jsonminify = require("jsonminify");
 
 const minifyHTML = new Minimize();
 
@@ -20,4 +21,8 @@ global.toolTerserJS = function(content, callback) {
 
 global.toolTerserHTML = function(content) {
     return minifyHTML.parse(content);
+}
+
+global.toolTerserJSON = function(content) {
+    return jsonminify(content);
 }
