@@ -31,7 +31,9 @@ test:
 
 .PHONY: install
 install: build
+	-rm ./bin/pamphlet
 	-rm /opt/homebrew/bin/pamphlet
+    
 	-cp .build/${PROJECTNAME} /opt/homebrew/bin/pamphlet
 	
 	-rm /usr/local/bin/pamphlet
@@ -42,7 +44,7 @@ install: build
 .PHONY: install
 tools: install
 	make -C Tools
-	./bin/pamphlet --prefix=Tools --collapse-all ./Tools/Pamphlet ./Sources/Pamphlet/Tools
+	./bin/pamphlet --prefix=Tools --release --collapse-all ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 docker:
 	-docker buildx create --name local_builder

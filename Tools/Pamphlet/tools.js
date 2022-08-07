@@ -1,3 +1,4 @@
+let global = {};
 (function () {
   'use strict';
 
@@ -43,6 +44,8 @@
       SUCH DAMAGE.
 
    ***********************************************************************/
+
+  "use strict";
 
   function characters(str) {
       return str.split("");
@@ -206,6 +209,24 @@
       }
   }
 
+  function map_from_object(obj) {
+      var map = new Map();
+      for (var key in obj) {
+          if (HOP(obj, key) && key.charAt(0) === "$") {
+              map.set(key.substr(1), obj[key]);
+          }
+      }
+      return map;
+  }
+
+  function map_to_object(map) {
+      var obj = Object.create(null);
+      map.forEach(function (value, key) {
+          obj["$" + key] = value;
+      });
+      return obj;
+  }
+
   function HOP(obj, prop) {
       return Object.prototype.hasOwnProperty.call(obj, prop);
   }
@@ -308,6 +329,8 @@
       SUCH DAMAGE.
 
    ***********************************************************************/
+
+  "use strict";
 
   var LATEST_RAW = "";  // Only used for numbers and template strings
   var TEMPLATE_RAWS = new Map();  // Raw template strings
@@ -6585,6 +6608,8 @@
 
    ***********************************************************************/
 
+  "use strict";
+
   function def_transform(node, descend) {
       node.DEFMETHOD("transform", function(tw, in_list) {
           let transformed = undefined;
@@ -8541,6 +8566,8 @@
       SUCH DAMAGE.
 
    ***********************************************************************/
+
+  "use strict";
 
   const EXPECT_DIRECTIVE = /^$|[;{][\s\n]*$/;
   const CODE_LINE_BREAK = 10;
@@ -11005,6 +11032,8 @@
       SUCH DAMAGE.
 
    ***********************************************************************/
+
+  "use strict";
 
   const MASK_EXPORT_DONT_MANGLE = 1 << 0;
   const MASK_EXPORT_WANT_MANGLE = 1 << 1;
@@ -20986,6 +21015,8 @@
       }
   });
 
+  const comma = ','.charCodeAt(0);
+  const semicolon = ';'.charCodeAt(0);
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const intToChar = new Uint8Array(64); // 64 possible chars.
   const charToInteger = new Uint8Array(128); // z is 122 in ASCII
@@ -20995,7 +21026,7 @@
       intToChar[i] = c;
   }
   // Provide a fallback for older environments.
-  typeof TextDecoder !== 'undefined'
+  const td = typeof TextDecoder !== 'undefined'
       ? new TextDecoder()
       : typeof Buffer !== 'undefined'
           ? {
@@ -21013,8 +21044,569 @@
                   return out;
               },
           };
+  function decode(mappings) {
+      const state = new Int32Array(5);
+      const decoded = [];
+      let line = [];
+      let sorted = true;
+      let lastCol = 0;
+      for (let i = 0; i < mappings.length;) {
+          const c = mappings.charCodeAt(i);
+          if (c === comma) {
+              i++;
+          }
+          else if (c === semicolon) {
+              state[0] = lastCol = 0;
+              if (!sorted)
+                  sort(line);
+              sorted = true;
+              decoded.push(line);
+              line = [];
+              i++;
+          }
+          else {
+              i = decodeInteger(mappings, i, state, 0); // generatedCodeColumn
+              const col = state[0];
+              if (col < lastCol)
+                  sorted = false;
+              lastCol = col;
+              if (!hasMoreSegments(mappings, i)) {
+                  line.push([col]);
+                  continue;
+              }
+              i = decodeInteger(mappings, i, state, 1); // sourceFileIndex
+              i = decodeInteger(mappings, i, state, 2); // sourceCodeLine
+              i = decodeInteger(mappings, i, state, 3); // sourceCodeColumn
+              if (!hasMoreSegments(mappings, i)) {
+                  line.push([col, state[1], state[2], state[3]]);
+                  continue;
+              }
+              i = decodeInteger(mappings, i, state, 4); // nameIndex
+              line.push([col, state[1], state[2], state[3], state[4]]);
+          }
+      }
+      if (!sorted)
+          sort(line);
+      decoded.push(line);
+      return decoded;
+  }
+  function decodeInteger(mappings, pos, state, j) {
+      let value = 0;
+      let shift = 0;
+      let integer = 0;
+      do {
+          const c = mappings.charCodeAt(pos++);
+          integer = charToInteger[c];
+          value |= (integer & 31) << shift;
+          shift += 5;
+      } while (integer & 32);
+      const shouldNegate = value & 1;
+      value >>>= 1;
+      if (shouldNegate) {
+          value = -0x80000000 | -value;
+      }
+      state[j] += value;
+      return pos;
+  }
+  function hasMoreSegments(mappings, i) {
+      if (i >= mappings.length)
+          return false;
+      const c = mappings.charCodeAt(i);
+      if (c === comma || c === semicolon)
+          return false;
+      return true;
+  }
+  function sort(line) {
+      line.sort(sortComparator$1);
+  }
+  function sortComparator$1(a, b) {
+      return a[0] - b[0];
+  }
+  function encode(decoded) {
+      const state = new Int32Array(5);
+      let buf = new Uint8Array(1024);
+      let pos = 0;
+      for (let i = 0; i < decoded.length; i++) {
+          const line = decoded[i];
+          if (i > 0) {
+              buf = reserve(buf, pos, 1);
+              buf[pos++] = semicolon;
+          }
+          if (line.length === 0)
+              continue;
+          state[0] = 0;
+          for (let j = 0; j < line.length; j++) {
+              const segment = line[j];
+              // We can push up to 5 ints, each int can take at most 7 chars, and we
+              // may push a comma.
+              buf = reserve(buf, pos, 36);
+              if (j > 0)
+                  buf[pos++] = comma;
+              pos = encodeInteger(buf, pos, state, segment, 0); // generatedCodeColumn
+              if (segment.length === 1)
+                  continue;
+              pos = encodeInteger(buf, pos, state, segment, 1); // sourceFileIndex
+              pos = encodeInteger(buf, pos, state, segment, 2); // sourceCodeLine
+              pos = encodeInteger(buf, pos, state, segment, 3); // sourceCodeColumn
+              if (segment.length === 4)
+                  continue;
+              pos = encodeInteger(buf, pos, state, segment, 4); // nameIndex
+          }
+      }
+      return td.decode(buf.subarray(0, pos));
+  }
+  function reserve(buf, pos, count) {
+      if (buf.length > pos + count)
+          return buf;
+      const swap = new Uint8Array(buf.length * 2);
+      swap.set(buf);
+      return swap;
+  }
+  function encodeInteger(buf, pos, state, segment, j) {
+      const next = segment[j];
+      let num = next - state[j];
+      state[j] = next;
+      num = num < 0 ? (-num << 1) | 1 : num << 1;
+      do {
+          let clamped = num & 0b011111;
+          num >>>= 5;
+          if (num > 0)
+              clamped |= 0b100000;
+          buf[pos++] = intToChar[clamped];
+      } while (num > 0);
+      return pos;
+  }
 
-  Object.freeze({
+  // Matches the scheme of a URL, eg "http://"
+  const schemeRegex = /^[\w+.-]+:\/\//;
+  /**
+   * Matches the parts of a URL:
+   * 1. Scheme, including ":", guaranteed.
+   * 2. User/password, including "@", optional.
+   * 3. Host, guaranteed.
+   * 4. Port, including ":", optional.
+   * 5. Path, including "/", optional.
+   */
+  const urlRegex = /^([\w+.-]+:)\/\/([^@/#?]*@)?([^:/#?]*)(:\d+)?(\/[^#?]*)?/;
+  /**
+   * File URLs are weird. They dont' need the regular `//` in the scheme, they may or may not start
+   * with a leading `/`, they can have a domain (but only if they don't start with a Windows drive).
+   *
+   * 1. Host, optional.
+   * 2. Path, which may inclue "/", guaranteed.
+   */
+  const fileRegex = /^file:(?:\/\/((?![a-z]:)[^/]*)?)?(\/?.*)/i;
+  function isAbsoluteUrl(input) {
+      return schemeRegex.test(input);
+  }
+  function isSchemeRelativeUrl(input) {
+      return input.startsWith('//');
+  }
+  function isAbsolutePath(input) {
+      return input.startsWith('/');
+  }
+  function isFileUrl(input) {
+      return input.startsWith('file:');
+  }
+  function parseAbsoluteUrl(input) {
+      const match = urlRegex.exec(input);
+      return makeUrl(match[1], match[2] || '', match[3], match[4] || '', match[5] || '/');
+  }
+  function parseFileUrl(input) {
+      const match = fileRegex.exec(input);
+      const path = match[2];
+      return makeUrl('file:', '', match[1] || '', '', isAbsolutePath(path) ? path : '/' + path);
+  }
+  function makeUrl(scheme, user, host, port, path) {
+      return {
+          scheme,
+          user,
+          host,
+          port,
+          path,
+          relativePath: false,
+      };
+  }
+  function parseUrl(input) {
+      if (isSchemeRelativeUrl(input)) {
+          const url = parseAbsoluteUrl('http:' + input);
+          url.scheme = '';
+          return url;
+      }
+      if (isAbsolutePath(input)) {
+          const url = parseAbsoluteUrl('http://foo.com' + input);
+          url.scheme = '';
+          url.host = '';
+          return url;
+      }
+      if (isFileUrl(input))
+          return parseFileUrl(input);
+      if (isAbsoluteUrl(input))
+          return parseAbsoluteUrl(input);
+      const url = parseAbsoluteUrl('http://foo.com/' + input);
+      url.scheme = '';
+      url.host = '';
+      url.relativePath = true;
+      return url;
+  }
+  function stripPathFilename(path) {
+      // If a path ends with a parent directory "..", then it's a relative path with excess parent
+      // paths. It's not a file, so we can't strip it.
+      if (path.endsWith('/..'))
+          return path;
+      const index = path.lastIndexOf('/');
+      return path.slice(0, index + 1);
+  }
+  function mergePaths(url, base) {
+      // If we're not a relative path, then we're an absolute path, and it doesn't matter what base is.
+      if (!url.relativePath)
+          return;
+      normalizePath(base);
+      // If the path is just a "/", then it was an empty path to begin with (remember, we're a relative
+      // path).
+      if (url.path === '/') {
+          url.path = base.path;
+      }
+      else {
+          // Resolution happens relative to the base path's directory, not the file.
+          url.path = stripPathFilename(base.path) + url.path;
+      }
+      // If the base path is absolute, then our path is now absolute too.
+      url.relativePath = base.relativePath;
+  }
+  /**
+   * The path can have empty directories "//", unneeded parents "foo/..", or current directory
+   * "foo/.". We need to normalize to a standard representation.
+   */
+  function normalizePath(url) {
+      const { relativePath } = url;
+      const pieces = url.path.split('/');
+      // We need to preserve the first piece always, so that we output a leading slash. The item at
+      // pieces[0] is an empty string.
+      let pointer = 1;
+      // Positive is the number of real directories we've output, used for popping a parent directory.
+      // Eg, "foo/bar/.." will have a positive 2, and we can decrement to be left with just "foo".
+      let positive = 0;
+      // We need to keep a trailing slash if we encounter an empty directory (eg, splitting "foo/" will
+      // generate `["foo", ""]` pieces). And, if we pop a parent directory. But once we encounter a
+      // real directory, we won't need to append, unless the other conditions happen again.
+      let addTrailingSlash = false;
+      for (let i = 1; i < pieces.length; i++) {
+          const piece = pieces[i];
+          // An empty directory, could be a trailing slash, or just a double "//" in the path.
+          if (!piece) {
+              addTrailingSlash = true;
+              continue;
+          }
+          // If we encounter a real directory, then we don't need to append anymore.
+          addTrailingSlash = false;
+          // A current directory, which we can always drop.
+          if (piece === '.')
+              continue;
+          // A parent directory, we need to see if there are any real directories we can pop. Else, we
+          // have an excess of parents, and we'll need to keep the "..".
+          if (piece === '..') {
+              if (positive) {
+                  addTrailingSlash = true;
+                  positive--;
+                  pointer--;
+              }
+              else if (relativePath) {
+                  // If we're in a relativePath, then we need to keep the excess parents. Else, in an absolute
+                  // URL, protocol relative URL, or an absolute path, we don't need to keep excess.
+                  pieces[pointer++] = piece;
+              }
+              continue;
+          }
+          // We've encountered a real directory. Move it to the next insertion pointer, which accounts for
+          // any popped or dropped directories.
+          pieces[pointer++] = piece;
+          positive++;
+      }
+      let path = '';
+      for (let i = 1; i < pointer; i++) {
+          path += '/' + pieces[i];
+      }
+      if (!path || (addTrailingSlash && !path.endsWith('/..'))) {
+          path += '/';
+      }
+      url.path = path;
+  }
+  /**
+   * Attempts to resolve `input` URL/path relative to `base`.
+   */
+  function resolve$1(input, base) {
+      if (!input && !base)
+          return '';
+      const url = parseUrl(input);
+      // If we have a base, and the input isn't already an absolute URL, then we need to merge.
+      if (base && !url.scheme) {
+          const baseUrl = parseUrl(base);
+          url.scheme = baseUrl.scheme;
+          // If there's no host, then we were just a path.
+          if (!url.host) {
+              // The host, user, and port are joined, you can't copy one without the others.
+              url.user = baseUrl.user;
+              url.host = baseUrl.host;
+              url.port = baseUrl.port;
+          }
+          mergePaths(url, baseUrl);
+      }
+      normalizePath(url);
+      // If the input (and base, if there was one) are both relative, then we need to output a relative.
+      if (url.relativePath) {
+          // The first char is always a "/".
+          const path = url.path.slice(1);
+          if (!path)
+              return '.';
+          // If base started with a leading ".", or there is no base and input started with a ".", then we
+          // need to ensure that the relative path starts with a ".". We don't know if relative starts
+          // with a "..", though, so check before prepending.
+          const keepRelative = (base || input).startsWith('.');
+          return !keepRelative || path.startsWith('.') ? path : './' + path;
+      }
+      // If there's no host (and no scheme/user/port), then we need to output an absolute path.
+      if (!url.scheme && !url.host)
+          return url.path;
+      // We're outputting either an absolute URL, or a protocol relative one.
+      return `${url.scheme}//${url.user}${url.host}${url.port}${url.path}`;
+  }
+
+  function resolve(input, base) {
+      // The base is always treated as a directory, if it's not empty.
+      // https://github.com/mozilla/source-map/blob/8cb3ee57/lib/util.js#L327
+      // https://github.com/chromium/chromium/blob/da4adbb3/third_party/blink/renderer/devtools/front_end/sdk/SourceMap.js#L400-L401
+      if (base && !base.endsWith('/'))
+          base += '/';
+      return resolve$1(input, base);
+  }
+
+  /**
+   * Removes everything after the last "/", but leaves the slash.
+   */
+  function stripFilename(path) {
+      if (!path)
+          return '';
+      const index = path.lastIndexOf('/');
+      return path.slice(0, index + 1);
+  }
+
+  const COLUMN$1 = 0;
+  const SOURCES_INDEX$1 = 1;
+  const SOURCE_LINE$1 = 2;
+  const SOURCE_COLUMN$1 = 3;
+  const NAMES_INDEX$1 = 4;
+
+  function maybeSort(mappings, owned) {
+      const unsortedIndex = nextUnsortedSegmentLine(mappings, 0);
+      if (unsortedIndex === mappings.length)
+          return mappings;
+      // If we own the array (meaning we parsed it from JSON), then we're free to directly mutate it. If
+      // not, we do not want to modify the consumer's input array.
+      if (!owned)
+          mappings = mappings.slice();
+      for (let i = unsortedIndex; i < mappings.length; i = nextUnsortedSegmentLine(mappings, i + 1)) {
+          mappings[i] = sortSegments(mappings[i], owned);
+      }
+      return mappings;
+  }
+  function nextUnsortedSegmentLine(mappings, start) {
+      for (let i = start; i < mappings.length; i++) {
+          if (!isSorted(mappings[i]))
+              return i;
+      }
+      return mappings.length;
+  }
+  function isSorted(line) {
+      for (let j = 1; j < line.length; j++) {
+          if (line[j][COLUMN$1] < line[j - 1][COLUMN$1]) {
+              return false;
+          }
+      }
+      return true;
+  }
+  function sortSegments(line, owned) {
+      if (!owned)
+          line = line.slice();
+      return line.sort(sortComparator);
+  }
+  function sortComparator(a, b) {
+      return a[COLUMN$1] - b[COLUMN$1];
+  }
+
+  let found = false;
+  /**
+   * A binary search implementation that returns the index if a match is found.
+   * If no match is found, then the left-index (the index associated with the item that comes just
+   * before the desired index) is returned. To maintain proper sort order, a splice would happen at
+   * the next index:
+   *
+   * ```js
+   * const array = [1, 3];
+   * const needle = 2;
+   * const index = binarySearch(array, needle, (item, needle) => item - needle);
+   *
+   * assert.equal(index, 0);
+   * array.splice(index + 1, 0, needle);
+   * assert.deepEqual(array, [1, 2, 3]);
+   * ```
+   */
+  function binarySearch(haystack, needle, low, high) {
+      while (low <= high) {
+          const mid = low + ((high - low) >> 1);
+          const cmp = haystack[mid][COLUMN$1] - needle;
+          if (cmp === 0) {
+              found = true;
+              return mid;
+          }
+          if (cmp < 0) {
+              low = mid + 1;
+          }
+          else {
+              high = mid - 1;
+          }
+      }
+      found = false;
+      return low - 1;
+  }
+  function upperBound(haystack, needle, index) {
+      for (let i = index + 1; i < haystack.length; i++, index++) {
+          if (haystack[i][COLUMN$1] !== needle)
+              break;
+      }
+      return index;
+  }
+  function lowerBound(haystack, needle, index) {
+      for (let i = index - 1; i >= 0; i--, index--) {
+          if (haystack[i][COLUMN$1] !== needle)
+              break;
+      }
+      return index;
+  }
+  function memoizedState() {
+      return {
+          lastKey: -1,
+          lastNeedle: -1,
+          lastIndex: -1,
+      };
+  }
+  /**
+   * This overly complicated beast is just to record the last tested line/column and the resulting
+   * index, allowing us to skip a few tests if mappings are monotonically increasing.
+   */
+  function memoizedBinarySearch(haystack, needle, state, key) {
+      const { lastKey, lastNeedle, lastIndex } = state;
+      let low = 0;
+      let high = haystack.length - 1;
+      if (key === lastKey) {
+          if (needle === lastNeedle) {
+              found = lastIndex !== -1 && haystack[lastIndex][COLUMN$1] === needle;
+              return lastIndex;
+          }
+          if (needle >= lastNeedle) {
+              // lastIndex may be -1 if the previous needle was not found.
+              low = lastIndex === -1 ? 0 : lastIndex;
+          }
+          else {
+              high = lastIndex;
+          }
+      }
+      state.lastKey = key;
+      state.lastNeedle = needle;
+      return (state.lastIndex = binarySearch(haystack, needle, low, high));
+  }
+
+  const AnyMap = function (map, mapUrl) {
+      const parsed = typeof map === 'string' ? JSON.parse(map) : map;
+      if (!('sections' in parsed))
+          return new TraceMap(parsed, mapUrl);
+      const mappings = [];
+      const sources = [];
+      const sourcesContent = [];
+      const names = [];
+      const { sections } = parsed;
+      let i = 0;
+      for (; i < sections.length - 1; i++) {
+          const no = sections[i + 1].offset;
+          addSection(sections[i], mapUrl, mappings, sources, sourcesContent, names, no.line, no.column);
+      }
+      if (sections.length > 0) {
+          addSection(sections[i], mapUrl, mappings, sources, sourcesContent, names, Infinity, Infinity);
+      }
+      const joined = {
+          version: 3,
+          file: parsed.file,
+          names,
+          sources,
+          sourcesContent,
+          mappings,
+      };
+      return presortedDecodedMap(joined);
+  };
+  function addSection(section, mapUrl, mappings, sources, sourcesContent, names, stopLine, stopColumn) {
+      const map = AnyMap(section.map, mapUrl);
+      const { line: lineOffset, column: columnOffset } = section.offset;
+      const sourcesOffset = sources.length;
+      const namesOffset = names.length;
+      const decoded = decodedMappings(map);
+      const { resolvedSources } = map;
+      append(sources, resolvedSources);
+      append(sourcesContent, map.sourcesContent || fillSourcesContent(resolvedSources.length));
+      append(names, map.names);
+      // If this section jumps forwards several lines, we need to add lines to the output mappings catch up.
+      for (let i = mappings.length; i <= lineOffset; i++)
+          mappings.push([]);
+      // We can only add so many lines before we step into the range that the next section's map
+      // controls. When we get to the last line, then we'll start checking the segments to see if
+      // they've crossed into the column range.
+      const stopI = stopLine - lineOffset;
+      const len = Math.min(decoded.length, stopI + 1);
+      for (let i = 0; i < len; i++) {
+          const line = decoded[i];
+          // On the 0th loop, the line will already exist due to a previous section, or the line catch up
+          // loop above.
+          const out = i === 0 ? mappings[lineOffset] : (mappings[lineOffset + i] = []);
+          // On the 0th loop, the section's column offset shifts us forward. On all other lines (since the
+          // map can be multiple lines), it doesn't.
+          const cOffset = i === 0 ? columnOffset : 0;
+          for (let j = 0; j < line.length; j++) {
+              const seg = line[j];
+              const column = cOffset + seg[COLUMN$1];
+              // If this segment steps into the column range that the next section's map controls, we need
+              // to stop early.
+              if (i === stopI && column >= stopColumn)
+                  break;
+              if (seg.length === 1) {
+                  out.push([column]);
+                  continue;
+              }
+              const sourcesIndex = sourcesOffset + seg[SOURCES_INDEX$1];
+              const sourceLine = seg[SOURCE_LINE$1];
+              const sourceColumn = seg[SOURCE_COLUMN$1];
+              if (seg.length === 4) {
+                  out.push([column, sourcesIndex, sourceLine, sourceColumn]);
+                  continue;
+              }
+              out.push([column, sourcesIndex, sourceLine, sourceColumn, namesOffset + seg[NAMES_INDEX$1]]);
+          }
+      }
+  }
+  function append(arr, other) {
+      for (let i = 0; i < other.length; i++)
+          arr.push(other[i]);
+  }
+  // Sourcemaps don't need to have sourcesContent, and if they don't, we need to create an array of
+  // equal length to the sources. This is because the sources and sourcesContent are paired arrays,
+  // where `sourcesContent[i]` is the content of the `sources[i]` file. If we didn't, then joined
+  // sourcemap would desynchronize the sources/contents.
+  function fillSourcesContent(len) {
+      const sourcesContent = [];
+      for (let i = 0; i < len; i++)
+          sourcesContent[i] = null;
+      return sourcesContent;
+  }
+
+  const INVALID_ORIGINAL_MAPPING = Object.freeze({
       source: null,
       line: null,
       column: null,
@@ -21024,5 +21616,9444 @@
       line: null,
       column: null,
   });
+  const LINE_GTR_ZERO = '`line` must be greater than 0 (lines start at line 1)';
+  const COL_GTR_EQ_ZERO = '`column` must be greater than or equal to 0 (columns start at column 0)';
+  const LEAST_UPPER_BOUND = -1;
+  const GREATEST_LOWER_BOUND = 1;
+  /**
+   * Returns the decoded (array of lines of segments) form of the SourceMap's mappings field.
+   */
+  let decodedMappings;
+  /**
+   * A higher-level API to find the source/line/column associated with a generated line/column
+   * (think, from a stack trace). Line is 1-based, but column is 0-based, due to legacy behavior in
+   * `source-map` library.
+   */
+  let originalPositionFor;
+  /**
+   * A helper that skips sorting of the input map's mappings array, which can be expensive for larger
+   * maps.
+   */
+  let presortedDecodedMap;
+  class TraceMap {
+      constructor(map, mapUrl) {
+          this._decodedMemo = memoizedState();
+          this._bySources = undefined;
+          this._bySourceMemos = undefined;
+          const isString = typeof map === 'string';
+          if (!isString && map.constructor === TraceMap)
+              return map;
+          const parsed = (isString ? JSON.parse(map) : map);
+          const { version, file, names, sourceRoot, sources, sourcesContent } = parsed;
+          this.version = version;
+          this.file = file;
+          this.names = names;
+          this.sourceRoot = sourceRoot;
+          this.sources = sources;
+          this.sourcesContent = sourcesContent;
+          if (sourceRoot || mapUrl) {
+              const from = resolve(sourceRoot || '', stripFilename(mapUrl));
+              this.resolvedSources = sources.map((s) => resolve(s || '', from));
+          }
+          else {
+              this.resolvedSources = sources.map((s) => s || '');
+          }
+          const { mappings } = parsed;
+          if (typeof mappings === 'string') {
+              this._encoded = mappings;
+              this._decoded = undefined;
+          }
+          else {
+              this._encoded = undefined;
+              this._decoded = maybeSort(mappings, isString);
+          }
+      }
+  }
+  (() => {
+      decodedMappings = (map) => {
+          return (map._decoded || (map._decoded = decode(map._encoded)));
+      };
+      originalPositionFor = (map, { line, column, bias }) => {
+          line--;
+          if (line < 0)
+              throw new Error(LINE_GTR_ZERO);
+          if (column < 0)
+              throw new Error(COL_GTR_EQ_ZERO);
+          const decoded = decodedMappings(map);
+          // It's common for parent source maps to have pointers to lines that have no
+          // mapping (like a "//# sourceMappingURL=") at the end of the child file.
+          if (line >= decoded.length)
+              return INVALID_ORIGINAL_MAPPING;
+          const segment = traceSegmentInternal(decoded[line], map._decodedMemo, line, column, bias || GREATEST_LOWER_BOUND);
+          if (segment == null)
+              return INVALID_ORIGINAL_MAPPING;
+          if (segment.length == 1)
+              return INVALID_ORIGINAL_MAPPING;
+          const { names, resolvedSources } = map;
+          return {
+              source: resolvedSources[segment[SOURCES_INDEX$1]],
+              line: segment[SOURCE_LINE$1] + 1,
+              column: segment[SOURCE_COLUMN$1],
+              name: segment.length === 5 ? names[segment[NAMES_INDEX$1]] : null,
+          };
+      };
+      presortedDecodedMap = (map, mapUrl) => {
+          const clone = Object.assign({}, map);
+          clone.mappings = [];
+          const tracer = new TraceMap(clone, mapUrl);
+          tracer._decoded = map.mappings;
+          return tracer;
+      };
+  })();
+  function traceSegmentInternal(segments, memo, line, column, bias) {
+      let index = memoizedBinarySearch(segments, column, memo, line);
+      if (found) {
+          index = (bias === LEAST_UPPER_BOUND ? upperBound : lowerBound)(segments, column, index);
+      }
+      else if (bias === LEAST_UPPER_BOUND)
+          index++;
+      if (index === -1 || index === segments.length)
+          return null;
+      return segments[index];
+  }
+
+  /**
+   * Gets the index associated with `key` in the backing array, if it is already present.
+   */
+  let get;
+  /**
+   * Puts `key` into the backing array, if it is not already present. Returns
+   * the index of the `key` in the backing array.
+   */
+  let put;
+  /**
+   * SetArray acts like a `Set` (allowing only one occurrence of a string `key`), but provides the
+   * index of the `key` in the backing array.
+   *
+   * This is designed to allow synchronizing a second array with the contents of the backing array,
+   * like how in a sourcemap `sourcesContent[i]` is the source content associated with `source[i]`,
+   * and there are never duplicates.
+   */
+  class SetArray {
+      constructor() {
+          this._indexes = { __proto__: null };
+          this.array = [];
+      }
+  }
+  (() => {
+      get = (strarr, key) => strarr._indexes[key];
+      put = (strarr, key) => {
+          // The key may or may not be present. If it is present, it's a number.
+          const index = get(strarr, key);
+          if (index !== undefined)
+              return index;
+          const { array, _indexes: indexes } = strarr;
+          return (indexes[key] = array.push(key) - 1);
+      };
+  })();
+
+  const COLUMN = 0;
+  const SOURCES_INDEX = 1;
+  const SOURCE_LINE = 2;
+  const SOURCE_COLUMN = 3;
+  const NAMES_INDEX = 4;
+
+  const NO_NAME = -1;
+  /**
+   * Same as `addMapping`, but will only add the mapping if it generates useful information in the
+   * resulting map. This only works correctly if mappings are added **in order**, meaning you should
+   * not add a mapping with a lower generated line/column than one that came before.
+   */
+  let maybeAddMapping;
+  /**
+   * Adds/removes the content of the source file to the source map.
+   */
+  let setSourceContent;
+  /**
+   * Returns a sourcemap object (with decoded mappings) suitable for passing to a library that expects
+   * a sourcemap, or to JSON.stringify.
+   */
+  let toDecodedMap;
+  /**
+   * Returns a sourcemap object (with encoded mappings) suitable for passing to a library that expects
+   * a sourcemap, or to JSON.stringify.
+   */
+  let toEncodedMap;
+  // This split declaration is only so that terser can elminiate the static initialization block.
+  let addSegmentInternal;
+  /**
+   * Provides the state to generate a sourcemap.
+   */
+  class GenMapping {
+      constructor({ file, sourceRoot } = {}) {
+          this._names = new SetArray();
+          this._sources = new SetArray();
+          this._sourcesContent = [];
+          this._mappings = [];
+          this.file = file;
+          this.sourceRoot = sourceRoot;
+      }
+  }
+  (() => {
+      maybeAddMapping = (map, mapping) => {
+          return addMappingInternal(true, map, mapping);
+      };
+      setSourceContent = (map, source, content) => {
+          const { _sources: sources, _sourcesContent: sourcesContent } = map;
+          sourcesContent[put(sources, source)] = content;
+      };
+      toDecodedMap = (map) => {
+          const { file, sourceRoot, _mappings: mappings, _sources: sources, _sourcesContent: sourcesContent, _names: names, } = map;
+          removeEmptyFinalLines(mappings);
+          return {
+              version: 3,
+              file: file || undefined,
+              names: names.array,
+              sourceRoot: sourceRoot || undefined,
+              sources: sources.array,
+              sourcesContent,
+              mappings,
+          };
+      };
+      toEncodedMap = (map) => {
+          const decoded = toDecodedMap(map);
+          return Object.assign(Object.assign({}, decoded), { mappings: encode(decoded.mappings) });
+      };
+      // Internal helpers
+      addSegmentInternal = (skipable, map, genLine, genColumn, source, sourceLine, sourceColumn, name) => {
+          const { _mappings: mappings, _sources: sources, _sourcesContent: sourcesContent, _names: names, } = map;
+          const line = getLine(mappings, genLine);
+          const index = getColumnIndex(line, genColumn);
+          if (!source) {
+              if (skipable && skipSourceless(line, index))
+                  return;
+              return insert(line, index, [genColumn]);
+          }
+          const sourcesIndex = put(sources, source);
+          const namesIndex = name ? put(names, name) : NO_NAME;
+          if (sourcesIndex === sourcesContent.length)
+              sourcesContent[sourcesIndex] = null;
+          if (skipable && skipSource(line, index, sourcesIndex, sourceLine, sourceColumn, namesIndex)) {
+              return;
+          }
+          return insert(line, index, name
+              ? [genColumn, sourcesIndex, sourceLine, sourceColumn, namesIndex]
+              : [genColumn, sourcesIndex, sourceLine, sourceColumn]);
+      };
+  })();
+  function getLine(mappings, index) {
+      for (let i = mappings.length; i <= index; i++) {
+          mappings[i] = [];
+      }
+      return mappings[index];
+  }
+  function getColumnIndex(line, genColumn) {
+      let index = line.length;
+      for (let i = index - 1; i >= 0; index = i--) {
+          const current = line[i];
+          if (genColumn >= current[COLUMN])
+              break;
+      }
+      return index;
+  }
+  function insert(array, index, value) {
+      for (let i = array.length; i > index; i--) {
+          array[i] = array[i - 1];
+      }
+      array[index] = value;
+  }
+  function removeEmptyFinalLines(mappings) {
+      const { length } = mappings;
+      let len = length;
+      for (let i = len - 1; i >= 0; len = i, i--) {
+          if (mappings[i].length > 0)
+              break;
+      }
+      if (len < length)
+          mappings.length = len;
+  }
+  function skipSourceless(line, index) {
+      // The start of a line is already sourceless, so adding a sourceless segment to the beginning
+      // doesn't generate any useful information.
+      if (index === 0)
+          return true;
+      const prev = line[index - 1];
+      // If the previous segment is also sourceless, then adding another sourceless segment doesn't
+      // genrate any new information. Else, this segment will end the source/named segment and point to
+      // a sourceless position, which is useful.
+      return prev.length === 1;
+  }
+  function skipSource(line, index, sourcesIndex, sourceLine, sourceColumn, namesIndex) {
+      // A source/named segment at the start of a line gives position at that genColumn
+      if (index === 0)
+          return false;
+      const prev = line[index - 1];
+      // If the previous segment is sourceless, then we're transitioning to a source.
+      if (prev.length === 1)
+          return false;
+      // If the previous segment maps to the exact same source position, then this segment doesn't
+      // provide any new position information.
+      return (sourcesIndex === prev[SOURCES_INDEX] &&
+          sourceLine === prev[SOURCE_LINE] &&
+          sourceColumn === prev[SOURCE_COLUMN] &&
+          namesIndex === (prev.length === 5 ? prev[NAMES_INDEX] : NO_NAME));
+  }
+  function addMappingInternal(skipable, map, mapping) {
+      const { generated, source, original, name } = mapping;
+      if (!source) {
+          return addSegmentInternal(skipable, map, generated.line - 1, generated.column, null, null, null, null);
+      }
+      const s = source;
+      return addSegmentInternal(skipable, map, generated.line - 1, generated.column, s, original.line - 1, original.column, name);
+  }
+
+  class SourceMapConsumer {
+      constructor(map, mapUrl) {
+          const trace = (this._map = new AnyMap(map, mapUrl));
+          this.file = trace.file;
+          this.names = trace.names;
+          this.sourceRoot = trace.sourceRoot;
+          this.sources = trace.resolvedSources;
+          this.sourcesContent = trace.sourcesContent;
+      }
+      originalPositionFor(needle) {
+          return originalPositionFor(this._map, needle);
+      }
+      destroy() {
+          // noop.
+      }
+  }
+  class SourceMapGenerator {
+      constructor(opts) {
+          this._map = new GenMapping(opts);
+      }
+      addMapping(mapping) {
+          maybeAddMapping(this._map, mapping);
+      }
+      setSourceContent(source, content) {
+          setSourceContent(this._map, source, content);
+      }
+      toJSON() {
+          return toEncodedMap(this._map);
+      }
+      toDecodedMap() {
+          return toDecodedMap(this._map);
+      }
+  }
+
+  /***********************************************************************
+
+    A JavaScript tokenizer / parser / beautifier / compressor.
+    https://github.com/mishoo/UglifyJS2
+
+    -------------------------------- (C) ---------------------------------
+
+                             Author: Mihai Bazon
+                           <mihai.bazon@gmail.com>
+                         http://mihai.bazon.net/blog
+
+    Distributed under the BSD license:
+
+      Copyright 2012 (c) Mihai Bazon <mihai.bazon@gmail.com>
+
+      Redistribution and use in source and binary forms, with or without
+      modification, are permitted provided that the following conditions
+      are met:
+
+          * Redistributions of source code must retain the above
+            copyright notice, this list of conditions and the following
+            disclaimer.
+
+          * Redistributions in binary form must reproduce the above
+            copyright notice, this list of conditions and the following
+            disclaimer in the documentation and/or other materials
+            provided with the distribution.
+
+      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER “AS IS” AND ANY
+      EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+      IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+      PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE
+      LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+      OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+      PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+      PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+      THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+      TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+      THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+      SUCH DAMAGE.
+
+   ***********************************************************************/
+
+  "use strict";
+
+  // a small wrapper around source-map and @jridgewell/source-map
+  async function SourceMap(options) {
+      options = defaults(options, {
+          file : null,
+          root : null,
+          orig : null,
+          files: {},
+      });
+
+      var orig_map;
+      var generator = new SourceMapGenerator({
+          file       : options.file,
+          sourceRoot : options.root
+      });
+
+      let sourcesContent = {__proto__: null};
+      let files = options.files;
+      for (var name in files) if (HOP(files, name)) {
+          sourcesContent[name] = files[name];
+      }
+      if (options.orig) {
+          // We support both @jridgewell/source-map (which has a sync
+          // SourceMapConsumer) and source-map (which has an async
+          // SourceMapConsumer).
+          orig_map = await new SourceMapConsumer(options.orig);
+          if (orig_map.sourcesContent) {
+              orig_map.sources.forEach(function(source, i) {
+                  var content = orig_map.sourcesContent[i];
+                  if (content) {
+                      sourcesContent[source] = content;
+                  }
+              });
+          }
+      }
+
+      function add(source, gen_line, gen_col, orig_line, orig_col, name) {
+          let generatedPos = { line: gen_line, column: gen_col };
+
+          if (orig_map) {
+              var info = orig_map.originalPositionFor({
+                  line: orig_line,
+                  column: orig_col
+              });
+              if (info.source === null) {
+                  generator.addMapping({
+                      generated: generatedPos,
+                      original: null,
+                      source: null,
+                      name: null
+                  });
+                  return;
+              }
+              source = info.source;
+              orig_line = info.line;
+              orig_col = info.column;
+              name = info.name || name;
+          }
+          generator.addMapping({
+              generated : generatedPos,
+              original  : { line: orig_line, column: orig_col },
+              source    : source,
+              name      : name
+          });
+          generator.setSourceContent(source, sourcesContent[source]);
+      }
+
+      function clean(map) {
+          const allNull = map.sourcesContent && map.sourcesContent.every(c => c == null);
+          if (allNull) delete map.sourcesContent;
+          if (map.file === undefined) delete map.file;
+          if (map.sourceRoot === undefined) delete map.sourceRoot;
+          return map;
+      }
+
+      function getDecoded() {
+          if (!generator.toDecodedMap) return null;
+          return clean(generator.toDecodedMap());
+      }
+
+      function getEncoded() {
+          return clean(generator.toJSON());
+      }
+
+      function destroy() {
+          // @jridgewell/source-map's SourceMapConsumer does not need to be
+          // manually freed.
+          if (orig_map && orig_map.destroy) orig_map.destroy();
+      }
+
+      return {
+          add,
+          getDecoded,
+          getEncoded,
+          destroy,
+      };
+  }
+
+  var domprops = [
+      "$&",
+      "$'",
+      "$*",
+      "$+",
+      "$1",
+      "$2",
+      "$3",
+      "$4",
+      "$5",
+      "$6",
+      "$7",
+      "$8",
+      "$9",
+      "$_",
+      "$`",
+      "$input",
+      "-moz-animation",
+      "-moz-animation-delay",
+      "-moz-animation-direction",
+      "-moz-animation-duration",
+      "-moz-animation-fill-mode",
+      "-moz-animation-iteration-count",
+      "-moz-animation-name",
+      "-moz-animation-play-state",
+      "-moz-animation-timing-function",
+      "-moz-appearance",
+      "-moz-backface-visibility",
+      "-moz-border-end",
+      "-moz-border-end-color",
+      "-moz-border-end-style",
+      "-moz-border-end-width",
+      "-moz-border-image",
+      "-moz-border-start",
+      "-moz-border-start-color",
+      "-moz-border-start-style",
+      "-moz-border-start-width",
+      "-moz-box-align",
+      "-moz-box-direction",
+      "-moz-box-flex",
+      "-moz-box-ordinal-group",
+      "-moz-box-orient",
+      "-moz-box-pack",
+      "-moz-box-sizing",
+      "-moz-float-edge",
+      "-moz-font-feature-settings",
+      "-moz-font-language-override",
+      "-moz-force-broken-image-icon",
+      "-moz-hyphens",
+      "-moz-image-region",
+      "-moz-margin-end",
+      "-moz-margin-start",
+      "-moz-orient",
+      "-moz-osx-font-smoothing",
+      "-moz-outline-radius",
+      "-moz-outline-radius-bottomleft",
+      "-moz-outline-radius-bottomright",
+      "-moz-outline-radius-topleft",
+      "-moz-outline-radius-topright",
+      "-moz-padding-end",
+      "-moz-padding-start",
+      "-moz-perspective",
+      "-moz-perspective-origin",
+      "-moz-tab-size",
+      "-moz-text-size-adjust",
+      "-moz-transform",
+      "-moz-transform-origin",
+      "-moz-transform-style",
+      "-moz-transition",
+      "-moz-transition-delay",
+      "-moz-transition-duration",
+      "-moz-transition-property",
+      "-moz-transition-timing-function",
+      "-moz-user-focus",
+      "-moz-user-input",
+      "-moz-user-modify",
+      "-moz-user-select",
+      "-moz-window-dragging",
+      "-webkit-align-content",
+      "-webkit-align-items",
+      "-webkit-align-self",
+      "-webkit-animation",
+      "-webkit-animation-delay",
+      "-webkit-animation-direction",
+      "-webkit-animation-duration",
+      "-webkit-animation-fill-mode",
+      "-webkit-animation-iteration-count",
+      "-webkit-animation-name",
+      "-webkit-animation-play-state",
+      "-webkit-animation-timing-function",
+      "-webkit-appearance",
+      "-webkit-backface-visibility",
+      "-webkit-background-clip",
+      "-webkit-background-origin",
+      "-webkit-background-size",
+      "-webkit-border-bottom-left-radius",
+      "-webkit-border-bottom-right-radius",
+      "-webkit-border-image",
+      "-webkit-border-radius",
+      "-webkit-border-top-left-radius",
+      "-webkit-border-top-right-radius",
+      "-webkit-box-align",
+      "-webkit-box-direction",
+      "-webkit-box-flex",
+      "-webkit-box-ordinal-group",
+      "-webkit-box-orient",
+      "-webkit-box-pack",
+      "-webkit-box-shadow",
+      "-webkit-box-sizing",
+      "-webkit-filter",
+      "-webkit-flex",
+      "-webkit-flex-basis",
+      "-webkit-flex-direction",
+      "-webkit-flex-flow",
+      "-webkit-flex-grow",
+      "-webkit-flex-shrink",
+      "-webkit-flex-wrap",
+      "-webkit-justify-content",
+      "-webkit-line-clamp",
+      "-webkit-mask",
+      "-webkit-mask-clip",
+      "-webkit-mask-composite",
+      "-webkit-mask-image",
+      "-webkit-mask-origin",
+      "-webkit-mask-position",
+      "-webkit-mask-position-x",
+      "-webkit-mask-position-y",
+      "-webkit-mask-repeat",
+      "-webkit-mask-size",
+      "-webkit-order",
+      "-webkit-perspective",
+      "-webkit-perspective-origin",
+      "-webkit-text-fill-color",
+      "-webkit-text-size-adjust",
+      "-webkit-text-stroke",
+      "-webkit-text-stroke-color",
+      "-webkit-text-stroke-width",
+      "-webkit-transform",
+      "-webkit-transform-origin",
+      "-webkit-transform-style",
+      "-webkit-transition",
+      "-webkit-transition-delay",
+      "-webkit-transition-duration",
+      "-webkit-transition-property",
+      "-webkit-transition-timing-function",
+      "-webkit-user-select",
+      "0",
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "2",
+      "20",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "@@iterator",
+      "ABORT_ERR",
+      "ACTIVE",
+      "ACTIVE_ATTRIBUTES",
+      "ACTIVE_TEXTURE",
+      "ACTIVE_UNIFORMS",
+      "ACTIVE_UNIFORM_BLOCKS",
+      "ADDITION",
+      "ALIASED_LINE_WIDTH_RANGE",
+      "ALIASED_POINT_SIZE_RANGE",
+      "ALLOW_KEYBOARD_INPUT",
+      "ALLPASS",
+      "ALPHA",
+      "ALPHA_BITS",
+      "ALREADY_SIGNALED",
+      "ALT_MASK",
+      "ALWAYS",
+      "ANY_SAMPLES_PASSED",
+      "ANY_SAMPLES_PASSED_CONSERVATIVE",
+      "ANY_TYPE",
+      "ANY_UNORDERED_NODE_TYPE",
+      "ARRAY_BUFFER",
+      "ARRAY_BUFFER_BINDING",
+      "ATTACHED_SHADERS",
+      "ATTRIBUTE_NODE",
+      "AT_TARGET",
+      "AbortController",
+      "AbortSignal",
+      "AbsoluteOrientationSensor",
+      "AbstractRange",
+      "Accelerometer",
+      "AddSearchProvider",
+      "AggregateError",
+      "AnalyserNode",
+      "Animation",
+      "AnimationEffect",
+      "AnimationEvent",
+      "AnimationPlaybackEvent",
+      "AnimationTimeline",
+      "AnonXMLHttpRequest",
+      "Any",
+      "ApplicationCache",
+      "ApplicationCacheErrorEvent",
+      "Array",
+      "ArrayBuffer",
+      "ArrayType",
+      "Atomics",
+      "Attr",
+      "Audio",
+      "AudioBuffer",
+      "AudioBufferSourceNode",
+      "AudioContext",
+      "AudioDestinationNode",
+      "AudioListener",
+      "AudioNode",
+      "AudioParam",
+      "AudioParamMap",
+      "AudioProcessingEvent",
+      "AudioScheduledSourceNode",
+      "AudioStreamTrack",
+      "AudioWorklet",
+      "AudioWorkletNode",
+      "AuthenticatorAssertionResponse",
+      "AuthenticatorAttestationResponse",
+      "AuthenticatorResponse",
+      "AutocompleteErrorEvent",
+      "BACK",
+      "BAD_BOUNDARYPOINTS_ERR",
+      "BAD_REQUEST",
+      "BANDPASS",
+      "BLEND",
+      "BLEND_COLOR",
+      "BLEND_DST_ALPHA",
+      "BLEND_DST_RGB",
+      "BLEND_EQUATION",
+      "BLEND_EQUATION_ALPHA",
+      "BLEND_EQUATION_RGB",
+      "BLEND_SRC_ALPHA",
+      "BLEND_SRC_RGB",
+      "BLUE_BITS",
+      "BLUR",
+      "BOOL",
+      "BOOLEAN_TYPE",
+      "BOOL_VEC2",
+      "BOOL_VEC3",
+      "BOOL_VEC4",
+      "BOTH",
+      "BROWSER_DEFAULT_WEBGL",
+      "BUBBLING_PHASE",
+      "BUFFER_SIZE",
+      "BUFFER_USAGE",
+      "BYTE",
+      "BYTES_PER_ELEMENT",
+      "BackgroundFetchManager",
+      "BackgroundFetchRecord",
+      "BackgroundFetchRegistration",
+      "BarProp",
+      "BarcodeDetector",
+      "BaseAudioContext",
+      "BaseHref",
+      "BatteryManager",
+      "BeforeInstallPromptEvent",
+      "BeforeLoadEvent",
+      "BeforeUnloadEvent",
+      "BigInt",
+      "BigInt64Array",
+      "BigUint64Array",
+      "BiquadFilterNode",
+      "Blob",
+      "BlobEvent",
+      "Bluetooth",
+      "BluetoothCharacteristicProperties",
+      "BluetoothDevice",
+      "BluetoothRemoteGATTCharacteristic",
+      "BluetoothRemoteGATTDescriptor",
+      "BluetoothRemoteGATTServer",
+      "BluetoothRemoteGATTService",
+      "BluetoothUUID",
+      "Boolean",
+      "BroadcastChannel",
+      "ByteLengthQueuingStrategy",
+      "CAPTURING_PHASE",
+      "CCW",
+      "CDATASection",
+      "CDATA_SECTION_NODE",
+      "CHANGE",
+      "CHARSET_RULE",
+      "CHECKING",
+      "CLAMP_TO_EDGE",
+      "CLICK",
+      "CLOSED",
+      "CLOSING",
+      "COLOR",
+      "COLOR_ATTACHMENT0",
+      "COLOR_ATTACHMENT1",
+      "COLOR_ATTACHMENT10",
+      "COLOR_ATTACHMENT11",
+      "COLOR_ATTACHMENT12",
+      "COLOR_ATTACHMENT13",
+      "COLOR_ATTACHMENT14",
+      "COLOR_ATTACHMENT15",
+      "COLOR_ATTACHMENT2",
+      "COLOR_ATTACHMENT3",
+      "COLOR_ATTACHMENT4",
+      "COLOR_ATTACHMENT5",
+      "COLOR_ATTACHMENT6",
+      "COLOR_ATTACHMENT7",
+      "COLOR_ATTACHMENT8",
+      "COLOR_ATTACHMENT9",
+      "COLOR_BUFFER_BIT",
+      "COLOR_CLEAR_VALUE",
+      "COLOR_WRITEMASK",
+      "COMMENT_NODE",
+      "COMPARE_REF_TO_TEXTURE",
+      "COMPILE_STATUS",
+      "COMPLETION_STATUS_KHR",
+      "COMPRESSED_RGBA_S3TC_DXT1_EXT",
+      "COMPRESSED_RGBA_S3TC_DXT3_EXT",
+      "COMPRESSED_RGBA_S3TC_DXT5_EXT",
+      "COMPRESSED_RGB_S3TC_DXT1_EXT",
+      "COMPRESSED_TEXTURE_FORMATS",
+      "CONDITION_SATISFIED",
+      "CONFIGURATION_UNSUPPORTED",
+      "CONNECTING",
+      "CONSTANT_ALPHA",
+      "CONSTANT_COLOR",
+      "CONSTRAINT_ERR",
+      "CONTEXT_LOST_WEBGL",
+      "CONTROL_MASK",
+      "COPY_READ_BUFFER",
+      "COPY_READ_BUFFER_BINDING",
+      "COPY_WRITE_BUFFER",
+      "COPY_WRITE_BUFFER_BINDING",
+      "COUNTER_STYLE_RULE",
+      "CSS",
+      "CSS2Properties",
+      "CSSAnimation",
+      "CSSCharsetRule",
+      "CSSConditionRule",
+      "CSSCounterStyleRule",
+      "CSSFontFaceRule",
+      "CSSFontFeatureValuesRule",
+      "CSSGroupingRule",
+      "CSSImageValue",
+      "CSSImportRule",
+      "CSSKeyframeRule",
+      "CSSKeyframesRule",
+      "CSSKeywordValue",
+      "CSSMathInvert",
+      "CSSMathMax",
+      "CSSMathMin",
+      "CSSMathNegate",
+      "CSSMathProduct",
+      "CSSMathSum",
+      "CSSMathValue",
+      "CSSMatrixComponent",
+      "CSSMediaRule",
+      "CSSMozDocumentRule",
+      "CSSNameSpaceRule",
+      "CSSNamespaceRule",
+      "CSSNumericArray",
+      "CSSNumericValue",
+      "CSSPageRule",
+      "CSSPerspective",
+      "CSSPositionValue",
+      "CSSPrimitiveValue",
+      "CSSRotate",
+      "CSSRule",
+      "CSSRuleList",
+      "CSSScale",
+      "CSSSkew",
+      "CSSSkewX",
+      "CSSSkewY",
+      "CSSStyleDeclaration",
+      "CSSStyleRule",
+      "CSSStyleSheet",
+      "CSSStyleValue",
+      "CSSSupportsRule",
+      "CSSTransformComponent",
+      "CSSTransformValue",
+      "CSSTransition",
+      "CSSTranslate",
+      "CSSUnitValue",
+      "CSSUnknownRule",
+      "CSSUnparsedValue",
+      "CSSValue",
+      "CSSValueList",
+      "CSSVariableReferenceValue",
+      "CSSVariablesDeclaration",
+      "CSSVariablesRule",
+      "CSSViewportRule",
+      "CSS_ATTR",
+      "CSS_CM",
+      "CSS_COUNTER",
+      "CSS_CUSTOM",
+      "CSS_DEG",
+      "CSS_DIMENSION",
+      "CSS_EMS",
+      "CSS_EXS",
+      "CSS_FILTER_BLUR",
+      "CSS_FILTER_BRIGHTNESS",
+      "CSS_FILTER_CONTRAST",
+      "CSS_FILTER_CUSTOM",
+      "CSS_FILTER_DROP_SHADOW",
+      "CSS_FILTER_GRAYSCALE",
+      "CSS_FILTER_HUE_ROTATE",
+      "CSS_FILTER_INVERT",
+      "CSS_FILTER_OPACITY",
+      "CSS_FILTER_REFERENCE",
+      "CSS_FILTER_SATURATE",
+      "CSS_FILTER_SEPIA",
+      "CSS_GRAD",
+      "CSS_HZ",
+      "CSS_IDENT",
+      "CSS_IN",
+      "CSS_INHERIT",
+      "CSS_KHZ",
+      "CSS_MATRIX",
+      "CSS_MATRIX3D",
+      "CSS_MM",
+      "CSS_MS",
+      "CSS_NUMBER",
+      "CSS_PC",
+      "CSS_PERCENTAGE",
+      "CSS_PERSPECTIVE",
+      "CSS_PRIMITIVE_VALUE",
+      "CSS_PT",
+      "CSS_PX",
+      "CSS_RAD",
+      "CSS_RECT",
+      "CSS_RGBCOLOR",
+      "CSS_ROTATE",
+      "CSS_ROTATE3D",
+      "CSS_ROTATEX",
+      "CSS_ROTATEY",
+      "CSS_ROTATEZ",
+      "CSS_S",
+      "CSS_SCALE",
+      "CSS_SCALE3D",
+      "CSS_SCALEX",
+      "CSS_SCALEY",
+      "CSS_SCALEZ",
+      "CSS_SKEW",
+      "CSS_SKEWX",
+      "CSS_SKEWY",
+      "CSS_STRING",
+      "CSS_TRANSLATE",
+      "CSS_TRANSLATE3D",
+      "CSS_TRANSLATEX",
+      "CSS_TRANSLATEY",
+      "CSS_TRANSLATEZ",
+      "CSS_UNKNOWN",
+      "CSS_URI",
+      "CSS_VALUE_LIST",
+      "CSS_VH",
+      "CSS_VMAX",
+      "CSS_VMIN",
+      "CSS_VW",
+      "CULL_FACE",
+      "CULL_FACE_MODE",
+      "CURRENT_PROGRAM",
+      "CURRENT_QUERY",
+      "CURRENT_VERTEX_ATTRIB",
+      "CUSTOM",
+      "CW",
+      "Cache",
+      "CacheStorage",
+      "CanvasCaptureMediaStream",
+      "CanvasCaptureMediaStreamTrack",
+      "CanvasGradient",
+      "CanvasPattern",
+      "CanvasRenderingContext2D",
+      "CaretPosition",
+      "ChannelMergerNode",
+      "ChannelSplitterNode",
+      "CharacterData",
+      "ClientRect",
+      "ClientRectList",
+      "Clipboard",
+      "ClipboardEvent",
+      "ClipboardItem",
+      "CloseEvent",
+      "Collator",
+      "CommandEvent",
+      "Comment",
+      "CompileError",
+      "CompositionEvent",
+      "CompressionStream",
+      "Console",
+      "ConstantSourceNode",
+      "Controllers",
+      "ConvolverNode",
+      "CountQueuingStrategy",
+      "Counter",
+      "Credential",
+      "CredentialsContainer",
+      "Crypto",
+      "CryptoKey",
+      "CustomElementRegistry",
+      "CustomEvent",
+      "DATABASE_ERR",
+      "DATA_CLONE_ERR",
+      "DATA_ERR",
+      "DBLCLICK",
+      "DECR",
+      "DECR_WRAP",
+      "DELETE_STATUS",
+      "DEPTH",
+      "DEPTH24_STENCIL8",
+      "DEPTH32F_STENCIL8",
+      "DEPTH_ATTACHMENT",
+      "DEPTH_BITS",
+      "DEPTH_BUFFER_BIT",
+      "DEPTH_CLEAR_VALUE",
+      "DEPTH_COMPONENT",
+      "DEPTH_COMPONENT16",
+      "DEPTH_COMPONENT24",
+      "DEPTH_COMPONENT32F",
+      "DEPTH_FUNC",
+      "DEPTH_RANGE",
+      "DEPTH_STENCIL",
+      "DEPTH_STENCIL_ATTACHMENT",
+      "DEPTH_TEST",
+      "DEPTH_WRITEMASK",
+      "DEVICE_INELIGIBLE",
+      "DIRECTION_DOWN",
+      "DIRECTION_LEFT",
+      "DIRECTION_RIGHT",
+      "DIRECTION_UP",
+      "DISABLED",
+      "DISPATCH_REQUEST_ERR",
+      "DITHER",
+      "DOCUMENT_FRAGMENT_NODE",
+      "DOCUMENT_NODE",
+      "DOCUMENT_POSITION_CONTAINED_BY",
+      "DOCUMENT_POSITION_CONTAINS",
+      "DOCUMENT_POSITION_DISCONNECTED",
+      "DOCUMENT_POSITION_FOLLOWING",
+      "DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC",
+      "DOCUMENT_POSITION_PRECEDING",
+      "DOCUMENT_TYPE_NODE",
+      "DOMCursor",
+      "DOMError",
+      "DOMException",
+      "DOMImplementation",
+      "DOMImplementationLS",
+      "DOMMatrix",
+      "DOMMatrixReadOnly",
+      "DOMParser",
+      "DOMPoint",
+      "DOMPointReadOnly",
+      "DOMQuad",
+      "DOMRect",
+      "DOMRectList",
+      "DOMRectReadOnly",
+      "DOMRequest",
+      "DOMSTRING_SIZE_ERR",
+      "DOMSettableTokenList",
+      "DOMStringList",
+      "DOMStringMap",
+      "DOMTokenList",
+      "DOMTransactionEvent",
+      "DOM_DELTA_LINE",
+      "DOM_DELTA_PAGE",
+      "DOM_DELTA_PIXEL",
+      "DOM_INPUT_METHOD_DROP",
+      "DOM_INPUT_METHOD_HANDWRITING",
+      "DOM_INPUT_METHOD_IME",
+      "DOM_INPUT_METHOD_KEYBOARD",
+      "DOM_INPUT_METHOD_MULTIMODAL",
+      "DOM_INPUT_METHOD_OPTION",
+      "DOM_INPUT_METHOD_PASTE",
+      "DOM_INPUT_METHOD_SCRIPT",
+      "DOM_INPUT_METHOD_UNKNOWN",
+      "DOM_INPUT_METHOD_VOICE",
+      "DOM_KEY_LOCATION_JOYSTICK",
+      "DOM_KEY_LOCATION_LEFT",
+      "DOM_KEY_LOCATION_MOBILE",
+      "DOM_KEY_LOCATION_NUMPAD",
+      "DOM_KEY_LOCATION_RIGHT",
+      "DOM_KEY_LOCATION_STANDARD",
+      "DOM_VK_0",
+      "DOM_VK_1",
+      "DOM_VK_2",
+      "DOM_VK_3",
+      "DOM_VK_4",
+      "DOM_VK_5",
+      "DOM_VK_6",
+      "DOM_VK_7",
+      "DOM_VK_8",
+      "DOM_VK_9",
+      "DOM_VK_A",
+      "DOM_VK_ACCEPT",
+      "DOM_VK_ADD",
+      "DOM_VK_ALT",
+      "DOM_VK_ALTGR",
+      "DOM_VK_AMPERSAND",
+      "DOM_VK_ASTERISK",
+      "DOM_VK_AT",
+      "DOM_VK_ATTN",
+      "DOM_VK_B",
+      "DOM_VK_BACKSPACE",
+      "DOM_VK_BACK_QUOTE",
+      "DOM_VK_BACK_SLASH",
+      "DOM_VK_BACK_SPACE",
+      "DOM_VK_C",
+      "DOM_VK_CANCEL",
+      "DOM_VK_CAPS_LOCK",
+      "DOM_VK_CIRCUMFLEX",
+      "DOM_VK_CLEAR",
+      "DOM_VK_CLOSE_BRACKET",
+      "DOM_VK_CLOSE_CURLY_BRACKET",
+      "DOM_VK_CLOSE_PAREN",
+      "DOM_VK_COLON",
+      "DOM_VK_COMMA",
+      "DOM_VK_CONTEXT_MENU",
+      "DOM_VK_CONTROL",
+      "DOM_VK_CONVERT",
+      "DOM_VK_CRSEL",
+      "DOM_VK_CTRL",
+      "DOM_VK_D",
+      "DOM_VK_DECIMAL",
+      "DOM_VK_DELETE",
+      "DOM_VK_DIVIDE",
+      "DOM_VK_DOLLAR",
+      "DOM_VK_DOUBLE_QUOTE",
+      "DOM_VK_DOWN",
+      "DOM_VK_E",
+      "DOM_VK_EISU",
+      "DOM_VK_END",
+      "DOM_VK_ENTER",
+      "DOM_VK_EQUALS",
+      "DOM_VK_EREOF",
+      "DOM_VK_ESCAPE",
+      "DOM_VK_EXCLAMATION",
+      "DOM_VK_EXECUTE",
+      "DOM_VK_EXSEL",
+      "DOM_VK_F",
+      "DOM_VK_F1",
+      "DOM_VK_F10",
+      "DOM_VK_F11",
+      "DOM_VK_F12",
+      "DOM_VK_F13",
+      "DOM_VK_F14",
+      "DOM_VK_F15",
+      "DOM_VK_F16",
+      "DOM_VK_F17",
+      "DOM_VK_F18",
+      "DOM_VK_F19",
+      "DOM_VK_F2",
+      "DOM_VK_F20",
+      "DOM_VK_F21",
+      "DOM_VK_F22",
+      "DOM_VK_F23",
+      "DOM_VK_F24",
+      "DOM_VK_F25",
+      "DOM_VK_F26",
+      "DOM_VK_F27",
+      "DOM_VK_F28",
+      "DOM_VK_F29",
+      "DOM_VK_F3",
+      "DOM_VK_F30",
+      "DOM_VK_F31",
+      "DOM_VK_F32",
+      "DOM_VK_F33",
+      "DOM_VK_F34",
+      "DOM_VK_F35",
+      "DOM_VK_F36",
+      "DOM_VK_F4",
+      "DOM_VK_F5",
+      "DOM_VK_F6",
+      "DOM_VK_F7",
+      "DOM_VK_F8",
+      "DOM_VK_F9",
+      "DOM_VK_FINAL",
+      "DOM_VK_FRONT",
+      "DOM_VK_G",
+      "DOM_VK_GREATER_THAN",
+      "DOM_VK_H",
+      "DOM_VK_HANGUL",
+      "DOM_VK_HANJA",
+      "DOM_VK_HASH",
+      "DOM_VK_HELP",
+      "DOM_VK_HK_TOGGLE",
+      "DOM_VK_HOME",
+      "DOM_VK_HYPHEN_MINUS",
+      "DOM_VK_I",
+      "DOM_VK_INSERT",
+      "DOM_VK_J",
+      "DOM_VK_JUNJA",
+      "DOM_VK_K",
+      "DOM_VK_KANA",
+      "DOM_VK_KANJI",
+      "DOM_VK_L",
+      "DOM_VK_LEFT",
+      "DOM_VK_LEFT_TAB",
+      "DOM_VK_LESS_THAN",
+      "DOM_VK_M",
+      "DOM_VK_META",
+      "DOM_VK_MODECHANGE",
+      "DOM_VK_MULTIPLY",
+      "DOM_VK_N",
+      "DOM_VK_NONCONVERT",
+      "DOM_VK_NUMPAD0",
+      "DOM_VK_NUMPAD1",
+      "DOM_VK_NUMPAD2",
+      "DOM_VK_NUMPAD3",
+      "DOM_VK_NUMPAD4",
+      "DOM_VK_NUMPAD5",
+      "DOM_VK_NUMPAD6",
+      "DOM_VK_NUMPAD7",
+      "DOM_VK_NUMPAD8",
+      "DOM_VK_NUMPAD9",
+      "DOM_VK_NUM_LOCK",
+      "DOM_VK_O",
+      "DOM_VK_OEM_1",
+      "DOM_VK_OEM_102",
+      "DOM_VK_OEM_2",
+      "DOM_VK_OEM_3",
+      "DOM_VK_OEM_4",
+      "DOM_VK_OEM_5",
+      "DOM_VK_OEM_6",
+      "DOM_VK_OEM_7",
+      "DOM_VK_OEM_8",
+      "DOM_VK_OEM_COMMA",
+      "DOM_VK_OEM_MINUS",
+      "DOM_VK_OEM_PERIOD",
+      "DOM_VK_OEM_PLUS",
+      "DOM_VK_OPEN_BRACKET",
+      "DOM_VK_OPEN_CURLY_BRACKET",
+      "DOM_VK_OPEN_PAREN",
+      "DOM_VK_P",
+      "DOM_VK_PA1",
+      "DOM_VK_PAGEDOWN",
+      "DOM_VK_PAGEUP",
+      "DOM_VK_PAGE_DOWN",
+      "DOM_VK_PAGE_UP",
+      "DOM_VK_PAUSE",
+      "DOM_VK_PERCENT",
+      "DOM_VK_PERIOD",
+      "DOM_VK_PIPE",
+      "DOM_VK_PLAY",
+      "DOM_VK_PLUS",
+      "DOM_VK_PRINT",
+      "DOM_VK_PRINTSCREEN",
+      "DOM_VK_PROCESSKEY",
+      "DOM_VK_PROPERITES",
+      "DOM_VK_Q",
+      "DOM_VK_QUESTION_MARK",
+      "DOM_VK_QUOTE",
+      "DOM_VK_R",
+      "DOM_VK_REDO",
+      "DOM_VK_RETURN",
+      "DOM_VK_RIGHT",
+      "DOM_VK_S",
+      "DOM_VK_SCROLL_LOCK",
+      "DOM_VK_SELECT",
+      "DOM_VK_SEMICOLON",
+      "DOM_VK_SEPARATOR",
+      "DOM_VK_SHIFT",
+      "DOM_VK_SLASH",
+      "DOM_VK_SLEEP",
+      "DOM_VK_SPACE",
+      "DOM_VK_SUBTRACT",
+      "DOM_VK_T",
+      "DOM_VK_TAB",
+      "DOM_VK_TILDE",
+      "DOM_VK_U",
+      "DOM_VK_UNDERSCORE",
+      "DOM_VK_UNDO",
+      "DOM_VK_UNICODE",
+      "DOM_VK_UP",
+      "DOM_VK_V",
+      "DOM_VK_VOLUME_DOWN",
+      "DOM_VK_VOLUME_MUTE",
+      "DOM_VK_VOLUME_UP",
+      "DOM_VK_W",
+      "DOM_VK_WIN",
+      "DOM_VK_WINDOW",
+      "DOM_VK_WIN_ICO_00",
+      "DOM_VK_WIN_ICO_CLEAR",
+      "DOM_VK_WIN_ICO_HELP",
+      "DOM_VK_WIN_OEM_ATTN",
+      "DOM_VK_WIN_OEM_AUTO",
+      "DOM_VK_WIN_OEM_BACKTAB",
+      "DOM_VK_WIN_OEM_CLEAR",
+      "DOM_VK_WIN_OEM_COPY",
+      "DOM_VK_WIN_OEM_CUSEL",
+      "DOM_VK_WIN_OEM_ENLW",
+      "DOM_VK_WIN_OEM_FINISH",
+      "DOM_VK_WIN_OEM_FJ_JISHO",
+      "DOM_VK_WIN_OEM_FJ_LOYA",
+      "DOM_VK_WIN_OEM_FJ_MASSHOU",
+      "DOM_VK_WIN_OEM_FJ_ROYA",
+      "DOM_VK_WIN_OEM_FJ_TOUROKU",
+      "DOM_VK_WIN_OEM_JUMP",
+      "DOM_VK_WIN_OEM_PA1",
+      "DOM_VK_WIN_OEM_PA2",
+      "DOM_VK_WIN_OEM_PA3",
+      "DOM_VK_WIN_OEM_RESET",
+      "DOM_VK_WIN_OEM_WSCTRL",
+      "DOM_VK_X",
+      "DOM_VK_XF86XK_ADD_FAVORITE",
+      "DOM_VK_XF86XK_APPLICATION_LEFT",
+      "DOM_VK_XF86XK_APPLICATION_RIGHT",
+      "DOM_VK_XF86XK_AUDIO_CYCLE_TRACK",
+      "DOM_VK_XF86XK_AUDIO_FORWARD",
+      "DOM_VK_XF86XK_AUDIO_LOWER_VOLUME",
+      "DOM_VK_XF86XK_AUDIO_MEDIA",
+      "DOM_VK_XF86XK_AUDIO_MUTE",
+      "DOM_VK_XF86XK_AUDIO_NEXT",
+      "DOM_VK_XF86XK_AUDIO_PAUSE",
+      "DOM_VK_XF86XK_AUDIO_PLAY",
+      "DOM_VK_XF86XK_AUDIO_PREV",
+      "DOM_VK_XF86XK_AUDIO_RAISE_VOLUME",
+      "DOM_VK_XF86XK_AUDIO_RANDOM_PLAY",
+      "DOM_VK_XF86XK_AUDIO_RECORD",
+      "DOM_VK_XF86XK_AUDIO_REPEAT",
+      "DOM_VK_XF86XK_AUDIO_REWIND",
+      "DOM_VK_XF86XK_AUDIO_STOP",
+      "DOM_VK_XF86XK_AWAY",
+      "DOM_VK_XF86XK_BACK",
+      "DOM_VK_XF86XK_BACK_FORWARD",
+      "DOM_VK_XF86XK_BATTERY",
+      "DOM_VK_XF86XK_BLUE",
+      "DOM_VK_XF86XK_BLUETOOTH",
+      "DOM_VK_XF86XK_BOOK",
+      "DOM_VK_XF86XK_BRIGHTNESS_ADJUST",
+      "DOM_VK_XF86XK_CALCULATOR",
+      "DOM_VK_XF86XK_CALENDAR",
+      "DOM_VK_XF86XK_CD",
+      "DOM_VK_XF86XK_CLOSE",
+      "DOM_VK_XF86XK_COMMUNITY",
+      "DOM_VK_XF86XK_CONTRAST_ADJUST",
+      "DOM_VK_XF86XK_COPY",
+      "DOM_VK_XF86XK_CUT",
+      "DOM_VK_XF86XK_CYCLE_ANGLE",
+      "DOM_VK_XF86XK_DISPLAY",
+      "DOM_VK_XF86XK_DOCUMENTS",
+      "DOM_VK_XF86XK_DOS",
+      "DOM_VK_XF86XK_EJECT",
+      "DOM_VK_XF86XK_EXCEL",
+      "DOM_VK_XF86XK_EXPLORER",
+      "DOM_VK_XF86XK_FAVORITES",
+      "DOM_VK_XF86XK_FINANCE",
+      "DOM_VK_XF86XK_FORWARD",
+      "DOM_VK_XF86XK_FRAME_BACK",
+      "DOM_VK_XF86XK_FRAME_FORWARD",
+      "DOM_VK_XF86XK_GAME",
+      "DOM_VK_XF86XK_GO",
+      "DOM_VK_XF86XK_GREEN",
+      "DOM_VK_XF86XK_HIBERNATE",
+      "DOM_VK_XF86XK_HISTORY",
+      "DOM_VK_XF86XK_HOME_PAGE",
+      "DOM_VK_XF86XK_HOT_LINKS",
+      "DOM_VK_XF86XK_I_TOUCH",
+      "DOM_VK_XF86XK_KBD_BRIGHTNESS_DOWN",
+      "DOM_VK_XF86XK_KBD_BRIGHTNESS_UP",
+      "DOM_VK_XF86XK_KBD_LIGHT_ON_OFF",
+      "DOM_VK_XF86XK_LAUNCH0",
+      "DOM_VK_XF86XK_LAUNCH1",
+      "DOM_VK_XF86XK_LAUNCH2",
+      "DOM_VK_XF86XK_LAUNCH3",
+      "DOM_VK_XF86XK_LAUNCH4",
+      "DOM_VK_XF86XK_LAUNCH5",
+      "DOM_VK_XF86XK_LAUNCH6",
+      "DOM_VK_XF86XK_LAUNCH7",
+      "DOM_VK_XF86XK_LAUNCH8",
+      "DOM_VK_XF86XK_LAUNCH9",
+      "DOM_VK_XF86XK_LAUNCH_A",
+      "DOM_VK_XF86XK_LAUNCH_B",
+      "DOM_VK_XF86XK_LAUNCH_C",
+      "DOM_VK_XF86XK_LAUNCH_D",
+      "DOM_VK_XF86XK_LAUNCH_E",
+      "DOM_VK_XF86XK_LAUNCH_F",
+      "DOM_VK_XF86XK_LIGHT_BULB",
+      "DOM_VK_XF86XK_LOG_OFF",
+      "DOM_VK_XF86XK_MAIL",
+      "DOM_VK_XF86XK_MAIL_FORWARD",
+      "DOM_VK_XF86XK_MARKET",
+      "DOM_VK_XF86XK_MEETING",
+      "DOM_VK_XF86XK_MEMO",
+      "DOM_VK_XF86XK_MENU_KB",
+      "DOM_VK_XF86XK_MENU_PB",
+      "DOM_VK_XF86XK_MESSENGER",
+      "DOM_VK_XF86XK_MON_BRIGHTNESS_DOWN",
+      "DOM_VK_XF86XK_MON_BRIGHTNESS_UP",
+      "DOM_VK_XF86XK_MUSIC",
+      "DOM_VK_XF86XK_MY_COMPUTER",
+      "DOM_VK_XF86XK_MY_SITES",
+      "DOM_VK_XF86XK_NEW",
+      "DOM_VK_XF86XK_NEWS",
+      "DOM_VK_XF86XK_OFFICE_HOME",
+      "DOM_VK_XF86XK_OPEN",
+      "DOM_VK_XF86XK_OPEN_URL",
+      "DOM_VK_XF86XK_OPTION",
+      "DOM_VK_XF86XK_PASTE",
+      "DOM_VK_XF86XK_PHONE",
+      "DOM_VK_XF86XK_PICTURES",
+      "DOM_VK_XF86XK_POWER_DOWN",
+      "DOM_VK_XF86XK_POWER_OFF",
+      "DOM_VK_XF86XK_RED",
+      "DOM_VK_XF86XK_REFRESH",
+      "DOM_VK_XF86XK_RELOAD",
+      "DOM_VK_XF86XK_REPLY",
+      "DOM_VK_XF86XK_ROCKER_DOWN",
+      "DOM_VK_XF86XK_ROCKER_ENTER",
+      "DOM_VK_XF86XK_ROCKER_UP",
+      "DOM_VK_XF86XK_ROTATE_WINDOWS",
+      "DOM_VK_XF86XK_ROTATION_KB",
+      "DOM_VK_XF86XK_ROTATION_PB",
+      "DOM_VK_XF86XK_SAVE",
+      "DOM_VK_XF86XK_SCREEN_SAVER",
+      "DOM_VK_XF86XK_SCROLL_CLICK",
+      "DOM_VK_XF86XK_SCROLL_DOWN",
+      "DOM_VK_XF86XK_SCROLL_UP",
+      "DOM_VK_XF86XK_SEARCH",
+      "DOM_VK_XF86XK_SEND",
+      "DOM_VK_XF86XK_SHOP",
+      "DOM_VK_XF86XK_SPELL",
+      "DOM_VK_XF86XK_SPLIT_SCREEN",
+      "DOM_VK_XF86XK_STANDBY",
+      "DOM_VK_XF86XK_START",
+      "DOM_VK_XF86XK_STOP",
+      "DOM_VK_XF86XK_SUBTITLE",
+      "DOM_VK_XF86XK_SUPPORT",
+      "DOM_VK_XF86XK_SUSPEND",
+      "DOM_VK_XF86XK_TASK_PANE",
+      "DOM_VK_XF86XK_TERMINAL",
+      "DOM_VK_XF86XK_TIME",
+      "DOM_VK_XF86XK_TOOLS",
+      "DOM_VK_XF86XK_TOP_MENU",
+      "DOM_VK_XF86XK_TO_DO_LIST",
+      "DOM_VK_XF86XK_TRAVEL",
+      "DOM_VK_XF86XK_USER1KB",
+      "DOM_VK_XF86XK_USER2KB",
+      "DOM_VK_XF86XK_USER_PB",
+      "DOM_VK_XF86XK_UWB",
+      "DOM_VK_XF86XK_VENDOR_HOME",
+      "DOM_VK_XF86XK_VIDEO",
+      "DOM_VK_XF86XK_VIEW",
+      "DOM_VK_XF86XK_WAKE_UP",
+      "DOM_VK_XF86XK_WEB_CAM",
+      "DOM_VK_XF86XK_WHEEL_BUTTON",
+      "DOM_VK_XF86XK_WLAN",
+      "DOM_VK_XF86XK_WORD",
+      "DOM_VK_XF86XK_WWW",
+      "DOM_VK_XF86XK_XFER",
+      "DOM_VK_XF86XK_YELLOW",
+      "DOM_VK_XF86XK_ZOOM_IN",
+      "DOM_VK_XF86XK_ZOOM_OUT",
+      "DOM_VK_Y",
+      "DOM_VK_Z",
+      "DOM_VK_ZOOM",
+      "DONE",
+      "DONT_CARE",
+      "DOWNLOADING",
+      "DRAGDROP",
+      "DRAW_BUFFER0",
+      "DRAW_BUFFER1",
+      "DRAW_BUFFER10",
+      "DRAW_BUFFER11",
+      "DRAW_BUFFER12",
+      "DRAW_BUFFER13",
+      "DRAW_BUFFER14",
+      "DRAW_BUFFER15",
+      "DRAW_BUFFER2",
+      "DRAW_BUFFER3",
+      "DRAW_BUFFER4",
+      "DRAW_BUFFER5",
+      "DRAW_BUFFER6",
+      "DRAW_BUFFER7",
+      "DRAW_BUFFER8",
+      "DRAW_BUFFER9",
+      "DRAW_FRAMEBUFFER",
+      "DRAW_FRAMEBUFFER_BINDING",
+      "DST_ALPHA",
+      "DST_COLOR",
+      "DYNAMIC_COPY",
+      "DYNAMIC_DRAW",
+      "DYNAMIC_READ",
+      "DataChannel",
+      "DataTransfer",
+      "DataTransferItem",
+      "DataTransferItemList",
+      "DataView",
+      "Date",
+      "DateTimeFormat",
+      "DecompressionStream",
+      "DelayNode",
+      "DeprecationReportBody",
+      "DesktopNotification",
+      "DesktopNotificationCenter",
+      "DeviceLightEvent",
+      "DeviceMotionEvent",
+      "DeviceMotionEventAcceleration",
+      "DeviceMotionEventRotationRate",
+      "DeviceOrientationEvent",
+      "DeviceProximityEvent",
+      "DeviceStorage",
+      "DeviceStorageChangeEvent",
+      "Directory",
+      "DisplayNames",
+      "Document",
+      "DocumentFragment",
+      "DocumentTimeline",
+      "DocumentType",
+      "DragEvent",
+      "DynamicsCompressorNode",
+      "E",
+      "ELEMENT_ARRAY_BUFFER",
+      "ELEMENT_ARRAY_BUFFER_BINDING",
+      "ELEMENT_NODE",
+      "EMPTY",
+      "ENCODING_ERR",
+      "ENDED",
+      "END_TO_END",
+      "END_TO_START",
+      "ENTITY_NODE",
+      "ENTITY_REFERENCE_NODE",
+      "EPSILON",
+      "EQUAL",
+      "EQUALPOWER",
+      "ERROR",
+      "EXPONENTIAL_DISTANCE",
+      "Element",
+      "ElementInternals",
+      "ElementQuery",
+      "EnterPictureInPictureEvent",
+      "Entity",
+      "EntityReference",
+      "Error",
+      "ErrorEvent",
+      "EvalError",
+      "Event",
+      "EventException",
+      "EventSource",
+      "EventTarget",
+      "External",
+      "FASTEST",
+      "FIDOSDK",
+      "FILTER_ACCEPT",
+      "FILTER_INTERRUPT",
+      "FILTER_REJECT",
+      "FILTER_SKIP",
+      "FINISHED_STATE",
+      "FIRST_ORDERED_NODE_TYPE",
+      "FLOAT",
+      "FLOAT_32_UNSIGNED_INT_24_8_REV",
+      "FLOAT_MAT2",
+      "FLOAT_MAT2x3",
+      "FLOAT_MAT2x4",
+      "FLOAT_MAT3",
+      "FLOAT_MAT3x2",
+      "FLOAT_MAT3x4",
+      "FLOAT_MAT4",
+      "FLOAT_MAT4x2",
+      "FLOAT_MAT4x3",
+      "FLOAT_VEC2",
+      "FLOAT_VEC3",
+      "FLOAT_VEC4",
+      "FOCUS",
+      "FONT_FACE_RULE",
+      "FONT_FEATURE_VALUES_RULE",
+      "FRAGMENT_SHADER",
+      "FRAGMENT_SHADER_DERIVATIVE_HINT",
+      "FRAGMENT_SHADER_DERIVATIVE_HINT_OES",
+      "FRAMEBUFFER",
+      "FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_BLUE_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING",
+      "FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE",
+      "FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_GREEN_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_OBJECT_NAME",
+      "FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE",
+      "FRAMEBUFFER_ATTACHMENT_RED_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE",
+      "FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE",
+      "FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER",
+      "FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL",
+      "FRAMEBUFFER_BINDING",
+      "FRAMEBUFFER_COMPLETE",
+      "FRAMEBUFFER_DEFAULT",
+      "FRAMEBUFFER_INCOMPLETE_ATTACHMENT",
+      "FRAMEBUFFER_INCOMPLETE_DIMENSIONS",
+      "FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT",
+      "FRAMEBUFFER_INCOMPLETE_MULTISAMPLE",
+      "FRAMEBUFFER_UNSUPPORTED",
+      "FRONT",
+      "FRONT_AND_BACK",
+      "FRONT_FACE",
+      "FUNC_ADD",
+      "FUNC_REVERSE_SUBTRACT",
+      "FUNC_SUBTRACT",
+      "FeaturePolicy",
+      "FeaturePolicyViolationReportBody",
+      "FederatedCredential",
+      "Feed",
+      "FeedEntry",
+      "File",
+      "FileError",
+      "FileList",
+      "FileReader",
+      "FileSystem",
+      "FileSystemDirectoryEntry",
+      "FileSystemDirectoryReader",
+      "FileSystemEntry",
+      "FileSystemFileEntry",
+      "FinalizationRegistry",
+      "FindInPage",
+      "Float32Array",
+      "Float64Array",
+      "FocusEvent",
+      "FontFace",
+      "FontFaceSet",
+      "FontFaceSetLoadEvent",
+      "FormData",
+      "FormDataEvent",
+      "FragmentDirective",
+      "Function",
+      "GENERATE_MIPMAP_HINT",
+      "GEQUAL",
+      "GREATER",
+      "GREEN_BITS",
+      "GainNode",
+      "Gamepad",
+      "GamepadAxisMoveEvent",
+      "GamepadButton",
+      "GamepadButtonEvent",
+      "GamepadEvent",
+      "GamepadHapticActuator",
+      "GamepadPose",
+      "Geolocation",
+      "GeolocationCoordinates",
+      "GeolocationPosition",
+      "GeolocationPositionError",
+      "GestureEvent",
+      "Global",
+      "Gyroscope",
+      "HALF_FLOAT",
+      "HAVE_CURRENT_DATA",
+      "HAVE_ENOUGH_DATA",
+      "HAVE_FUTURE_DATA",
+      "HAVE_METADATA",
+      "HAVE_NOTHING",
+      "HEADERS_RECEIVED",
+      "HIDDEN",
+      "HIERARCHY_REQUEST_ERR",
+      "HIGHPASS",
+      "HIGHSHELF",
+      "HIGH_FLOAT",
+      "HIGH_INT",
+      "HORIZONTAL",
+      "HORIZONTAL_AXIS",
+      "HRTF",
+      "HTMLAllCollection",
+      "HTMLAnchorElement",
+      "HTMLAppletElement",
+      "HTMLAreaElement",
+      "HTMLAudioElement",
+      "HTMLBRElement",
+      "HTMLBaseElement",
+      "HTMLBaseFontElement",
+      "HTMLBlockquoteElement",
+      "HTMLBodyElement",
+      "HTMLButtonElement",
+      "HTMLCanvasElement",
+      "HTMLCollection",
+      "HTMLCommandElement",
+      "HTMLContentElement",
+      "HTMLDListElement",
+      "HTMLDataElement",
+      "HTMLDataListElement",
+      "HTMLDetailsElement",
+      "HTMLDialogElement",
+      "HTMLDirectoryElement",
+      "HTMLDivElement",
+      "HTMLDocument",
+      "HTMLElement",
+      "HTMLEmbedElement",
+      "HTMLFieldSetElement",
+      "HTMLFontElement",
+      "HTMLFormControlsCollection",
+      "HTMLFormElement",
+      "HTMLFrameElement",
+      "HTMLFrameSetElement",
+      "HTMLHRElement",
+      "HTMLHeadElement",
+      "HTMLHeadingElement",
+      "HTMLHtmlElement",
+      "HTMLIFrameElement",
+      "HTMLImageElement",
+      "HTMLInputElement",
+      "HTMLIsIndexElement",
+      "HTMLKeygenElement",
+      "HTMLLIElement",
+      "HTMLLabelElement",
+      "HTMLLegendElement",
+      "HTMLLinkElement",
+      "HTMLMapElement",
+      "HTMLMarqueeElement",
+      "HTMLMediaElement",
+      "HTMLMenuElement",
+      "HTMLMenuItemElement",
+      "HTMLMetaElement",
+      "HTMLMeterElement",
+      "HTMLModElement",
+      "HTMLOListElement",
+      "HTMLObjectElement",
+      "HTMLOptGroupElement",
+      "HTMLOptionElement",
+      "HTMLOptionsCollection",
+      "HTMLOutputElement",
+      "HTMLParagraphElement",
+      "HTMLParamElement",
+      "HTMLPictureElement",
+      "HTMLPreElement",
+      "HTMLProgressElement",
+      "HTMLPropertiesCollection",
+      "HTMLQuoteElement",
+      "HTMLScriptElement",
+      "HTMLSelectElement",
+      "HTMLShadowElement",
+      "HTMLSlotElement",
+      "HTMLSourceElement",
+      "HTMLSpanElement",
+      "HTMLStyleElement",
+      "HTMLTableCaptionElement",
+      "HTMLTableCellElement",
+      "HTMLTableColElement",
+      "HTMLTableElement",
+      "HTMLTableRowElement",
+      "HTMLTableSectionElement",
+      "HTMLTemplateElement",
+      "HTMLTextAreaElement",
+      "HTMLTimeElement",
+      "HTMLTitleElement",
+      "HTMLTrackElement",
+      "HTMLUListElement",
+      "HTMLUnknownElement",
+      "HTMLVideoElement",
+      "HashChangeEvent",
+      "Headers",
+      "History",
+      "Hz",
+      "ICE_CHECKING",
+      "ICE_CLOSED",
+      "ICE_COMPLETED",
+      "ICE_CONNECTED",
+      "ICE_FAILED",
+      "ICE_GATHERING",
+      "ICE_WAITING",
+      "IDBCursor",
+      "IDBCursorWithValue",
+      "IDBDatabase",
+      "IDBDatabaseException",
+      "IDBFactory",
+      "IDBFileHandle",
+      "IDBFileRequest",
+      "IDBIndex",
+      "IDBKeyRange",
+      "IDBMutableFile",
+      "IDBObjectStore",
+      "IDBOpenDBRequest",
+      "IDBRequest",
+      "IDBTransaction",
+      "IDBVersionChangeEvent",
+      "IDLE",
+      "IIRFilterNode",
+      "IMPLEMENTATION_COLOR_READ_FORMAT",
+      "IMPLEMENTATION_COLOR_READ_TYPE",
+      "IMPORT_RULE",
+      "INCR",
+      "INCR_WRAP",
+      "INDEX_SIZE_ERR",
+      "INT",
+      "INTERLEAVED_ATTRIBS",
+      "INT_2_10_10_10_REV",
+      "INT_SAMPLER_2D",
+      "INT_SAMPLER_2D_ARRAY",
+      "INT_SAMPLER_3D",
+      "INT_SAMPLER_CUBE",
+      "INT_VEC2",
+      "INT_VEC3",
+      "INT_VEC4",
+      "INUSE_ATTRIBUTE_ERR",
+      "INVALID_ACCESS_ERR",
+      "INVALID_CHARACTER_ERR",
+      "INVALID_ENUM",
+      "INVALID_EXPRESSION_ERR",
+      "INVALID_FRAMEBUFFER_OPERATION",
+      "INVALID_INDEX",
+      "INVALID_MODIFICATION_ERR",
+      "INVALID_NODE_TYPE_ERR",
+      "INVALID_OPERATION",
+      "INVALID_STATE_ERR",
+      "INVALID_VALUE",
+      "INVERSE_DISTANCE",
+      "INVERT",
+      "IceCandidate",
+      "IdleDeadline",
+      "Image",
+      "ImageBitmap",
+      "ImageBitmapRenderingContext",
+      "ImageCapture",
+      "ImageData",
+      "Infinity",
+      "InputDeviceCapabilities",
+      "InputDeviceInfo",
+      "InputEvent",
+      "InputMethodContext",
+      "InstallTrigger",
+      "InstallTriggerImpl",
+      "Instance",
+      "Int16Array",
+      "Int32Array",
+      "Int8Array",
+      "Intent",
+      "InternalError",
+      "IntersectionObserver",
+      "IntersectionObserverEntry",
+      "Intl",
+      "IsSearchProviderInstalled",
+      "Iterator",
+      "JSON",
+      "KEEP",
+      "KEYDOWN",
+      "KEYFRAMES_RULE",
+      "KEYFRAME_RULE",
+      "KEYPRESS",
+      "KEYUP",
+      "KeyEvent",
+      "Keyboard",
+      "KeyboardEvent",
+      "KeyboardLayoutMap",
+      "KeyframeEffect",
+      "LENGTHADJUST_SPACING",
+      "LENGTHADJUST_SPACINGANDGLYPHS",
+      "LENGTHADJUST_UNKNOWN",
+      "LEQUAL",
+      "LESS",
+      "LINEAR",
+      "LINEAR_DISTANCE",
+      "LINEAR_MIPMAP_LINEAR",
+      "LINEAR_MIPMAP_NEAREST",
+      "LINES",
+      "LINE_LOOP",
+      "LINE_STRIP",
+      "LINE_WIDTH",
+      "LINK_STATUS",
+      "LIVE",
+      "LN10",
+      "LN2",
+      "LOADED",
+      "LOADING",
+      "LOG10E",
+      "LOG2E",
+      "LOWPASS",
+      "LOWSHELF",
+      "LOW_FLOAT",
+      "LOW_INT",
+      "LSException",
+      "LSParserFilter",
+      "LUMINANCE",
+      "LUMINANCE_ALPHA",
+      "LargestContentfulPaint",
+      "LayoutShift",
+      "LayoutShiftAttribution",
+      "LinearAccelerationSensor",
+      "LinkError",
+      "ListFormat",
+      "LocalMediaStream",
+      "Locale",
+      "Location",
+      "Lock",
+      "LockManager",
+      "MAX",
+      "MAX_3D_TEXTURE_SIZE",
+      "MAX_ARRAY_TEXTURE_LAYERS",
+      "MAX_CLIENT_WAIT_TIMEOUT_WEBGL",
+      "MAX_COLOR_ATTACHMENTS",
+      "MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS",
+      "MAX_COMBINED_TEXTURE_IMAGE_UNITS",
+      "MAX_COMBINED_UNIFORM_BLOCKS",
+      "MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS",
+      "MAX_CUBE_MAP_TEXTURE_SIZE",
+      "MAX_DRAW_BUFFERS",
+      "MAX_ELEMENTS_INDICES",
+      "MAX_ELEMENTS_VERTICES",
+      "MAX_ELEMENT_INDEX",
+      "MAX_FRAGMENT_INPUT_COMPONENTS",
+      "MAX_FRAGMENT_UNIFORM_BLOCKS",
+      "MAX_FRAGMENT_UNIFORM_COMPONENTS",
+      "MAX_FRAGMENT_UNIFORM_VECTORS",
+      "MAX_PROGRAM_TEXEL_OFFSET",
+      "MAX_RENDERBUFFER_SIZE",
+      "MAX_SAFE_INTEGER",
+      "MAX_SAMPLES",
+      "MAX_SERVER_WAIT_TIMEOUT",
+      "MAX_TEXTURE_IMAGE_UNITS",
+      "MAX_TEXTURE_LOD_BIAS",
+      "MAX_TEXTURE_MAX_ANISOTROPY_EXT",
+      "MAX_TEXTURE_SIZE",
+      "MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS",
+      "MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS",
+      "MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS",
+      "MAX_UNIFORM_BLOCK_SIZE",
+      "MAX_UNIFORM_BUFFER_BINDINGS",
+      "MAX_VALUE",
+      "MAX_VARYING_COMPONENTS",
+      "MAX_VARYING_VECTORS",
+      "MAX_VERTEX_ATTRIBS",
+      "MAX_VERTEX_OUTPUT_COMPONENTS",
+      "MAX_VERTEX_TEXTURE_IMAGE_UNITS",
+      "MAX_VERTEX_UNIFORM_BLOCKS",
+      "MAX_VERTEX_UNIFORM_COMPONENTS",
+      "MAX_VERTEX_UNIFORM_VECTORS",
+      "MAX_VIEWPORT_DIMS",
+      "MEDIA_ERR_ABORTED",
+      "MEDIA_ERR_DECODE",
+      "MEDIA_ERR_ENCRYPTED",
+      "MEDIA_ERR_NETWORK",
+      "MEDIA_ERR_SRC_NOT_SUPPORTED",
+      "MEDIA_KEYERR_CLIENT",
+      "MEDIA_KEYERR_DOMAIN",
+      "MEDIA_KEYERR_HARDWARECHANGE",
+      "MEDIA_KEYERR_OUTPUT",
+      "MEDIA_KEYERR_SERVICE",
+      "MEDIA_KEYERR_UNKNOWN",
+      "MEDIA_RULE",
+      "MEDIUM_FLOAT",
+      "MEDIUM_INT",
+      "META_MASK",
+      "MIDIAccess",
+      "MIDIConnectionEvent",
+      "MIDIInput",
+      "MIDIInputMap",
+      "MIDIMessageEvent",
+      "MIDIOutput",
+      "MIDIOutputMap",
+      "MIDIPort",
+      "MIN",
+      "MIN_PROGRAM_TEXEL_OFFSET",
+      "MIN_SAFE_INTEGER",
+      "MIN_VALUE",
+      "MIRRORED_REPEAT",
+      "MODE_ASYNCHRONOUS",
+      "MODE_SYNCHRONOUS",
+      "MODIFICATION",
+      "MOUSEDOWN",
+      "MOUSEDRAG",
+      "MOUSEMOVE",
+      "MOUSEOUT",
+      "MOUSEOVER",
+      "MOUSEUP",
+      "MOZ_KEYFRAMES_RULE",
+      "MOZ_KEYFRAME_RULE",
+      "MOZ_SOURCE_CURSOR",
+      "MOZ_SOURCE_ERASER",
+      "MOZ_SOURCE_KEYBOARD",
+      "MOZ_SOURCE_MOUSE",
+      "MOZ_SOURCE_PEN",
+      "MOZ_SOURCE_TOUCH",
+      "MOZ_SOURCE_UNKNOWN",
+      "MSGESTURE_FLAG_BEGIN",
+      "MSGESTURE_FLAG_CANCEL",
+      "MSGESTURE_FLAG_END",
+      "MSGESTURE_FLAG_INERTIA",
+      "MSGESTURE_FLAG_NONE",
+      "MSPOINTER_TYPE_MOUSE",
+      "MSPOINTER_TYPE_PEN",
+      "MSPOINTER_TYPE_TOUCH",
+      "MS_ASYNC_CALLBACK_STATUS_ASSIGN_DELEGATE",
+      "MS_ASYNC_CALLBACK_STATUS_CANCEL",
+      "MS_ASYNC_CALLBACK_STATUS_CHOOSEANY",
+      "MS_ASYNC_CALLBACK_STATUS_ERROR",
+      "MS_ASYNC_CALLBACK_STATUS_JOIN",
+      "MS_ASYNC_OP_STATUS_CANCELED",
+      "MS_ASYNC_OP_STATUS_ERROR",
+      "MS_ASYNC_OP_STATUS_SUCCESS",
+      "MS_MANIPULATION_STATE_ACTIVE",
+      "MS_MANIPULATION_STATE_CANCELLED",
+      "MS_MANIPULATION_STATE_COMMITTED",
+      "MS_MANIPULATION_STATE_DRAGGING",
+      "MS_MANIPULATION_STATE_INERTIA",
+      "MS_MANIPULATION_STATE_PRESELECT",
+      "MS_MANIPULATION_STATE_SELECTING",
+      "MS_MANIPULATION_STATE_STOPPED",
+      "MS_MEDIA_ERR_ENCRYPTED",
+      "MS_MEDIA_KEYERR_CLIENT",
+      "MS_MEDIA_KEYERR_DOMAIN",
+      "MS_MEDIA_KEYERR_HARDWARECHANGE",
+      "MS_MEDIA_KEYERR_OUTPUT",
+      "MS_MEDIA_KEYERR_SERVICE",
+      "MS_MEDIA_KEYERR_UNKNOWN",
+      "Map",
+      "Math",
+      "MathMLElement",
+      "MediaCapabilities",
+      "MediaCapabilitiesInfo",
+      "MediaController",
+      "MediaDeviceInfo",
+      "MediaDevices",
+      "MediaElementAudioSourceNode",
+      "MediaEncryptedEvent",
+      "MediaError",
+      "MediaKeyError",
+      "MediaKeyEvent",
+      "MediaKeyMessageEvent",
+      "MediaKeyNeededEvent",
+      "MediaKeySession",
+      "MediaKeyStatusMap",
+      "MediaKeySystemAccess",
+      "MediaKeys",
+      "MediaList",
+      "MediaMetadata",
+      "MediaQueryList",
+      "MediaQueryListEvent",
+      "MediaRecorder",
+      "MediaRecorderErrorEvent",
+      "MediaSession",
+      "MediaSettingsRange",
+      "MediaSource",
+      "MediaStream",
+      "MediaStreamAudioDestinationNode",
+      "MediaStreamAudioSourceNode",
+      "MediaStreamEvent",
+      "MediaStreamTrack",
+      "MediaStreamTrackAudioSourceNode",
+      "MediaStreamTrackEvent",
+      "Memory",
+      "MessageChannel",
+      "MessageEvent",
+      "MessagePort",
+      "Methods",
+      "MimeType",
+      "MimeTypeArray",
+      "Module",
+      "MouseEvent",
+      "MouseScrollEvent",
+      "MozAnimation",
+      "MozAnimationDelay",
+      "MozAnimationDirection",
+      "MozAnimationDuration",
+      "MozAnimationFillMode",
+      "MozAnimationIterationCount",
+      "MozAnimationName",
+      "MozAnimationPlayState",
+      "MozAnimationTimingFunction",
+      "MozAppearance",
+      "MozBackfaceVisibility",
+      "MozBinding",
+      "MozBorderBottomColors",
+      "MozBorderEnd",
+      "MozBorderEndColor",
+      "MozBorderEndStyle",
+      "MozBorderEndWidth",
+      "MozBorderImage",
+      "MozBorderLeftColors",
+      "MozBorderRightColors",
+      "MozBorderStart",
+      "MozBorderStartColor",
+      "MozBorderStartStyle",
+      "MozBorderStartWidth",
+      "MozBorderTopColors",
+      "MozBoxAlign",
+      "MozBoxDirection",
+      "MozBoxFlex",
+      "MozBoxOrdinalGroup",
+      "MozBoxOrient",
+      "MozBoxPack",
+      "MozBoxSizing",
+      "MozCSSKeyframeRule",
+      "MozCSSKeyframesRule",
+      "MozColumnCount",
+      "MozColumnFill",
+      "MozColumnGap",
+      "MozColumnRule",
+      "MozColumnRuleColor",
+      "MozColumnRuleStyle",
+      "MozColumnRuleWidth",
+      "MozColumnWidth",
+      "MozColumns",
+      "MozContactChangeEvent",
+      "MozFloatEdge",
+      "MozFontFeatureSettings",
+      "MozFontLanguageOverride",
+      "MozForceBrokenImageIcon",
+      "MozHyphens",
+      "MozImageRegion",
+      "MozMarginEnd",
+      "MozMarginStart",
+      "MozMmsEvent",
+      "MozMmsMessage",
+      "MozMobileMessageThread",
+      "MozOSXFontSmoothing",
+      "MozOrient",
+      "MozOsxFontSmoothing",
+      "MozOutlineRadius",
+      "MozOutlineRadiusBottomleft",
+      "MozOutlineRadiusBottomright",
+      "MozOutlineRadiusTopleft",
+      "MozOutlineRadiusTopright",
+      "MozPaddingEnd",
+      "MozPaddingStart",
+      "MozPerspective",
+      "MozPerspectiveOrigin",
+      "MozPowerManager",
+      "MozSettingsEvent",
+      "MozSmsEvent",
+      "MozSmsMessage",
+      "MozStackSizing",
+      "MozTabSize",
+      "MozTextAlignLast",
+      "MozTextDecorationColor",
+      "MozTextDecorationLine",
+      "MozTextDecorationStyle",
+      "MozTextSizeAdjust",
+      "MozTransform",
+      "MozTransformOrigin",
+      "MozTransformStyle",
+      "MozTransition",
+      "MozTransitionDelay",
+      "MozTransitionDuration",
+      "MozTransitionProperty",
+      "MozTransitionTimingFunction",
+      "MozUserFocus",
+      "MozUserInput",
+      "MozUserModify",
+      "MozUserSelect",
+      "MozWindowDragging",
+      "MozWindowShadow",
+      "MutationEvent",
+      "MutationObserver",
+      "MutationRecord",
+      "NAMESPACE_ERR",
+      "NAMESPACE_RULE",
+      "NEAREST",
+      "NEAREST_MIPMAP_LINEAR",
+      "NEAREST_MIPMAP_NEAREST",
+      "NEGATIVE_INFINITY",
+      "NETWORK_EMPTY",
+      "NETWORK_ERR",
+      "NETWORK_IDLE",
+      "NETWORK_LOADED",
+      "NETWORK_LOADING",
+      "NETWORK_NO_SOURCE",
+      "NEVER",
+      "NEW",
+      "NEXT",
+      "NEXT_NO_DUPLICATE",
+      "NICEST",
+      "NODE_AFTER",
+      "NODE_BEFORE",
+      "NODE_BEFORE_AND_AFTER",
+      "NODE_INSIDE",
+      "NONE",
+      "NON_TRANSIENT_ERR",
+      "NOTATION_NODE",
+      "NOTCH",
+      "NOTEQUAL",
+      "NOT_ALLOWED_ERR",
+      "NOT_FOUND_ERR",
+      "NOT_READABLE_ERR",
+      "NOT_SUPPORTED_ERR",
+      "NO_DATA_ALLOWED_ERR",
+      "NO_ERR",
+      "NO_ERROR",
+      "NO_MODIFICATION_ALLOWED_ERR",
+      "NUMBER_TYPE",
+      "NUM_COMPRESSED_TEXTURE_FORMATS",
+      "NaN",
+      "NamedNodeMap",
+      "NavigationPreloadManager",
+      "Navigator",
+      "NearbyLinks",
+      "NetworkInformation",
+      "Node",
+      "NodeFilter",
+      "NodeIterator",
+      "NodeList",
+      "Notation",
+      "Notification",
+      "NotifyPaintEvent",
+      "Number",
+      "NumberFormat",
+      "OBJECT_TYPE",
+      "OBSOLETE",
+      "OK",
+      "ONE",
+      "ONE_MINUS_CONSTANT_ALPHA",
+      "ONE_MINUS_CONSTANT_COLOR",
+      "ONE_MINUS_DST_ALPHA",
+      "ONE_MINUS_DST_COLOR",
+      "ONE_MINUS_SRC_ALPHA",
+      "ONE_MINUS_SRC_COLOR",
+      "OPEN",
+      "OPENED",
+      "OPENING",
+      "ORDERED_NODE_ITERATOR_TYPE",
+      "ORDERED_NODE_SNAPSHOT_TYPE",
+      "OTHER_ERROR",
+      "OUT_OF_MEMORY",
+      "Object",
+      "OfflineAudioCompletionEvent",
+      "OfflineAudioContext",
+      "OfflineResourceList",
+      "OffscreenCanvas",
+      "OffscreenCanvasRenderingContext2D",
+      "Option",
+      "OrientationSensor",
+      "OscillatorNode",
+      "OverconstrainedError",
+      "OverflowEvent",
+      "PACK_ALIGNMENT",
+      "PACK_ROW_LENGTH",
+      "PACK_SKIP_PIXELS",
+      "PACK_SKIP_ROWS",
+      "PAGE_RULE",
+      "PARSE_ERR",
+      "PATHSEG_ARC_ABS",
+      "PATHSEG_ARC_REL",
+      "PATHSEG_CLOSEPATH",
+      "PATHSEG_CURVETO_CUBIC_ABS",
+      "PATHSEG_CURVETO_CUBIC_REL",
+      "PATHSEG_CURVETO_CUBIC_SMOOTH_ABS",
+      "PATHSEG_CURVETO_CUBIC_SMOOTH_REL",
+      "PATHSEG_CURVETO_QUADRATIC_ABS",
+      "PATHSEG_CURVETO_QUADRATIC_REL",
+      "PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS",
+      "PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL",
+      "PATHSEG_LINETO_ABS",
+      "PATHSEG_LINETO_HORIZONTAL_ABS",
+      "PATHSEG_LINETO_HORIZONTAL_REL",
+      "PATHSEG_LINETO_REL",
+      "PATHSEG_LINETO_VERTICAL_ABS",
+      "PATHSEG_LINETO_VERTICAL_REL",
+      "PATHSEG_MOVETO_ABS",
+      "PATHSEG_MOVETO_REL",
+      "PATHSEG_UNKNOWN",
+      "PATH_EXISTS_ERR",
+      "PEAKING",
+      "PERMISSION_DENIED",
+      "PERSISTENT",
+      "PI",
+      "PIXEL_PACK_BUFFER",
+      "PIXEL_PACK_BUFFER_BINDING",
+      "PIXEL_UNPACK_BUFFER",
+      "PIXEL_UNPACK_BUFFER_BINDING",
+      "PLAYING_STATE",
+      "POINTS",
+      "POLYGON_OFFSET_FACTOR",
+      "POLYGON_OFFSET_FILL",
+      "POLYGON_OFFSET_UNITS",
+      "POSITION_UNAVAILABLE",
+      "POSITIVE_INFINITY",
+      "PREV",
+      "PREV_NO_DUPLICATE",
+      "PROCESSING_INSTRUCTION_NODE",
+      "PageChangeEvent",
+      "PageTransitionEvent",
+      "PaintRequest",
+      "PaintRequestList",
+      "PannerNode",
+      "PasswordCredential",
+      "Path2D",
+      "PaymentAddress",
+      "PaymentInstruments",
+      "PaymentManager",
+      "PaymentMethodChangeEvent",
+      "PaymentRequest",
+      "PaymentRequestUpdateEvent",
+      "PaymentResponse",
+      "Performance",
+      "PerformanceElementTiming",
+      "PerformanceEntry",
+      "PerformanceEventTiming",
+      "PerformanceLongTaskTiming",
+      "PerformanceMark",
+      "PerformanceMeasure",
+      "PerformanceNavigation",
+      "PerformanceNavigationTiming",
+      "PerformanceObserver",
+      "PerformanceObserverEntryList",
+      "PerformancePaintTiming",
+      "PerformanceResourceTiming",
+      "PerformanceServerTiming",
+      "PerformanceTiming",
+      "PeriodicSyncManager",
+      "PeriodicWave",
+      "PermissionStatus",
+      "Permissions",
+      "PhotoCapabilities",
+      "PictureInPictureWindow",
+      "Plugin",
+      "PluginArray",
+      "PluralRules",
+      "PointerEvent",
+      "PopStateEvent",
+      "PopupBlockedEvent",
+      "Presentation",
+      "PresentationAvailability",
+      "PresentationConnection",
+      "PresentationConnectionAvailableEvent",
+      "PresentationConnectionCloseEvent",
+      "PresentationConnectionList",
+      "PresentationReceiver",
+      "PresentationRequest",
+      "ProcessingInstruction",
+      "ProgressEvent",
+      "Promise",
+      "PromiseRejectionEvent",
+      "PropertyNodeList",
+      "Proxy",
+      "PublicKeyCredential",
+      "PushManager",
+      "PushSubscription",
+      "PushSubscriptionOptions",
+      "Q",
+      "QUERY_RESULT",
+      "QUERY_RESULT_AVAILABLE",
+      "QUOTA_ERR",
+      "QUOTA_EXCEEDED_ERR",
+      "QueryInterface",
+      "R11F_G11F_B10F",
+      "R16F",
+      "R16I",
+      "R16UI",
+      "R32F",
+      "R32I",
+      "R32UI",
+      "R8",
+      "R8I",
+      "R8UI",
+      "R8_SNORM",
+      "RASTERIZER_DISCARD",
+      "READ_BUFFER",
+      "READ_FRAMEBUFFER",
+      "READ_FRAMEBUFFER_BINDING",
+      "READ_ONLY",
+      "READ_ONLY_ERR",
+      "READ_WRITE",
+      "RED",
+      "RED_BITS",
+      "RED_INTEGER",
+      "REMOVAL",
+      "RENDERBUFFER",
+      "RENDERBUFFER_ALPHA_SIZE",
+      "RENDERBUFFER_BINDING",
+      "RENDERBUFFER_BLUE_SIZE",
+      "RENDERBUFFER_DEPTH_SIZE",
+      "RENDERBUFFER_GREEN_SIZE",
+      "RENDERBUFFER_HEIGHT",
+      "RENDERBUFFER_INTERNAL_FORMAT",
+      "RENDERBUFFER_RED_SIZE",
+      "RENDERBUFFER_SAMPLES",
+      "RENDERBUFFER_STENCIL_SIZE",
+      "RENDERBUFFER_WIDTH",
+      "RENDERER",
+      "RENDERING_INTENT_ABSOLUTE_COLORIMETRIC",
+      "RENDERING_INTENT_AUTO",
+      "RENDERING_INTENT_PERCEPTUAL",
+      "RENDERING_INTENT_RELATIVE_COLORIMETRIC",
+      "RENDERING_INTENT_SATURATION",
+      "RENDERING_INTENT_UNKNOWN",
+      "REPEAT",
+      "REPLACE",
+      "RG",
+      "RG16F",
+      "RG16I",
+      "RG16UI",
+      "RG32F",
+      "RG32I",
+      "RG32UI",
+      "RG8",
+      "RG8I",
+      "RG8UI",
+      "RG8_SNORM",
+      "RGB",
+      "RGB10_A2",
+      "RGB10_A2UI",
+      "RGB16F",
+      "RGB16I",
+      "RGB16UI",
+      "RGB32F",
+      "RGB32I",
+      "RGB32UI",
+      "RGB565",
+      "RGB5_A1",
+      "RGB8",
+      "RGB8I",
+      "RGB8UI",
+      "RGB8_SNORM",
+      "RGB9_E5",
+      "RGBA",
+      "RGBA16F",
+      "RGBA16I",
+      "RGBA16UI",
+      "RGBA32F",
+      "RGBA32I",
+      "RGBA32UI",
+      "RGBA4",
+      "RGBA8",
+      "RGBA8I",
+      "RGBA8UI",
+      "RGBA8_SNORM",
+      "RGBA_INTEGER",
+      "RGBColor",
+      "RGB_INTEGER",
+      "RG_INTEGER",
+      "ROTATION_CLOCKWISE",
+      "ROTATION_COUNTERCLOCKWISE",
+      "RTCCertificate",
+      "RTCDTMFSender",
+      "RTCDTMFToneChangeEvent",
+      "RTCDataChannel",
+      "RTCDataChannelEvent",
+      "RTCDtlsTransport",
+      "RTCError",
+      "RTCErrorEvent",
+      "RTCIceCandidate",
+      "RTCIceTransport",
+      "RTCPeerConnection",
+      "RTCPeerConnectionIceErrorEvent",
+      "RTCPeerConnectionIceEvent",
+      "RTCRtpReceiver",
+      "RTCRtpSender",
+      "RTCRtpTransceiver",
+      "RTCSctpTransport",
+      "RTCSessionDescription",
+      "RTCStatsReport",
+      "RTCTrackEvent",
+      "RadioNodeList",
+      "Range",
+      "RangeError",
+      "RangeException",
+      "ReadableStream",
+      "ReadableStreamDefaultReader",
+      "RecordErrorEvent",
+      "Rect",
+      "ReferenceError",
+      "Reflect",
+      "RegExp",
+      "RelativeOrientationSensor",
+      "RelativeTimeFormat",
+      "RemotePlayback",
+      "Report",
+      "ReportBody",
+      "ReportingObserver",
+      "Request",
+      "ResizeObserver",
+      "ResizeObserverEntry",
+      "ResizeObserverSize",
+      "Response",
+      "RuntimeError",
+      "SAMPLER_2D",
+      "SAMPLER_2D_ARRAY",
+      "SAMPLER_2D_ARRAY_SHADOW",
+      "SAMPLER_2D_SHADOW",
+      "SAMPLER_3D",
+      "SAMPLER_BINDING",
+      "SAMPLER_CUBE",
+      "SAMPLER_CUBE_SHADOW",
+      "SAMPLES",
+      "SAMPLE_ALPHA_TO_COVERAGE",
+      "SAMPLE_BUFFERS",
+      "SAMPLE_COVERAGE",
+      "SAMPLE_COVERAGE_INVERT",
+      "SAMPLE_COVERAGE_VALUE",
+      "SAWTOOTH",
+      "SCHEDULED_STATE",
+      "SCISSOR_BOX",
+      "SCISSOR_TEST",
+      "SCROLL_PAGE_DOWN",
+      "SCROLL_PAGE_UP",
+      "SDP_ANSWER",
+      "SDP_OFFER",
+      "SDP_PRANSWER",
+      "SECURITY_ERR",
+      "SELECT",
+      "SEPARATE_ATTRIBS",
+      "SERIALIZE_ERR",
+      "SEVERITY_ERROR",
+      "SEVERITY_FATAL_ERROR",
+      "SEVERITY_WARNING",
+      "SHADER_COMPILER",
+      "SHADER_TYPE",
+      "SHADING_LANGUAGE_VERSION",
+      "SHIFT_MASK",
+      "SHORT",
+      "SHOWING",
+      "SHOW_ALL",
+      "SHOW_ATTRIBUTE",
+      "SHOW_CDATA_SECTION",
+      "SHOW_COMMENT",
+      "SHOW_DOCUMENT",
+      "SHOW_DOCUMENT_FRAGMENT",
+      "SHOW_DOCUMENT_TYPE",
+      "SHOW_ELEMENT",
+      "SHOW_ENTITY",
+      "SHOW_ENTITY_REFERENCE",
+      "SHOW_NOTATION",
+      "SHOW_PROCESSING_INSTRUCTION",
+      "SHOW_TEXT",
+      "SIGNALED",
+      "SIGNED_NORMALIZED",
+      "SINE",
+      "SOUNDFIELD",
+      "SQLException",
+      "SQRT1_2",
+      "SQRT2",
+      "SQUARE",
+      "SRC_ALPHA",
+      "SRC_ALPHA_SATURATE",
+      "SRC_COLOR",
+      "SRGB",
+      "SRGB8",
+      "SRGB8_ALPHA8",
+      "START_TO_END",
+      "START_TO_START",
+      "STATIC_COPY",
+      "STATIC_DRAW",
+      "STATIC_READ",
+      "STENCIL",
+      "STENCIL_ATTACHMENT",
+      "STENCIL_BACK_FAIL",
+      "STENCIL_BACK_FUNC",
+      "STENCIL_BACK_PASS_DEPTH_FAIL",
+      "STENCIL_BACK_PASS_DEPTH_PASS",
+      "STENCIL_BACK_REF",
+      "STENCIL_BACK_VALUE_MASK",
+      "STENCIL_BACK_WRITEMASK",
+      "STENCIL_BITS",
+      "STENCIL_BUFFER_BIT",
+      "STENCIL_CLEAR_VALUE",
+      "STENCIL_FAIL",
+      "STENCIL_FUNC",
+      "STENCIL_INDEX",
+      "STENCIL_INDEX8",
+      "STENCIL_PASS_DEPTH_FAIL",
+      "STENCIL_PASS_DEPTH_PASS",
+      "STENCIL_REF",
+      "STENCIL_TEST",
+      "STENCIL_VALUE_MASK",
+      "STENCIL_WRITEMASK",
+      "STREAM_COPY",
+      "STREAM_DRAW",
+      "STREAM_READ",
+      "STRING_TYPE",
+      "STYLE_RULE",
+      "SUBPIXEL_BITS",
+      "SUPPORTS_RULE",
+      "SVGAElement",
+      "SVGAltGlyphDefElement",
+      "SVGAltGlyphElement",
+      "SVGAltGlyphItemElement",
+      "SVGAngle",
+      "SVGAnimateColorElement",
+      "SVGAnimateElement",
+      "SVGAnimateMotionElement",
+      "SVGAnimateTransformElement",
+      "SVGAnimatedAngle",
+      "SVGAnimatedBoolean",
+      "SVGAnimatedEnumeration",
+      "SVGAnimatedInteger",
+      "SVGAnimatedLength",
+      "SVGAnimatedLengthList",
+      "SVGAnimatedNumber",
+      "SVGAnimatedNumberList",
+      "SVGAnimatedPreserveAspectRatio",
+      "SVGAnimatedRect",
+      "SVGAnimatedString",
+      "SVGAnimatedTransformList",
+      "SVGAnimationElement",
+      "SVGCircleElement",
+      "SVGClipPathElement",
+      "SVGColor",
+      "SVGComponentTransferFunctionElement",
+      "SVGCursorElement",
+      "SVGDefsElement",
+      "SVGDescElement",
+      "SVGDiscardElement",
+      "SVGDocument",
+      "SVGElement",
+      "SVGElementInstance",
+      "SVGElementInstanceList",
+      "SVGEllipseElement",
+      "SVGException",
+      "SVGFEBlendElement",
+      "SVGFEColorMatrixElement",
+      "SVGFEComponentTransferElement",
+      "SVGFECompositeElement",
+      "SVGFEConvolveMatrixElement",
+      "SVGFEDiffuseLightingElement",
+      "SVGFEDisplacementMapElement",
+      "SVGFEDistantLightElement",
+      "SVGFEDropShadowElement",
+      "SVGFEFloodElement",
+      "SVGFEFuncAElement",
+      "SVGFEFuncBElement",
+      "SVGFEFuncGElement",
+      "SVGFEFuncRElement",
+      "SVGFEGaussianBlurElement",
+      "SVGFEImageElement",
+      "SVGFEMergeElement",
+      "SVGFEMergeNodeElement",
+      "SVGFEMorphologyElement",
+      "SVGFEOffsetElement",
+      "SVGFEPointLightElement",
+      "SVGFESpecularLightingElement",
+      "SVGFESpotLightElement",
+      "SVGFETileElement",
+      "SVGFETurbulenceElement",
+      "SVGFilterElement",
+      "SVGFontElement",
+      "SVGFontFaceElement",
+      "SVGFontFaceFormatElement",
+      "SVGFontFaceNameElement",
+      "SVGFontFaceSrcElement",
+      "SVGFontFaceUriElement",
+      "SVGForeignObjectElement",
+      "SVGGElement",
+      "SVGGeometryElement",
+      "SVGGlyphElement",
+      "SVGGlyphRefElement",
+      "SVGGradientElement",
+      "SVGGraphicsElement",
+      "SVGHKernElement",
+      "SVGImageElement",
+      "SVGLength",
+      "SVGLengthList",
+      "SVGLineElement",
+      "SVGLinearGradientElement",
+      "SVGMPathElement",
+      "SVGMarkerElement",
+      "SVGMaskElement",
+      "SVGMatrix",
+      "SVGMetadataElement",
+      "SVGMissingGlyphElement",
+      "SVGNumber",
+      "SVGNumberList",
+      "SVGPaint",
+      "SVGPathElement",
+      "SVGPathSeg",
+      "SVGPathSegArcAbs",
+      "SVGPathSegArcRel",
+      "SVGPathSegClosePath",
+      "SVGPathSegCurvetoCubicAbs",
+      "SVGPathSegCurvetoCubicRel",
+      "SVGPathSegCurvetoCubicSmoothAbs",
+      "SVGPathSegCurvetoCubicSmoothRel",
+      "SVGPathSegCurvetoQuadraticAbs",
+      "SVGPathSegCurvetoQuadraticRel",
+      "SVGPathSegCurvetoQuadraticSmoothAbs",
+      "SVGPathSegCurvetoQuadraticSmoothRel",
+      "SVGPathSegLinetoAbs",
+      "SVGPathSegLinetoHorizontalAbs",
+      "SVGPathSegLinetoHorizontalRel",
+      "SVGPathSegLinetoRel",
+      "SVGPathSegLinetoVerticalAbs",
+      "SVGPathSegLinetoVerticalRel",
+      "SVGPathSegList",
+      "SVGPathSegMovetoAbs",
+      "SVGPathSegMovetoRel",
+      "SVGPatternElement",
+      "SVGPoint",
+      "SVGPointList",
+      "SVGPolygonElement",
+      "SVGPolylineElement",
+      "SVGPreserveAspectRatio",
+      "SVGRadialGradientElement",
+      "SVGRect",
+      "SVGRectElement",
+      "SVGRenderingIntent",
+      "SVGSVGElement",
+      "SVGScriptElement",
+      "SVGSetElement",
+      "SVGStopElement",
+      "SVGStringList",
+      "SVGStyleElement",
+      "SVGSwitchElement",
+      "SVGSymbolElement",
+      "SVGTRefElement",
+      "SVGTSpanElement",
+      "SVGTextContentElement",
+      "SVGTextElement",
+      "SVGTextPathElement",
+      "SVGTextPositioningElement",
+      "SVGTitleElement",
+      "SVGTransform",
+      "SVGTransformList",
+      "SVGUnitTypes",
+      "SVGUseElement",
+      "SVGVKernElement",
+      "SVGViewElement",
+      "SVGViewSpec",
+      "SVGZoomAndPan",
+      "SVGZoomEvent",
+      "SVG_ANGLETYPE_DEG",
+      "SVG_ANGLETYPE_GRAD",
+      "SVG_ANGLETYPE_RAD",
+      "SVG_ANGLETYPE_UNKNOWN",
+      "SVG_ANGLETYPE_UNSPECIFIED",
+      "SVG_CHANNEL_A",
+      "SVG_CHANNEL_B",
+      "SVG_CHANNEL_G",
+      "SVG_CHANNEL_R",
+      "SVG_CHANNEL_UNKNOWN",
+      "SVG_COLORTYPE_CURRENTCOLOR",
+      "SVG_COLORTYPE_RGBCOLOR",
+      "SVG_COLORTYPE_RGBCOLOR_ICCCOLOR",
+      "SVG_COLORTYPE_UNKNOWN",
+      "SVG_EDGEMODE_DUPLICATE",
+      "SVG_EDGEMODE_NONE",
+      "SVG_EDGEMODE_UNKNOWN",
+      "SVG_EDGEMODE_WRAP",
+      "SVG_FEBLEND_MODE_COLOR",
+      "SVG_FEBLEND_MODE_COLOR_BURN",
+      "SVG_FEBLEND_MODE_COLOR_DODGE",
+      "SVG_FEBLEND_MODE_DARKEN",
+      "SVG_FEBLEND_MODE_DIFFERENCE",
+      "SVG_FEBLEND_MODE_EXCLUSION",
+      "SVG_FEBLEND_MODE_HARD_LIGHT",
+      "SVG_FEBLEND_MODE_HUE",
+      "SVG_FEBLEND_MODE_LIGHTEN",
+      "SVG_FEBLEND_MODE_LUMINOSITY",
+      "SVG_FEBLEND_MODE_MULTIPLY",
+      "SVG_FEBLEND_MODE_NORMAL",
+      "SVG_FEBLEND_MODE_OVERLAY",
+      "SVG_FEBLEND_MODE_SATURATION",
+      "SVG_FEBLEND_MODE_SCREEN",
+      "SVG_FEBLEND_MODE_SOFT_LIGHT",
+      "SVG_FEBLEND_MODE_UNKNOWN",
+      "SVG_FECOLORMATRIX_TYPE_HUEROTATE",
+      "SVG_FECOLORMATRIX_TYPE_LUMINANCETOALPHA",
+      "SVG_FECOLORMATRIX_TYPE_MATRIX",
+      "SVG_FECOLORMATRIX_TYPE_SATURATE",
+      "SVG_FECOLORMATRIX_TYPE_UNKNOWN",
+      "SVG_FECOMPONENTTRANSFER_TYPE_DISCRETE",
+      "SVG_FECOMPONENTTRANSFER_TYPE_GAMMA",
+      "SVG_FECOMPONENTTRANSFER_TYPE_IDENTITY",
+      "SVG_FECOMPONENTTRANSFER_TYPE_LINEAR",
+      "SVG_FECOMPONENTTRANSFER_TYPE_TABLE",
+      "SVG_FECOMPONENTTRANSFER_TYPE_UNKNOWN",
+      "SVG_FECOMPOSITE_OPERATOR_ARITHMETIC",
+      "SVG_FECOMPOSITE_OPERATOR_ATOP",
+      "SVG_FECOMPOSITE_OPERATOR_IN",
+      "SVG_FECOMPOSITE_OPERATOR_OUT",
+      "SVG_FECOMPOSITE_OPERATOR_OVER",
+      "SVG_FECOMPOSITE_OPERATOR_UNKNOWN",
+      "SVG_FECOMPOSITE_OPERATOR_XOR",
+      "SVG_INVALID_VALUE_ERR",
+      "SVG_LENGTHTYPE_CM",
+      "SVG_LENGTHTYPE_EMS",
+      "SVG_LENGTHTYPE_EXS",
+      "SVG_LENGTHTYPE_IN",
+      "SVG_LENGTHTYPE_MM",
+      "SVG_LENGTHTYPE_NUMBER",
+      "SVG_LENGTHTYPE_PC",
+      "SVG_LENGTHTYPE_PERCENTAGE",
+      "SVG_LENGTHTYPE_PT",
+      "SVG_LENGTHTYPE_PX",
+      "SVG_LENGTHTYPE_UNKNOWN",
+      "SVG_MARKERUNITS_STROKEWIDTH",
+      "SVG_MARKERUNITS_UNKNOWN",
+      "SVG_MARKERUNITS_USERSPACEONUSE",
+      "SVG_MARKER_ORIENT_ANGLE",
+      "SVG_MARKER_ORIENT_AUTO",
+      "SVG_MARKER_ORIENT_UNKNOWN",
+      "SVG_MASKTYPE_ALPHA",
+      "SVG_MASKTYPE_LUMINANCE",
+      "SVG_MATRIX_NOT_INVERTABLE",
+      "SVG_MEETORSLICE_MEET",
+      "SVG_MEETORSLICE_SLICE",
+      "SVG_MEETORSLICE_UNKNOWN",
+      "SVG_MORPHOLOGY_OPERATOR_DILATE",
+      "SVG_MORPHOLOGY_OPERATOR_ERODE",
+      "SVG_MORPHOLOGY_OPERATOR_UNKNOWN",
+      "SVG_PAINTTYPE_CURRENTCOLOR",
+      "SVG_PAINTTYPE_NONE",
+      "SVG_PAINTTYPE_RGBCOLOR",
+      "SVG_PAINTTYPE_RGBCOLOR_ICCCOLOR",
+      "SVG_PAINTTYPE_UNKNOWN",
+      "SVG_PAINTTYPE_URI",
+      "SVG_PAINTTYPE_URI_CURRENTCOLOR",
+      "SVG_PAINTTYPE_URI_NONE",
+      "SVG_PAINTTYPE_URI_RGBCOLOR",
+      "SVG_PAINTTYPE_URI_RGBCOLOR_ICCCOLOR",
+      "SVG_PRESERVEASPECTRATIO_NONE",
+      "SVG_PRESERVEASPECTRATIO_UNKNOWN",
+      "SVG_PRESERVEASPECTRATIO_XMAXYMAX",
+      "SVG_PRESERVEASPECTRATIO_XMAXYMID",
+      "SVG_PRESERVEASPECTRATIO_XMAXYMIN",
+      "SVG_PRESERVEASPECTRATIO_XMIDYMAX",
+      "SVG_PRESERVEASPECTRATIO_XMIDYMID",
+      "SVG_PRESERVEASPECTRATIO_XMIDYMIN",
+      "SVG_PRESERVEASPECTRATIO_XMINYMAX",
+      "SVG_PRESERVEASPECTRATIO_XMINYMID",
+      "SVG_PRESERVEASPECTRATIO_XMINYMIN",
+      "SVG_SPREADMETHOD_PAD",
+      "SVG_SPREADMETHOD_REFLECT",
+      "SVG_SPREADMETHOD_REPEAT",
+      "SVG_SPREADMETHOD_UNKNOWN",
+      "SVG_STITCHTYPE_NOSTITCH",
+      "SVG_STITCHTYPE_STITCH",
+      "SVG_STITCHTYPE_UNKNOWN",
+      "SVG_TRANSFORM_MATRIX",
+      "SVG_TRANSFORM_ROTATE",
+      "SVG_TRANSFORM_SCALE",
+      "SVG_TRANSFORM_SKEWX",
+      "SVG_TRANSFORM_SKEWY",
+      "SVG_TRANSFORM_TRANSLATE",
+      "SVG_TRANSFORM_UNKNOWN",
+      "SVG_TURBULENCE_TYPE_FRACTALNOISE",
+      "SVG_TURBULENCE_TYPE_TURBULENCE",
+      "SVG_TURBULENCE_TYPE_UNKNOWN",
+      "SVG_UNIT_TYPE_OBJECTBOUNDINGBOX",
+      "SVG_UNIT_TYPE_UNKNOWN",
+      "SVG_UNIT_TYPE_USERSPACEONUSE",
+      "SVG_WRONG_TYPE_ERR",
+      "SVG_ZOOMANDPAN_DISABLE",
+      "SVG_ZOOMANDPAN_MAGNIFY",
+      "SVG_ZOOMANDPAN_UNKNOWN",
+      "SYNC_CONDITION",
+      "SYNC_FENCE",
+      "SYNC_FLAGS",
+      "SYNC_FLUSH_COMMANDS_BIT",
+      "SYNC_GPU_COMMANDS_COMPLETE",
+      "SYNC_STATUS",
+      "SYNTAX_ERR",
+      "SavedPages",
+      "Screen",
+      "ScreenOrientation",
+      "Script",
+      "ScriptProcessorNode",
+      "ScrollAreaEvent",
+      "SecurityPolicyViolationEvent",
+      "Selection",
+      "Sensor",
+      "SensorErrorEvent",
+      "ServiceWorker",
+      "ServiceWorkerContainer",
+      "ServiceWorkerRegistration",
+      "SessionDescription",
+      "Set",
+      "ShadowRoot",
+      "SharedArrayBuffer",
+      "SharedWorker",
+      "SimpleGestureEvent",
+      "SourceBuffer",
+      "SourceBufferList",
+      "SpeechSynthesis",
+      "SpeechSynthesisErrorEvent",
+      "SpeechSynthesisEvent",
+      "SpeechSynthesisUtterance",
+      "SpeechSynthesisVoice",
+      "StaticRange",
+      "StereoPannerNode",
+      "StopIteration",
+      "Storage",
+      "StorageEvent",
+      "StorageManager",
+      "String",
+      "StructType",
+      "StylePropertyMap",
+      "StylePropertyMapReadOnly",
+      "StyleSheet",
+      "StyleSheetList",
+      "SubmitEvent",
+      "SubtleCrypto",
+      "Symbol",
+      "SyncManager",
+      "SyntaxError",
+      "TEMPORARY",
+      "TEXTPATH_METHODTYPE_ALIGN",
+      "TEXTPATH_METHODTYPE_STRETCH",
+      "TEXTPATH_METHODTYPE_UNKNOWN",
+      "TEXTPATH_SPACINGTYPE_AUTO",
+      "TEXTPATH_SPACINGTYPE_EXACT",
+      "TEXTPATH_SPACINGTYPE_UNKNOWN",
+      "TEXTURE",
+      "TEXTURE0",
+      "TEXTURE1",
+      "TEXTURE10",
+      "TEXTURE11",
+      "TEXTURE12",
+      "TEXTURE13",
+      "TEXTURE14",
+      "TEXTURE15",
+      "TEXTURE16",
+      "TEXTURE17",
+      "TEXTURE18",
+      "TEXTURE19",
+      "TEXTURE2",
+      "TEXTURE20",
+      "TEXTURE21",
+      "TEXTURE22",
+      "TEXTURE23",
+      "TEXTURE24",
+      "TEXTURE25",
+      "TEXTURE26",
+      "TEXTURE27",
+      "TEXTURE28",
+      "TEXTURE29",
+      "TEXTURE3",
+      "TEXTURE30",
+      "TEXTURE31",
+      "TEXTURE4",
+      "TEXTURE5",
+      "TEXTURE6",
+      "TEXTURE7",
+      "TEXTURE8",
+      "TEXTURE9",
+      "TEXTURE_2D",
+      "TEXTURE_2D_ARRAY",
+      "TEXTURE_3D",
+      "TEXTURE_BASE_LEVEL",
+      "TEXTURE_BINDING_2D",
+      "TEXTURE_BINDING_2D_ARRAY",
+      "TEXTURE_BINDING_3D",
+      "TEXTURE_BINDING_CUBE_MAP",
+      "TEXTURE_COMPARE_FUNC",
+      "TEXTURE_COMPARE_MODE",
+      "TEXTURE_CUBE_MAP",
+      "TEXTURE_CUBE_MAP_NEGATIVE_X",
+      "TEXTURE_CUBE_MAP_NEGATIVE_Y",
+      "TEXTURE_CUBE_MAP_NEGATIVE_Z",
+      "TEXTURE_CUBE_MAP_POSITIVE_X",
+      "TEXTURE_CUBE_MAP_POSITIVE_Y",
+      "TEXTURE_CUBE_MAP_POSITIVE_Z",
+      "TEXTURE_IMMUTABLE_FORMAT",
+      "TEXTURE_IMMUTABLE_LEVELS",
+      "TEXTURE_MAG_FILTER",
+      "TEXTURE_MAX_ANISOTROPY_EXT",
+      "TEXTURE_MAX_LEVEL",
+      "TEXTURE_MAX_LOD",
+      "TEXTURE_MIN_FILTER",
+      "TEXTURE_MIN_LOD",
+      "TEXTURE_WRAP_R",
+      "TEXTURE_WRAP_S",
+      "TEXTURE_WRAP_T",
+      "TEXT_NODE",
+      "TIMEOUT",
+      "TIMEOUT_ERR",
+      "TIMEOUT_EXPIRED",
+      "TIMEOUT_IGNORED",
+      "TOO_LARGE_ERR",
+      "TRANSACTION_INACTIVE_ERR",
+      "TRANSFORM_FEEDBACK",
+      "TRANSFORM_FEEDBACK_ACTIVE",
+      "TRANSFORM_FEEDBACK_BINDING",
+      "TRANSFORM_FEEDBACK_BUFFER",
+      "TRANSFORM_FEEDBACK_BUFFER_BINDING",
+      "TRANSFORM_FEEDBACK_BUFFER_MODE",
+      "TRANSFORM_FEEDBACK_BUFFER_SIZE",
+      "TRANSFORM_FEEDBACK_BUFFER_START",
+      "TRANSFORM_FEEDBACK_PAUSED",
+      "TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN",
+      "TRANSFORM_FEEDBACK_VARYINGS",
+      "TRIANGLE",
+      "TRIANGLES",
+      "TRIANGLE_FAN",
+      "TRIANGLE_STRIP",
+      "TYPE_BACK_FORWARD",
+      "TYPE_ERR",
+      "TYPE_MISMATCH_ERR",
+      "TYPE_NAVIGATE",
+      "TYPE_RELOAD",
+      "TYPE_RESERVED",
+      "Table",
+      "TaskAttributionTiming",
+      "Text",
+      "TextDecoder",
+      "TextDecoderStream",
+      "TextEncoder",
+      "TextEncoderStream",
+      "TextEvent",
+      "TextMetrics",
+      "TextTrack",
+      "TextTrackCue",
+      "TextTrackCueList",
+      "TextTrackList",
+      "TimeEvent",
+      "TimeRanges",
+      "Touch",
+      "TouchEvent",
+      "TouchList",
+      "TrackEvent",
+      "TransformStream",
+      "TransitionEvent",
+      "TreeWalker",
+      "TrustedHTML",
+      "TrustedScript",
+      "TrustedScriptURL",
+      "TrustedTypePolicy",
+      "TrustedTypePolicyFactory",
+      "TypeError",
+      "TypedObject",
+      "U2F",
+      "UIEvent",
+      "UNCACHED",
+      "UNIFORM_ARRAY_STRIDE",
+      "UNIFORM_BLOCK_ACTIVE_UNIFORMS",
+      "UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES",
+      "UNIFORM_BLOCK_BINDING",
+      "UNIFORM_BLOCK_DATA_SIZE",
+      "UNIFORM_BLOCK_INDEX",
+      "UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER",
+      "UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER",
+      "UNIFORM_BUFFER",
+      "UNIFORM_BUFFER_BINDING",
+      "UNIFORM_BUFFER_OFFSET_ALIGNMENT",
+      "UNIFORM_BUFFER_SIZE",
+      "UNIFORM_BUFFER_START",
+      "UNIFORM_IS_ROW_MAJOR",
+      "UNIFORM_MATRIX_STRIDE",
+      "UNIFORM_OFFSET",
+      "UNIFORM_SIZE",
+      "UNIFORM_TYPE",
+      "UNKNOWN_ERR",
+      "UNKNOWN_RULE",
+      "UNMASKED_RENDERER_WEBGL",
+      "UNMASKED_VENDOR_WEBGL",
+      "UNORDERED_NODE_ITERATOR_TYPE",
+      "UNORDERED_NODE_SNAPSHOT_TYPE",
+      "UNPACK_ALIGNMENT",
+      "UNPACK_COLORSPACE_CONVERSION_WEBGL",
+      "UNPACK_FLIP_Y_WEBGL",
+      "UNPACK_IMAGE_HEIGHT",
+      "UNPACK_PREMULTIPLY_ALPHA_WEBGL",
+      "UNPACK_ROW_LENGTH",
+      "UNPACK_SKIP_IMAGES",
+      "UNPACK_SKIP_PIXELS",
+      "UNPACK_SKIP_ROWS",
+      "UNSCHEDULED_STATE",
+      "UNSENT",
+      "UNSIGNALED",
+      "UNSIGNED_BYTE",
+      "UNSIGNED_INT",
+      "UNSIGNED_INT_10F_11F_11F_REV",
+      "UNSIGNED_INT_24_8",
+      "UNSIGNED_INT_2_10_10_10_REV",
+      "UNSIGNED_INT_5_9_9_9_REV",
+      "UNSIGNED_INT_SAMPLER_2D",
+      "UNSIGNED_INT_SAMPLER_2D_ARRAY",
+      "UNSIGNED_INT_SAMPLER_3D",
+      "UNSIGNED_INT_SAMPLER_CUBE",
+      "UNSIGNED_INT_VEC2",
+      "UNSIGNED_INT_VEC3",
+      "UNSIGNED_INT_VEC4",
+      "UNSIGNED_NORMALIZED",
+      "UNSIGNED_SHORT",
+      "UNSIGNED_SHORT_4_4_4_4",
+      "UNSIGNED_SHORT_5_5_5_1",
+      "UNSIGNED_SHORT_5_6_5",
+      "UNSPECIFIED_EVENT_TYPE_ERR",
+      "UPDATEREADY",
+      "URIError",
+      "URL",
+      "URLSearchParams",
+      "URLUnencoded",
+      "URL_MISMATCH_ERR",
+      "USB",
+      "USBAlternateInterface",
+      "USBConfiguration",
+      "USBConnectionEvent",
+      "USBDevice",
+      "USBEndpoint",
+      "USBInTransferResult",
+      "USBInterface",
+      "USBIsochronousInTransferPacket",
+      "USBIsochronousInTransferResult",
+      "USBIsochronousOutTransferPacket",
+      "USBIsochronousOutTransferResult",
+      "USBOutTransferResult",
+      "UTC",
+      "Uint16Array",
+      "Uint32Array",
+      "Uint8Array",
+      "Uint8ClampedArray",
+      "UserActivation",
+      "UserMessageHandler",
+      "UserMessageHandlersNamespace",
+      "UserProximityEvent",
+      "VALIDATE_STATUS",
+      "VALIDATION_ERR",
+      "VARIABLES_RULE",
+      "VENDOR",
+      "VERSION",
+      "VERSION_CHANGE",
+      "VERSION_ERR",
+      "VERTEX_ARRAY_BINDING",
+      "VERTEX_ATTRIB_ARRAY_BUFFER_BINDING",
+      "VERTEX_ATTRIB_ARRAY_DIVISOR",
+      "VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE",
+      "VERTEX_ATTRIB_ARRAY_ENABLED",
+      "VERTEX_ATTRIB_ARRAY_INTEGER",
+      "VERTEX_ATTRIB_ARRAY_NORMALIZED",
+      "VERTEX_ATTRIB_ARRAY_POINTER",
+      "VERTEX_ATTRIB_ARRAY_SIZE",
+      "VERTEX_ATTRIB_ARRAY_STRIDE",
+      "VERTEX_ATTRIB_ARRAY_TYPE",
+      "VERTEX_SHADER",
+      "VERTICAL",
+      "VERTICAL_AXIS",
+      "VER_ERR",
+      "VIEWPORT",
+      "VIEWPORT_RULE",
+      "VRDisplay",
+      "VRDisplayCapabilities",
+      "VRDisplayEvent",
+      "VREyeParameters",
+      "VRFieldOfView",
+      "VRFrameData",
+      "VRPose",
+      "VRStageParameters",
+      "VTTCue",
+      "VTTRegion",
+      "ValidityState",
+      "VideoPlaybackQuality",
+      "VideoStreamTrack",
+      "VisualViewport",
+      "WAIT_FAILED",
+      "WEBKIT_FILTER_RULE",
+      "WEBKIT_KEYFRAMES_RULE",
+      "WEBKIT_KEYFRAME_RULE",
+      "WEBKIT_REGION_RULE",
+      "WRONG_DOCUMENT_ERR",
+      "WakeLock",
+      "WakeLockSentinel",
+      "WasmAnyRef",
+      "WaveShaperNode",
+      "WeakMap",
+      "WeakRef",
+      "WeakSet",
+      "WebAssembly",
+      "WebGL2RenderingContext",
+      "WebGLActiveInfo",
+      "WebGLBuffer",
+      "WebGLContextEvent",
+      "WebGLFramebuffer",
+      "WebGLProgram",
+      "WebGLQuery",
+      "WebGLRenderbuffer",
+      "WebGLRenderingContext",
+      "WebGLSampler",
+      "WebGLShader",
+      "WebGLShaderPrecisionFormat",
+      "WebGLSync",
+      "WebGLTexture",
+      "WebGLTransformFeedback",
+      "WebGLUniformLocation",
+      "WebGLVertexArray",
+      "WebGLVertexArrayObject",
+      "WebKitAnimationEvent",
+      "WebKitBlobBuilder",
+      "WebKitCSSFilterRule",
+      "WebKitCSSFilterValue",
+      "WebKitCSSKeyframeRule",
+      "WebKitCSSKeyframesRule",
+      "WebKitCSSMatrix",
+      "WebKitCSSRegionRule",
+      "WebKitCSSTransformValue",
+      "WebKitDataCue",
+      "WebKitGamepad",
+      "WebKitMediaKeyError",
+      "WebKitMediaKeyMessageEvent",
+      "WebKitMediaKeySession",
+      "WebKitMediaKeys",
+      "WebKitMediaSource",
+      "WebKitMutationObserver",
+      "WebKitNamespace",
+      "WebKitPlaybackTargetAvailabilityEvent",
+      "WebKitPoint",
+      "WebKitShadowRoot",
+      "WebKitSourceBuffer",
+      "WebKitSourceBufferList",
+      "WebKitTransitionEvent",
+      "WebSocket",
+      "WebkitAlignContent",
+      "WebkitAlignItems",
+      "WebkitAlignSelf",
+      "WebkitAnimation",
+      "WebkitAnimationDelay",
+      "WebkitAnimationDirection",
+      "WebkitAnimationDuration",
+      "WebkitAnimationFillMode",
+      "WebkitAnimationIterationCount",
+      "WebkitAnimationName",
+      "WebkitAnimationPlayState",
+      "WebkitAnimationTimingFunction",
+      "WebkitAppearance",
+      "WebkitBackfaceVisibility",
+      "WebkitBackgroundClip",
+      "WebkitBackgroundOrigin",
+      "WebkitBackgroundSize",
+      "WebkitBorderBottomLeftRadius",
+      "WebkitBorderBottomRightRadius",
+      "WebkitBorderImage",
+      "WebkitBorderRadius",
+      "WebkitBorderTopLeftRadius",
+      "WebkitBorderTopRightRadius",
+      "WebkitBoxAlign",
+      "WebkitBoxDirection",
+      "WebkitBoxFlex",
+      "WebkitBoxOrdinalGroup",
+      "WebkitBoxOrient",
+      "WebkitBoxPack",
+      "WebkitBoxShadow",
+      "WebkitBoxSizing",
+      "WebkitFilter",
+      "WebkitFlex",
+      "WebkitFlexBasis",
+      "WebkitFlexDirection",
+      "WebkitFlexFlow",
+      "WebkitFlexGrow",
+      "WebkitFlexShrink",
+      "WebkitFlexWrap",
+      "WebkitJustifyContent",
+      "WebkitLineClamp",
+      "WebkitMask",
+      "WebkitMaskClip",
+      "WebkitMaskComposite",
+      "WebkitMaskImage",
+      "WebkitMaskOrigin",
+      "WebkitMaskPosition",
+      "WebkitMaskPositionX",
+      "WebkitMaskPositionY",
+      "WebkitMaskRepeat",
+      "WebkitMaskSize",
+      "WebkitOrder",
+      "WebkitPerspective",
+      "WebkitPerspectiveOrigin",
+      "WebkitTextFillColor",
+      "WebkitTextSizeAdjust",
+      "WebkitTextStroke",
+      "WebkitTextStrokeColor",
+      "WebkitTextStrokeWidth",
+      "WebkitTransform",
+      "WebkitTransformOrigin",
+      "WebkitTransformStyle",
+      "WebkitTransition",
+      "WebkitTransitionDelay",
+      "WebkitTransitionDuration",
+      "WebkitTransitionProperty",
+      "WebkitTransitionTimingFunction",
+      "WebkitUserSelect",
+      "WheelEvent",
+      "Window",
+      "Worker",
+      "Worklet",
+      "WritableStream",
+      "WritableStreamDefaultWriter",
+      "XMLDocument",
+      "XMLHttpRequest",
+      "XMLHttpRequestEventTarget",
+      "XMLHttpRequestException",
+      "XMLHttpRequestProgressEvent",
+      "XMLHttpRequestUpload",
+      "XMLSerializer",
+      "XMLStylesheetProcessingInstruction",
+      "XPathEvaluator",
+      "XPathException",
+      "XPathExpression",
+      "XPathNSResolver",
+      "XPathResult",
+      "XRBoundedReferenceSpace",
+      "XRDOMOverlayState",
+      "XRFrame",
+      "XRHitTestResult",
+      "XRHitTestSource",
+      "XRInputSource",
+      "XRInputSourceArray",
+      "XRInputSourceEvent",
+      "XRInputSourcesChangeEvent",
+      "XRLayer",
+      "XRPose",
+      "XRRay",
+      "XRReferenceSpace",
+      "XRReferenceSpaceEvent",
+      "XRRenderState",
+      "XRRigidTransform",
+      "XRSession",
+      "XRSessionEvent",
+      "XRSpace",
+      "XRSystem",
+      "XRTransientInputHitTestResult",
+      "XRTransientInputHitTestSource",
+      "XRView",
+      "XRViewerPose",
+      "XRViewport",
+      "XRWebGLLayer",
+      "XSLTProcessor",
+      "ZERO",
+      "_XD0M_",
+      "_YD0M_",
+      "__defineGetter__",
+      "__defineSetter__",
+      "__lookupGetter__",
+      "__lookupSetter__",
+      "__opera",
+      "__proto__",
+      "_browserjsran",
+      "a",
+      "aLink",
+      "abbr",
+      "abort",
+      "aborted",
+      "abs",
+      "absolute",
+      "acceleration",
+      "accelerationIncludingGravity",
+      "accelerator",
+      "accept",
+      "acceptCharset",
+      "acceptNode",
+      "accessKey",
+      "accessKeyLabel",
+      "accuracy",
+      "acos",
+      "acosh",
+      "action",
+      "actionURL",
+      "actions",
+      "activated",
+      "active",
+      "activeCues",
+      "activeElement",
+      "activeSourceBuffers",
+      "activeSourceCount",
+      "activeTexture",
+      "activeVRDisplays",
+      "actualBoundingBoxAscent",
+      "actualBoundingBoxDescent",
+      "actualBoundingBoxLeft",
+      "actualBoundingBoxRight",
+      "add",
+      "addAll",
+      "addBehavior",
+      "addCandidate",
+      "addColorStop",
+      "addCue",
+      "addElement",
+      "addEventListener",
+      "addFilter",
+      "addFromString",
+      "addFromUri",
+      "addIceCandidate",
+      "addImport",
+      "addListener",
+      "addModule",
+      "addNamed",
+      "addPageRule",
+      "addPath",
+      "addPointer",
+      "addRange",
+      "addRegion",
+      "addRule",
+      "addSearchEngine",
+      "addSourceBuffer",
+      "addStream",
+      "addTextTrack",
+      "addTrack",
+      "addTransceiver",
+      "addWakeLockListener",
+      "added",
+      "addedNodes",
+      "additionalName",
+      "additiveSymbols",
+      "addons",
+      "address",
+      "addressLine",
+      "adoptNode",
+      "adoptedStyleSheets",
+      "adr",
+      "advance",
+      "after",
+      "album",
+      "alert",
+      "algorithm",
+      "align",
+      "align-content",
+      "align-items",
+      "align-self",
+      "alignContent",
+      "alignItems",
+      "alignSelf",
+      "alignmentBaseline",
+      "alinkColor",
+      "all",
+      "allSettled",
+      "allow",
+      "allowFullscreen",
+      "allowPaymentRequest",
+      "allowedDirections",
+      "allowedFeatures",
+      "allowedToPlay",
+      "allowsFeature",
+      "alpha",
+      "alt",
+      "altGraphKey",
+      "altHtml",
+      "altKey",
+      "altLeft",
+      "alternate",
+      "alternateSetting",
+      "alternates",
+      "altitude",
+      "altitudeAccuracy",
+      "amplitude",
+      "ancestorOrigins",
+      "anchor",
+      "anchorNode",
+      "anchorOffset",
+      "anchors",
+      "and",
+      "angle",
+      "angularAcceleration",
+      "angularVelocity",
+      "animVal",
+      "animate",
+      "animatedInstanceRoot",
+      "animatedNormalizedPathSegList",
+      "animatedPathSegList",
+      "animatedPoints",
+      "animation",
+      "animation-delay",
+      "animation-direction",
+      "animation-duration",
+      "animation-fill-mode",
+      "animation-iteration-count",
+      "animation-name",
+      "animation-play-state",
+      "animation-timing-function",
+      "animationDelay",
+      "animationDirection",
+      "animationDuration",
+      "animationFillMode",
+      "animationIterationCount",
+      "animationName",
+      "animationPlayState",
+      "animationStartTime",
+      "animationTimingFunction",
+      "animationsPaused",
+      "anniversary",
+      "antialias",
+      "anticipatedRemoval",
+      "any",
+      "app",
+      "appCodeName",
+      "appMinorVersion",
+      "appName",
+      "appNotifications",
+      "appVersion",
+      "appearance",
+      "append",
+      "appendBuffer",
+      "appendChild",
+      "appendData",
+      "appendItem",
+      "appendMedium",
+      "appendNamed",
+      "appendRule",
+      "appendStream",
+      "appendWindowEnd",
+      "appendWindowStart",
+      "applets",
+      "applicationCache",
+      "applicationServerKey",
+      "apply",
+      "applyConstraints",
+      "applyElement",
+      "arc",
+      "arcTo",
+      "architecture",
+      "archive",
+      "areas",
+      "arguments",
+      "ariaAtomic",
+      "ariaAutoComplete",
+      "ariaBusy",
+      "ariaChecked",
+      "ariaColCount",
+      "ariaColIndex",
+      "ariaColSpan",
+      "ariaCurrent",
+      "ariaDescription",
+      "ariaDisabled",
+      "ariaExpanded",
+      "ariaHasPopup",
+      "ariaHidden",
+      "ariaKeyShortcuts",
+      "ariaLabel",
+      "ariaLevel",
+      "ariaLive",
+      "ariaModal",
+      "ariaMultiLine",
+      "ariaMultiSelectable",
+      "ariaOrientation",
+      "ariaPlaceholder",
+      "ariaPosInSet",
+      "ariaPressed",
+      "ariaReadOnly",
+      "ariaRelevant",
+      "ariaRequired",
+      "ariaRoleDescription",
+      "ariaRowCount",
+      "ariaRowIndex",
+      "ariaRowSpan",
+      "ariaSelected",
+      "ariaSetSize",
+      "ariaSort",
+      "ariaValueMax",
+      "ariaValueMin",
+      "ariaValueNow",
+      "ariaValueText",
+      "arrayBuffer",
+      "artist",
+      "artwork",
+      "as",
+      "asIntN",
+      "asUintN",
+      "asin",
+      "asinh",
+      "assert",
+      "assign",
+      "assignedElements",
+      "assignedNodes",
+      "assignedSlot",
+      "async",
+      "asyncIterator",
+      "atEnd",
+      "atan",
+      "atan2",
+      "atanh",
+      "atob",
+      "attachEvent",
+      "attachInternals",
+      "attachShader",
+      "attachShadow",
+      "attachments",
+      "attack",
+      "attestationObject",
+      "attrChange",
+      "attrName",
+      "attributeFilter",
+      "attributeName",
+      "attributeNamespace",
+      "attributeOldValue",
+      "attributeStyleMap",
+      "attributes",
+      "attribution",
+      "audioBitsPerSecond",
+      "audioTracks",
+      "audioWorklet",
+      "authenticatedSignedWrites",
+      "authenticatorData",
+      "autoIncrement",
+      "autobuffer",
+      "autocapitalize",
+      "autocomplete",
+      "autocorrect",
+      "autofocus",
+      "automationRate",
+      "autoplay",
+      "availHeight",
+      "availLeft",
+      "availTop",
+      "availWidth",
+      "availability",
+      "available",
+      "aversion",
+      "ax",
+      "axes",
+      "axis",
+      "ay",
+      "azimuth",
+      "b",
+      "back",
+      "backface-visibility",
+      "backfaceVisibility",
+      "background",
+      "background-attachment",
+      "background-blend-mode",
+      "background-clip",
+      "background-color",
+      "background-image",
+      "background-origin",
+      "background-position",
+      "background-position-x",
+      "background-position-y",
+      "background-repeat",
+      "background-size",
+      "backgroundAttachment",
+      "backgroundBlendMode",
+      "backgroundClip",
+      "backgroundColor",
+      "backgroundFetch",
+      "backgroundImage",
+      "backgroundOrigin",
+      "backgroundPosition",
+      "backgroundPositionX",
+      "backgroundPositionY",
+      "backgroundRepeat",
+      "backgroundSize",
+      "badInput",
+      "badge",
+      "balance",
+      "baseFrequencyX",
+      "baseFrequencyY",
+      "baseLatency",
+      "baseLayer",
+      "baseNode",
+      "baseOffset",
+      "baseURI",
+      "baseVal",
+      "baselineShift",
+      "battery",
+      "bday",
+      "before",
+      "beginElement",
+      "beginElementAt",
+      "beginPath",
+      "beginQuery",
+      "beginTransformFeedback",
+      "behavior",
+      "behaviorCookie",
+      "behaviorPart",
+      "behaviorUrns",
+      "beta",
+      "bezierCurveTo",
+      "bgColor",
+      "bgProperties",
+      "bias",
+      "big",
+      "bigint64",
+      "biguint64",
+      "binaryType",
+      "bind",
+      "bindAttribLocation",
+      "bindBuffer",
+      "bindBufferBase",
+      "bindBufferRange",
+      "bindFramebuffer",
+      "bindRenderbuffer",
+      "bindSampler",
+      "bindTexture",
+      "bindTransformFeedback",
+      "bindVertexArray",
+      "bitness",
+      "blendColor",
+      "blendEquation",
+      "blendEquationSeparate",
+      "blendFunc",
+      "blendFuncSeparate",
+      "blink",
+      "blitFramebuffer",
+      "blob",
+      "block-size",
+      "blockDirection",
+      "blockSize",
+      "blockedURI",
+      "blue",
+      "bluetooth",
+      "blur",
+      "body",
+      "bodyUsed",
+      "bold",
+      "bookmarks",
+      "booleanValue",
+      "border",
+      "border-block",
+      "border-block-color",
+      "border-block-end",
+      "border-block-end-color",
+      "border-block-end-style",
+      "border-block-end-width",
+      "border-block-start",
+      "border-block-start-color",
+      "border-block-start-style",
+      "border-block-start-width",
+      "border-block-style",
+      "border-block-width",
+      "border-bottom",
+      "border-bottom-color",
+      "border-bottom-left-radius",
+      "border-bottom-right-radius",
+      "border-bottom-style",
+      "border-bottom-width",
+      "border-collapse",
+      "border-color",
+      "border-end-end-radius",
+      "border-end-start-radius",
+      "border-image",
+      "border-image-outset",
+      "border-image-repeat",
+      "border-image-slice",
+      "border-image-source",
+      "border-image-width",
+      "border-inline",
+      "border-inline-color",
+      "border-inline-end",
+      "border-inline-end-color",
+      "border-inline-end-style",
+      "border-inline-end-width",
+      "border-inline-start",
+      "border-inline-start-color",
+      "border-inline-start-style",
+      "border-inline-start-width",
+      "border-inline-style",
+      "border-inline-width",
+      "border-left",
+      "border-left-color",
+      "border-left-style",
+      "border-left-width",
+      "border-radius",
+      "border-right",
+      "border-right-color",
+      "border-right-style",
+      "border-right-width",
+      "border-spacing",
+      "border-start-end-radius",
+      "border-start-start-radius",
+      "border-style",
+      "border-top",
+      "border-top-color",
+      "border-top-left-radius",
+      "border-top-right-radius",
+      "border-top-style",
+      "border-top-width",
+      "border-width",
+      "borderBlock",
+      "borderBlockColor",
+      "borderBlockEnd",
+      "borderBlockEndColor",
+      "borderBlockEndStyle",
+      "borderBlockEndWidth",
+      "borderBlockStart",
+      "borderBlockStartColor",
+      "borderBlockStartStyle",
+      "borderBlockStartWidth",
+      "borderBlockStyle",
+      "borderBlockWidth",
+      "borderBottom",
+      "borderBottomColor",
+      "borderBottomLeftRadius",
+      "borderBottomRightRadius",
+      "borderBottomStyle",
+      "borderBottomWidth",
+      "borderBoxSize",
+      "borderCollapse",
+      "borderColor",
+      "borderColorDark",
+      "borderColorLight",
+      "borderEndEndRadius",
+      "borderEndStartRadius",
+      "borderImage",
+      "borderImageOutset",
+      "borderImageRepeat",
+      "borderImageSlice",
+      "borderImageSource",
+      "borderImageWidth",
+      "borderInline",
+      "borderInlineColor",
+      "borderInlineEnd",
+      "borderInlineEndColor",
+      "borderInlineEndStyle",
+      "borderInlineEndWidth",
+      "borderInlineStart",
+      "borderInlineStartColor",
+      "borderInlineStartStyle",
+      "borderInlineStartWidth",
+      "borderInlineStyle",
+      "borderInlineWidth",
+      "borderLeft",
+      "borderLeftColor",
+      "borderLeftStyle",
+      "borderLeftWidth",
+      "borderRadius",
+      "borderRight",
+      "borderRightColor",
+      "borderRightStyle",
+      "borderRightWidth",
+      "borderSpacing",
+      "borderStartEndRadius",
+      "borderStartStartRadius",
+      "borderStyle",
+      "borderTop",
+      "borderTopColor",
+      "borderTopLeftRadius",
+      "borderTopRightRadius",
+      "borderTopStyle",
+      "borderTopWidth",
+      "borderWidth",
+      "bottom",
+      "bottomMargin",
+      "bound",
+      "boundElements",
+      "boundingClientRect",
+      "boundingHeight",
+      "boundingLeft",
+      "boundingTop",
+      "boundingWidth",
+      "bounds",
+      "boundsGeometry",
+      "box-decoration-break",
+      "box-shadow",
+      "box-sizing",
+      "boxDecorationBreak",
+      "boxShadow",
+      "boxSizing",
+      "brand",
+      "brands",
+      "break-after",
+      "break-before",
+      "break-inside",
+      "breakAfter",
+      "breakBefore",
+      "breakInside",
+      "broadcast",
+      "browserLanguage",
+      "btoa",
+      "bubbles",
+      "buffer",
+      "bufferData",
+      "bufferDepth",
+      "bufferSize",
+      "bufferSubData",
+      "buffered",
+      "bufferedAmount",
+      "bufferedAmountLowThreshold",
+      "buildID",
+      "buildNumber",
+      "button",
+      "buttonID",
+      "buttons",
+      "byteLength",
+      "byteOffset",
+      "bytesWritten",
+      "c",
+      "cache",
+      "caches",
+      "call",
+      "caller",
+      "canBeFormatted",
+      "canBeMounted",
+      "canBeShared",
+      "canHaveChildren",
+      "canHaveHTML",
+      "canInsertDTMF",
+      "canMakePayment",
+      "canPlayType",
+      "canPresent",
+      "canTrickleIceCandidates",
+      "cancel",
+      "cancelAndHoldAtTime",
+      "cancelAnimationFrame",
+      "cancelBubble",
+      "cancelIdleCallback",
+      "cancelScheduledValues",
+      "cancelVideoFrameCallback",
+      "cancelWatchAvailability",
+      "cancelable",
+      "candidate",
+      "canonicalUUID",
+      "canvas",
+      "capabilities",
+      "caption",
+      "caption-side",
+      "captionSide",
+      "capture",
+      "captureEvents",
+      "captureStackTrace",
+      "captureStream",
+      "caret-color",
+      "caretBidiLevel",
+      "caretColor",
+      "caretPositionFromPoint",
+      "caretRangeFromPoint",
+      "cast",
+      "catch",
+      "category",
+      "cbrt",
+      "cd",
+      "ceil",
+      "cellIndex",
+      "cellPadding",
+      "cellSpacing",
+      "cells",
+      "ch",
+      "chOff",
+      "chain",
+      "challenge",
+      "changeType",
+      "changedTouches",
+      "channel",
+      "channelCount",
+      "channelCountMode",
+      "channelInterpretation",
+      "char",
+      "charAt",
+      "charCode",
+      "charCodeAt",
+      "charIndex",
+      "charLength",
+      "characterData",
+      "characterDataOldValue",
+      "characterSet",
+      "characteristic",
+      "charging",
+      "chargingTime",
+      "charset",
+      "check",
+      "checkEnclosure",
+      "checkFramebufferStatus",
+      "checkIntersection",
+      "checkValidity",
+      "checked",
+      "childElementCount",
+      "childList",
+      "childNodes",
+      "children",
+      "chrome",
+      "ciphertext",
+      "cite",
+      "city",
+      "claimInterface",
+      "claimed",
+      "classList",
+      "className",
+      "classid",
+      "clear",
+      "clearAppBadge",
+      "clearAttributes",
+      "clearBufferfi",
+      "clearBufferfv",
+      "clearBufferiv",
+      "clearBufferuiv",
+      "clearColor",
+      "clearData",
+      "clearDepth",
+      "clearHalt",
+      "clearImmediate",
+      "clearInterval",
+      "clearLiveSeekableRange",
+      "clearMarks",
+      "clearMaxGCPauseAccumulator",
+      "clearMeasures",
+      "clearParameters",
+      "clearRect",
+      "clearResourceTimings",
+      "clearShadow",
+      "clearStencil",
+      "clearTimeout",
+      "clearWatch",
+      "click",
+      "clickCount",
+      "clientDataJSON",
+      "clientHeight",
+      "clientInformation",
+      "clientLeft",
+      "clientRect",
+      "clientRects",
+      "clientTop",
+      "clientWaitSync",
+      "clientWidth",
+      "clientX",
+      "clientY",
+      "clip",
+      "clip-path",
+      "clip-rule",
+      "clipBottom",
+      "clipLeft",
+      "clipPath",
+      "clipPathUnits",
+      "clipRight",
+      "clipRule",
+      "clipTop",
+      "clipboard",
+      "clipboardData",
+      "clone",
+      "cloneContents",
+      "cloneNode",
+      "cloneRange",
+      "close",
+      "closePath",
+      "closed",
+      "closest",
+      "clz",
+      "clz32",
+      "cm",
+      "cmp",
+      "code",
+      "codeBase",
+      "codePointAt",
+      "codeType",
+      "colSpan",
+      "collapse",
+      "collapseToEnd",
+      "collapseToStart",
+      "collapsed",
+      "collect",
+      "colno",
+      "color",
+      "color-adjust",
+      "color-interpolation",
+      "color-interpolation-filters",
+      "colorAdjust",
+      "colorDepth",
+      "colorInterpolation",
+      "colorInterpolationFilters",
+      "colorMask",
+      "colorType",
+      "cols",
+      "column-count",
+      "column-fill",
+      "column-gap",
+      "column-rule",
+      "column-rule-color",
+      "column-rule-style",
+      "column-rule-width",
+      "column-span",
+      "column-width",
+      "columnCount",
+      "columnFill",
+      "columnGap",
+      "columnNumber",
+      "columnRule",
+      "columnRuleColor",
+      "columnRuleStyle",
+      "columnRuleWidth",
+      "columnSpan",
+      "columnWidth",
+      "columns",
+      "command",
+      "commit",
+      "commitPreferences",
+      "commitStyles",
+      "commonAncestorContainer",
+      "compact",
+      "compareBoundaryPoints",
+      "compareDocumentPosition",
+      "compareEndPoints",
+      "compareExchange",
+      "compareNode",
+      "comparePoint",
+      "compatMode",
+      "compatible",
+      "compile",
+      "compileShader",
+      "compileStreaming",
+      "complete",
+      "component",
+      "componentFromPoint",
+      "composed",
+      "composedPath",
+      "composite",
+      "compositionEndOffset",
+      "compositionStartOffset",
+      "compressedTexImage2D",
+      "compressedTexImage3D",
+      "compressedTexSubImage2D",
+      "compressedTexSubImage3D",
+      "computedStyleMap",
+      "concat",
+      "conditionText",
+      "coneInnerAngle",
+      "coneOuterAngle",
+      "coneOuterGain",
+      "configuration",
+      "configurationName",
+      "configurationValue",
+      "configurations",
+      "confirm",
+      "confirmComposition",
+      "confirmSiteSpecificTrackingException",
+      "confirmWebWideTrackingException",
+      "connect",
+      "connectEnd",
+      "connectShark",
+      "connectStart",
+      "connected",
+      "connection",
+      "connectionList",
+      "connectionSpeed",
+      "connectionState",
+      "connections",
+      "console",
+      "consolidate",
+      "constraint",
+      "constrictionActive",
+      "construct",
+      "constructor",
+      "contactID",
+      "contain",
+      "containerId",
+      "containerName",
+      "containerSrc",
+      "containerType",
+      "contains",
+      "containsNode",
+      "content",
+      "contentBoxSize",
+      "contentDocument",
+      "contentEditable",
+      "contentHint",
+      "contentOverflow",
+      "contentRect",
+      "contentScriptType",
+      "contentStyleType",
+      "contentType",
+      "contentWindow",
+      "context",
+      "contextMenu",
+      "contextmenu",
+      "continue",
+      "continuePrimaryKey",
+      "continuous",
+      "control",
+      "controlTransferIn",
+      "controlTransferOut",
+      "controller",
+      "controls",
+      "controlsList",
+      "convertPointFromNode",
+      "convertQuadFromNode",
+      "convertRectFromNode",
+      "convertToBlob",
+      "convertToSpecifiedUnits",
+      "cookie",
+      "cookieEnabled",
+      "coords",
+      "copyBufferSubData",
+      "copyFromChannel",
+      "copyTexImage2D",
+      "copyTexSubImage2D",
+      "copyTexSubImage3D",
+      "copyToChannel",
+      "copyWithin",
+      "correspondingElement",
+      "correspondingUseElement",
+      "corruptedVideoFrames",
+      "cos",
+      "cosh",
+      "count",
+      "countReset",
+      "counter-increment",
+      "counter-reset",
+      "counter-set",
+      "counterIncrement",
+      "counterReset",
+      "counterSet",
+      "country",
+      "cpuClass",
+      "cpuSleepAllowed",
+      "create",
+      "createAnalyser",
+      "createAnswer",
+      "createAttribute",
+      "createAttributeNS",
+      "createBiquadFilter",
+      "createBuffer",
+      "createBufferSource",
+      "createCDATASection",
+      "createCSSStyleSheet",
+      "createCaption",
+      "createChannelMerger",
+      "createChannelSplitter",
+      "createComment",
+      "createConstantSource",
+      "createContextualFragment",
+      "createControlRange",
+      "createConvolver",
+      "createDTMFSender",
+      "createDataChannel",
+      "createDelay",
+      "createDelayNode",
+      "createDocument",
+      "createDocumentFragment",
+      "createDocumentType",
+      "createDynamicsCompressor",
+      "createElement",
+      "createElementNS",
+      "createEntityReference",
+      "createEvent",
+      "createEventObject",
+      "createExpression",
+      "createFramebuffer",
+      "createFunction",
+      "createGain",
+      "createGainNode",
+      "createHTML",
+      "createHTMLDocument",
+      "createIIRFilter",
+      "createImageBitmap",
+      "createImageData",
+      "createIndex",
+      "createJavaScriptNode",
+      "createLinearGradient",
+      "createMediaElementSource",
+      "createMediaKeys",
+      "createMediaStreamDestination",
+      "createMediaStreamSource",
+      "createMediaStreamTrackSource",
+      "createMutableFile",
+      "createNSResolver",
+      "createNodeIterator",
+      "createNotification",
+      "createObjectStore",
+      "createObjectURL",
+      "createOffer",
+      "createOscillator",
+      "createPanner",
+      "createPattern",
+      "createPeriodicWave",
+      "createPolicy",
+      "createPopup",
+      "createProcessingInstruction",
+      "createProgram",
+      "createQuery",
+      "createRadialGradient",
+      "createRange",
+      "createRangeCollection",
+      "createReader",
+      "createRenderbuffer",
+      "createSVGAngle",
+      "createSVGLength",
+      "createSVGMatrix",
+      "createSVGNumber",
+      "createSVGPathSegArcAbs",
+      "createSVGPathSegArcRel",
+      "createSVGPathSegClosePath",
+      "createSVGPathSegCurvetoCubicAbs",
+      "createSVGPathSegCurvetoCubicRel",
+      "createSVGPathSegCurvetoCubicSmoothAbs",
+      "createSVGPathSegCurvetoCubicSmoothRel",
+      "createSVGPathSegCurvetoQuadraticAbs",
+      "createSVGPathSegCurvetoQuadraticRel",
+      "createSVGPathSegCurvetoQuadraticSmoothAbs",
+      "createSVGPathSegCurvetoQuadraticSmoothRel",
+      "createSVGPathSegLinetoAbs",
+      "createSVGPathSegLinetoHorizontalAbs",
+      "createSVGPathSegLinetoHorizontalRel",
+      "createSVGPathSegLinetoRel",
+      "createSVGPathSegLinetoVerticalAbs",
+      "createSVGPathSegLinetoVerticalRel",
+      "createSVGPathSegMovetoAbs",
+      "createSVGPathSegMovetoRel",
+      "createSVGPoint",
+      "createSVGRect",
+      "createSVGTransform",
+      "createSVGTransformFromMatrix",
+      "createSampler",
+      "createScript",
+      "createScriptProcessor",
+      "createScriptURL",
+      "createSession",
+      "createShader",
+      "createShadowRoot",
+      "createStereoPanner",
+      "createStyleSheet",
+      "createTBody",
+      "createTFoot",
+      "createTHead",
+      "createTextNode",
+      "createTextRange",
+      "createTexture",
+      "createTouch",
+      "createTouchList",
+      "createTransformFeedback",
+      "createTreeWalker",
+      "createVertexArray",
+      "createWaveShaper",
+      "creationTime",
+      "credentials",
+      "crossOrigin",
+      "crossOriginIsolated",
+      "crypto",
+      "csi",
+      "csp",
+      "cssFloat",
+      "cssRules",
+      "cssText",
+      "cssValueType",
+      "ctrlKey",
+      "ctrlLeft",
+      "cues",
+      "cullFace",
+      "currentDirection",
+      "currentLocalDescription",
+      "currentNode",
+      "currentPage",
+      "currentRect",
+      "currentRemoteDescription",
+      "currentScale",
+      "currentScript",
+      "currentSrc",
+      "currentState",
+      "currentStyle",
+      "currentTarget",
+      "currentTime",
+      "currentTranslate",
+      "currentView",
+      "cursor",
+      "curve",
+      "customElements",
+      "customError",
+      "cx",
+      "cy",
+      "d",
+      "data",
+      "dataFld",
+      "dataFormatAs",
+      "dataLoss",
+      "dataLossMessage",
+      "dataPageSize",
+      "dataSrc",
+      "dataTransfer",
+      "database",
+      "databases",
+      "dataset",
+      "dateTime",
+      "db",
+      "debug",
+      "debuggerEnabled",
+      "declare",
+      "decode",
+      "decodeAudioData",
+      "decodeURI",
+      "decodeURIComponent",
+      "decodedBodySize",
+      "decoding",
+      "decodingInfo",
+      "decrypt",
+      "default",
+      "defaultCharset",
+      "defaultChecked",
+      "defaultMuted",
+      "defaultPlaybackRate",
+      "defaultPolicy",
+      "defaultPrevented",
+      "defaultRequest",
+      "defaultSelected",
+      "defaultStatus",
+      "defaultURL",
+      "defaultValue",
+      "defaultView",
+      "defaultstatus",
+      "defer",
+      "define",
+      "defineMagicFunction",
+      "defineMagicVariable",
+      "defineProperties",
+      "defineProperty",
+      "deg",
+      "delay",
+      "delayTime",
+      "delegatesFocus",
+      "delete",
+      "deleteBuffer",
+      "deleteCaption",
+      "deleteCell",
+      "deleteContents",
+      "deleteData",
+      "deleteDatabase",
+      "deleteFramebuffer",
+      "deleteFromDocument",
+      "deleteIndex",
+      "deleteMedium",
+      "deleteObjectStore",
+      "deleteProgram",
+      "deleteProperty",
+      "deleteQuery",
+      "deleteRenderbuffer",
+      "deleteRow",
+      "deleteRule",
+      "deleteSampler",
+      "deleteShader",
+      "deleteSync",
+      "deleteTFoot",
+      "deleteTHead",
+      "deleteTexture",
+      "deleteTransformFeedback",
+      "deleteVertexArray",
+      "deliverChangeRecords",
+      "delivery",
+      "deliveryInfo",
+      "deliveryStatus",
+      "deliveryTimestamp",
+      "delta",
+      "deltaMode",
+      "deltaX",
+      "deltaY",
+      "deltaZ",
+      "dependentLocality",
+      "depthFar",
+      "depthFunc",
+      "depthMask",
+      "depthNear",
+      "depthRange",
+      "deref",
+      "deriveBits",
+      "deriveKey",
+      "description",
+      "deselectAll",
+      "designMode",
+      "desiredSize",
+      "destination",
+      "destinationURL",
+      "detach",
+      "detachEvent",
+      "detachShader",
+      "detail",
+      "details",
+      "detect",
+      "detune",
+      "device",
+      "deviceClass",
+      "deviceId",
+      "deviceMemory",
+      "devicePixelContentBoxSize",
+      "devicePixelRatio",
+      "deviceProtocol",
+      "deviceSubclass",
+      "deviceVersionMajor",
+      "deviceVersionMinor",
+      "deviceVersionSubminor",
+      "deviceXDPI",
+      "deviceYDPI",
+      "didTimeout",
+      "diffuseConstant",
+      "digest",
+      "dimensions",
+      "dir",
+      "dirName",
+      "direction",
+      "dirxml",
+      "disable",
+      "disablePictureInPicture",
+      "disableRemotePlayback",
+      "disableVertexAttribArray",
+      "disabled",
+      "dischargingTime",
+      "disconnect",
+      "disconnectShark",
+      "dispatchEvent",
+      "display",
+      "displayId",
+      "displayName",
+      "disposition",
+      "distanceModel",
+      "div",
+      "divisor",
+      "djsapi",
+      "djsproxy",
+      "doImport",
+      "doNotTrack",
+      "doScroll",
+      "doctype",
+      "document",
+      "documentElement",
+      "documentMode",
+      "documentURI",
+      "dolphin",
+      "dolphinGameCenter",
+      "dolphininfo",
+      "dolphinmeta",
+      "domComplete",
+      "domContentLoadedEventEnd",
+      "domContentLoadedEventStart",
+      "domInteractive",
+      "domLoading",
+      "domOverlayState",
+      "domain",
+      "domainLookupEnd",
+      "domainLookupStart",
+      "dominant-baseline",
+      "dominantBaseline",
+      "done",
+      "dopplerFactor",
+      "dotAll",
+      "downDegrees",
+      "downlink",
+      "download",
+      "downloadTotal",
+      "downloaded",
+      "dpcm",
+      "dpi",
+      "dppx",
+      "dragDrop",
+      "draggable",
+      "drawArrays",
+      "drawArraysInstanced",
+      "drawArraysInstancedANGLE",
+      "drawBuffers",
+      "drawCustomFocusRing",
+      "drawElements",
+      "drawElementsInstanced",
+      "drawElementsInstancedANGLE",
+      "drawFocusIfNeeded",
+      "drawImage",
+      "drawImageFromRect",
+      "drawRangeElements",
+      "drawSystemFocusRing",
+      "drawingBufferHeight",
+      "drawingBufferWidth",
+      "dropEffect",
+      "droppedVideoFrames",
+      "dropzone",
+      "dtmf",
+      "dump",
+      "dumpProfile",
+      "duplicate",
+      "durability",
+      "duration",
+      "dvname",
+      "dvnum",
+      "dx",
+      "dy",
+      "dynsrc",
+      "e",
+      "edgeMode",
+      "effect",
+      "effectAllowed",
+      "effectiveDirective",
+      "effectiveType",
+      "elapsedTime",
+      "element",
+      "elementFromPoint",
+      "elementTiming",
+      "elements",
+      "elementsFromPoint",
+      "elevation",
+      "ellipse",
+      "em",
+      "email",
+      "embeds",
+      "emma",
+      "empty",
+      "empty-cells",
+      "emptyCells",
+      "emptyHTML",
+      "emptyScript",
+      "emulatedPosition",
+      "enable",
+      "enableBackground",
+      "enableDelegations",
+      "enableStyleSheetsForSet",
+      "enableVertexAttribArray",
+      "enabled",
+      "enabledPlugin",
+      "encode",
+      "encodeInto",
+      "encodeURI",
+      "encodeURIComponent",
+      "encodedBodySize",
+      "encoding",
+      "encodingInfo",
+      "encrypt",
+      "enctype",
+      "end",
+      "endContainer",
+      "endElement",
+      "endElementAt",
+      "endOfStream",
+      "endOffset",
+      "endQuery",
+      "endTime",
+      "endTransformFeedback",
+      "ended",
+      "endpoint",
+      "endpointNumber",
+      "endpoints",
+      "endsWith",
+      "enterKeyHint",
+      "entities",
+      "entries",
+      "entryType",
+      "enumerate",
+      "enumerateDevices",
+      "enumerateEditable",
+      "environmentBlendMode",
+      "equals",
+      "error",
+      "errorCode",
+      "errorDetail",
+      "errorText",
+      "escape",
+      "estimate",
+      "eval",
+      "evaluate",
+      "event",
+      "eventPhase",
+      "every",
+      "ex",
+      "exception",
+      "exchange",
+      "exec",
+      "execCommand",
+      "execCommandShowHelp",
+      "execScript",
+      "exitFullscreen",
+      "exitPictureInPicture",
+      "exitPointerLock",
+      "exitPresent",
+      "exp",
+      "expand",
+      "expandEntityReferences",
+      "expando",
+      "expansion",
+      "expiration",
+      "expirationTime",
+      "expires",
+      "expiryDate",
+      "explicitOriginalTarget",
+      "expm1",
+      "exponent",
+      "exponentialRampToValueAtTime",
+      "exportKey",
+      "exports",
+      "extend",
+      "extensions",
+      "extentNode",
+      "extentOffset",
+      "external",
+      "externalResourcesRequired",
+      "extractContents",
+      "extractable",
+      "eye",
+      "f",
+      "face",
+      "factoryReset",
+      "failureReason",
+      "fallback",
+      "family",
+      "familyName",
+      "farthestViewportElement",
+      "fastSeek",
+      "fatal",
+      "featureId",
+      "featurePolicy",
+      "featureSettings",
+      "features",
+      "fenceSync",
+      "fetch",
+      "fetchStart",
+      "fftSize",
+      "fgColor",
+      "fieldOfView",
+      "file",
+      "fileCreatedDate",
+      "fileHandle",
+      "fileModifiedDate",
+      "fileName",
+      "fileSize",
+      "fileUpdatedDate",
+      "filename",
+      "files",
+      "filesystem",
+      "fill",
+      "fill-opacity",
+      "fill-rule",
+      "fillLightMode",
+      "fillOpacity",
+      "fillRect",
+      "fillRule",
+      "fillStyle",
+      "fillText",
+      "filter",
+      "filterResX",
+      "filterResY",
+      "filterUnits",
+      "filters",
+      "finally",
+      "find",
+      "findIndex",
+      "findRule",
+      "findText",
+      "finish",
+      "finished",
+      "fireEvent",
+      "firesTouchEvents",
+      "firstChild",
+      "firstElementChild",
+      "firstPage",
+      "fixed",
+      "flags",
+      "flat",
+      "flatMap",
+      "flex",
+      "flex-basis",
+      "flex-direction",
+      "flex-flow",
+      "flex-grow",
+      "flex-shrink",
+      "flex-wrap",
+      "flexBasis",
+      "flexDirection",
+      "flexFlow",
+      "flexGrow",
+      "flexShrink",
+      "flexWrap",
+      "flipX",
+      "flipY",
+      "float",
+      "float32",
+      "float64",
+      "flood-color",
+      "flood-opacity",
+      "floodColor",
+      "floodOpacity",
+      "floor",
+      "flush",
+      "focus",
+      "focusNode",
+      "focusOffset",
+      "font",
+      "font-family",
+      "font-feature-settings",
+      "font-kerning",
+      "font-language-override",
+      "font-optical-sizing",
+      "font-size",
+      "font-size-adjust",
+      "font-stretch",
+      "font-style",
+      "font-synthesis",
+      "font-variant",
+      "font-variant-alternates",
+      "font-variant-caps",
+      "font-variant-east-asian",
+      "font-variant-ligatures",
+      "font-variant-numeric",
+      "font-variant-position",
+      "font-variation-settings",
+      "font-weight",
+      "fontFamily",
+      "fontFeatureSettings",
+      "fontKerning",
+      "fontLanguageOverride",
+      "fontOpticalSizing",
+      "fontSize",
+      "fontSizeAdjust",
+      "fontSmoothingEnabled",
+      "fontStretch",
+      "fontStyle",
+      "fontSynthesis",
+      "fontVariant",
+      "fontVariantAlternates",
+      "fontVariantCaps",
+      "fontVariantEastAsian",
+      "fontVariantLigatures",
+      "fontVariantNumeric",
+      "fontVariantPosition",
+      "fontVariationSettings",
+      "fontWeight",
+      "fontcolor",
+      "fontfaces",
+      "fonts",
+      "fontsize",
+      "for",
+      "forEach",
+      "force",
+      "forceRedraw",
+      "form",
+      "formAction",
+      "formData",
+      "formEnctype",
+      "formMethod",
+      "formNoValidate",
+      "formTarget",
+      "format",
+      "formatToParts",
+      "forms",
+      "forward",
+      "forwardX",
+      "forwardY",
+      "forwardZ",
+      "foundation",
+      "fr",
+      "fragmentDirective",
+      "frame",
+      "frameBorder",
+      "frameElement",
+      "frameSpacing",
+      "framebuffer",
+      "framebufferHeight",
+      "framebufferRenderbuffer",
+      "framebufferTexture2D",
+      "framebufferTextureLayer",
+      "framebufferWidth",
+      "frames",
+      "freeSpace",
+      "freeze",
+      "frequency",
+      "frequencyBinCount",
+      "from",
+      "fromCharCode",
+      "fromCodePoint",
+      "fromElement",
+      "fromEntries",
+      "fromFloat32Array",
+      "fromFloat64Array",
+      "fromMatrix",
+      "fromPoint",
+      "fromQuad",
+      "fromRect",
+      "frontFace",
+      "fround",
+      "fullPath",
+      "fullScreen",
+      "fullVersionList",
+      "fullscreen",
+      "fullscreenElement",
+      "fullscreenEnabled",
+      "fx",
+      "fy",
+      "gain",
+      "gamepad",
+      "gamma",
+      "gap",
+      "gatheringState",
+      "gatt",
+      "genderIdentity",
+      "generateCertificate",
+      "generateKey",
+      "generateMipmap",
+      "generateRequest",
+      "geolocation",
+      "gestureObject",
+      "get",
+      "getActiveAttrib",
+      "getActiveUniform",
+      "getActiveUniformBlockName",
+      "getActiveUniformBlockParameter",
+      "getActiveUniforms",
+      "getAdjacentText",
+      "getAll",
+      "getAllKeys",
+      "getAllResponseHeaders",
+      "getAllowlistForFeature",
+      "getAnimations",
+      "getAsFile",
+      "getAsString",
+      "getAttachedShaders",
+      "getAttribLocation",
+      "getAttribute",
+      "getAttributeNS",
+      "getAttributeNames",
+      "getAttributeNode",
+      "getAttributeNodeNS",
+      "getAttributeType",
+      "getAudioTracks",
+      "getAvailability",
+      "getBBox",
+      "getBattery",
+      "getBigInt64",
+      "getBigUint64",
+      "getBlob",
+      "getBookmark",
+      "getBoundingClientRect",
+      "getBounds",
+      "getBoxQuads",
+      "getBufferParameter",
+      "getBufferSubData",
+      "getByteFrequencyData",
+      "getByteTimeDomainData",
+      "getCSSCanvasContext",
+      "getCTM",
+      "getCandidateWindowClientRect",
+      "getCanonicalLocales",
+      "getCapabilities",
+      "getChannelData",
+      "getCharNumAtPosition",
+      "getCharacteristic",
+      "getCharacteristics",
+      "getClientExtensionResults",
+      "getClientRect",
+      "getClientRects",
+      "getCoalescedEvents",
+      "getCompositionAlternatives",
+      "getComputedStyle",
+      "getComputedTextLength",
+      "getComputedTiming",
+      "getConfiguration",
+      "getConstraints",
+      "getContext",
+      "getContextAttributes",
+      "getContributingSources",
+      "getCounterValue",
+      "getCueAsHTML",
+      "getCueById",
+      "getCurrentPosition",
+      "getCurrentTime",
+      "getData",
+      "getDatabaseNames",
+      "getDate",
+      "getDay",
+      "getDefaultComputedStyle",
+      "getDescriptor",
+      "getDescriptors",
+      "getDestinationInsertionPoints",
+      "getDevices",
+      "getDirectory",
+      "getDisplayMedia",
+      "getDistributedNodes",
+      "getEditable",
+      "getElementById",
+      "getElementsByClassName",
+      "getElementsByName",
+      "getElementsByTagName",
+      "getElementsByTagNameNS",
+      "getEnclosureList",
+      "getEndPositionOfChar",
+      "getEntries",
+      "getEntriesByName",
+      "getEntriesByType",
+      "getError",
+      "getExtension",
+      "getExtentOfChar",
+      "getEyeParameters",
+      "getFeature",
+      "getFile",
+      "getFiles",
+      "getFilesAndDirectories",
+      "getFingerprints",
+      "getFloat32",
+      "getFloat64",
+      "getFloatFrequencyData",
+      "getFloatTimeDomainData",
+      "getFloatValue",
+      "getFragDataLocation",
+      "getFrameData",
+      "getFramebufferAttachmentParameter",
+      "getFrequencyResponse",
+      "getFullYear",
+      "getGamepads",
+      "getHighEntropyValues",
+      "getHitTestResults",
+      "getHitTestResultsForTransientInput",
+      "getHours",
+      "getIdentityAssertion",
+      "getIds",
+      "getImageData",
+      "getIndexedParameter",
+      "getInstalledRelatedApps",
+      "getInt16",
+      "getInt32",
+      "getInt8",
+      "getInternalformatParameter",
+      "getIntersectionList",
+      "getItem",
+      "getItems",
+      "getKey",
+      "getKeyframes",
+      "getLayers",
+      "getLayoutMap",
+      "getLineDash",
+      "getLocalCandidates",
+      "getLocalParameters",
+      "getLocalStreams",
+      "getMarks",
+      "getMatchedCSSRules",
+      "getMaxGCPauseSinceClear",
+      "getMeasures",
+      "getMetadata",
+      "getMilliseconds",
+      "getMinutes",
+      "getModifierState",
+      "getMonth",
+      "getNamedItem",
+      "getNamedItemNS",
+      "getNativeFramebufferScaleFactor",
+      "getNotifications",
+      "getNotifier",
+      "getNumberOfChars",
+      "getOffsetReferenceSpace",
+      "getOutputTimestamp",
+      "getOverrideHistoryNavigationMode",
+      "getOverrideStyle",
+      "getOwnPropertyDescriptor",
+      "getOwnPropertyDescriptors",
+      "getOwnPropertyNames",
+      "getOwnPropertySymbols",
+      "getParameter",
+      "getParameters",
+      "getParent",
+      "getPathSegAtLength",
+      "getPhotoCapabilities",
+      "getPhotoSettings",
+      "getPointAtLength",
+      "getPose",
+      "getPredictedEvents",
+      "getPreference",
+      "getPreferenceDefault",
+      "getPresentationAttribute",
+      "getPreventDefault",
+      "getPrimaryService",
+      "getPrimaryServices",
+      "getProgramInfoLog",
+      "getProgramParameter",
+      "getPropertyCSSValue",
+      "getPropertyPriority",
+      "getPropertyShorthand",
+      "getPropertyType",
+      "getPropertyValue",
+      "getPrototypeOf",
+      "getQuery",
+      "getQueryParameter",
+      "getRGBColorValue",
+      "getRandomValues",
+      "getRangeAt",
+      "getReader",
+      "getReceivers",
+      "getRectValue",
+      "getRegistration",
+      "getRegistrations",
+      "getRemoteCandidates",
+      "getRemoteCertificates",
+      "getRemoteParameters",
+      "getRemoteStreams",
+      "getRenderbufferParameter",
+      "getResponseHeader",
+      "getRoot",
+      "getRootNode",
+      "getRotationOfChar",
+      "getSVGDocument",
+      "getSamplerParameter",
+      "getScreenCTM",
+      "getSeconds",
+      "getSelectedCandidatePair",
+      "getSelection",
+      "getSenders",
+      "getService",
+      "getSettings",
+      "getShaderInfoLog",
+      "getShaderParameter",
+      "getShaderPrecisionFormat",
+      "getShaderSource",
+      "getSimpleDuration",
+      "getSiteIcons",
+      "getSources",
+      "getSpeculativeParserUrls",
+      "getStartPositionOfChar",
+      "getStartTime",
+      "getState",
+      "getStats",
+      "getStatusForPolicy",
+      "getStorageUpdates",
+      "getStreamById",
+      "getStringValue",
+      "getSubStringLength",
+      "getSubscription",
+      "getSupportedConstraints",
+      "getSupportedExtensions",
+      "getSupportedFormats",
+      "getSyncParameter",
+      "getSynchronizationSources",
+      "getTags",
+      "getTargetRanges",
+      "getTexParameter",
+      "getTime",
+      "getTimezoneOffset",
+      "getTiming",
+      "getTotalLength",
+      "getTrackById",
+      "getTracks",
+      "getTransceivers",
+      "getTransform",
+      "getTransformFeedbackVarying",
+      "getTransformToElement",
+      "getTransports",
+      "getType",
+      "getTypeMapping",
+      "getUTCDate",
+      "getUTCDay",
+      "getUTCFullYear",
+      "getUTCHours",
+      "getUTCMilliseconds",
+      "getUTCMinutes",
+      "getUTCMonth",
+      "getUTCSeconds",
+      "getUint16",
+      "getUint32",
+      "getUint8",
+      "getUniform",
+      "getUniformBlockIndex",
+      "getUniformIndices",
+      "getUniformLocation",
+      "getUserMedia",
+      "getVRDisplays",
+      "getValues",
+      "getVarDate",
+      "getVariableValue",
+      "getVertexAttrib",
+      "getVertexAttribOffset",
+      "getVideoPlaybackQuality",
+      "getVideoTracks",
+      "getViewerPose",
+      "getViewport",
+      "getVoices",
+      "getWakeLockState",
+      "getWriter",
+      "getYear",
+      "givenName",
+      "global",
+      "globalAlpha",
+      "globalCompositeOperation",
+      "globalThis",
+      "glyphOrientationHorizontal",
+      "glyphOrientationVertical",
+      "glyphRef",
+      "go",
+      "grabFrame",
+      "grad",
+      "gradientTransform",
+      "gradientUnits",
+      "grammars",
+      "green",
+      "grid",
+      "grid-area",
+      "grid-auto-columns",
+      "grid-auto-flow",
+      "grid-auto-rows",
+      "grid-column",
+      "grid-column-end",
+      "grid-column-gap",
+      "grid-column-start",
+      "grid-gap",
+      "grid-row",
+      "grid-row-end",
+      "grid-row-gap",
+      "grid-row-start",
+      "grid-template",
+      "grid-template-areas",
+      "grid-template-columns",
+      "grid-template-rows",
+      "gridArea",
+      "gridAutoColumns",
+      "gridAutoFlow",
+      "gridAutoRows",
+      "gridColumn",
+      "gridColumnEnd",
+      "gridColumnGap",
+      "gridColumnStart",
+      "gridGap",
+      "gridRow",
+      "gridRowEnd",
+      "gridRowGap",
+      "gridRowStart",
+      "gridTemplate",
+      "gridTemplateAreas",
+      "gridTemplateColumns",
+      "gridTemplateRows",
+      "gripSpace",
+      "group",
+      "groupCollapsed",
+      "groupEnd",
+      "groupId",
+      "hadRecentInput",
+      "hand",
+      "handedness",
+      "hapticActuators",
+      "hardwareConcurrency",
+      "has",
+      "hasAttribute",
+      "hasAttributeNS",
+      "hasAttributes",
+      "hasBeenActive",
+      "hasChildNodes",
+      "hasComposition",
+      "hasEnrolledInstrument",
+      "hasExtension",
+      "hasExternalDisplay",
+      "hasFeature",
+      "hasFocus",
+      "hasInstance",
+      "hasLayout",
+      "hasOrientation",
+      "hasOwnProperty",
+      "hasPointerCapture",
+      "hasPosition",
+      "hasReading",
+      "hasStorageAccess",
+      "hash",
+      "head",
+      "headers",
+      "heading",
+      "height",
+      "hidden",
+      "hide",
+      "hideFocus",
+      "high",
+      "highWaterMark",
+      "hint",
+      "history",
+      "honorificPrefix",
+      "honorificSuffix",
+      "horizontalOverflow",
+      "host",
+      "hostCandidate",
+      "hostname",
+      "href",
+      "hrefTranslate",
+      "hreflang",
+      "hspace",
+      "html5TagCheckInerface",
+      "htmlFor",
+      "htmlText",
+      "httpEquiv",
+      "httpRequestStatusCode",
+      "hwTimestamp",
+      "hyphens",
+      "hypot",
+      "iccId",
+      "iceConnectionState",
+      "iceGatheringState",
+      "iceTransport",
+      "icon",
+      "iconURL",
+      "id",
+      "identifier",
+      "identity",
+      "idpLoginUrl",
+      "ignoreBOM",
+      "ignoreCase",
+      "ignoreDepthValues",
+      "image-orientation",
+      "image-rendering",
+      "imageHeight",
+      "imageOrientation",
+      "imageRendering",
+      "imageSizes",
+      "imageSmoothingEnabled",
+      "imageSmoothingQuality",
+      "imageSrcset",
+      "imageWidth",
+      "images",
+      "ime-mode",
+      "imeMode",
+      "implementation",
+      "importKey",
+      "importNode",
+      "importStylesheet",
+      "imports",
+      "impp",
+      "imul",
+      "in",
+      "in1",
+      "in2",
+      "inBandMetadataTrackDispatchType",
+      "inRange",
+      "includes",
+      "incremental",
+      "indeterminate",
+      "index",
+      "indexNames",
+      "indexOf",
+      "indexedDB",
+      "indicate",
+      "inertiaDestinationX",
+      "inertiaDestinationY",
+      "info",
+      "init",
+      "initAnimationEvent",
+      "initBeforeLoadEvent",
+      "initClipboardEvent",
+      "initCloseEvent",
+      "initCommandEvent",
+      "initCompositionEvent",
+      "initCustomEvent",
+      "initData",
+      "initDataType",
+      "initDeviceMotionEvent",
+      "initDeviceOrientationEvent",
+      "initDragEvent",
+      "initErrorEvent",
+      "initEvent",
+      "initFocusEvent",
+      "initGestureEvent",
+      "initHashChangeEvent",
+      "initKeyEvent",
+      "initKeyboardEvent",
+      "initMSManipulationEvent",
+      "initMessageEvent",
+      "initMouseEvent",
+      "initMouseScrollEvent",
+      "initMouseWheelEvent",
+      "initMutationEvent",
+      "initNSMouseEvent",
+      "initOverflowEvent",
+      "initPageEvent",
+      "initPageTransitionEvent",
+      "initPointerEvent",
+      "initPopStateEvent",
+      "initProgressEvent",
+      "initScrollAreaEvent",
+      "initSimpleGestureEvent",
+      "initStorageEvent",
+      "initTextEvent",
+      "initTimeEvent",
+      "initTouchEvent",
+      "initTransitionEvent",
+      "initUIEvent",
+      "initWebKitAnimationEvent",
+      "initWebKitTransitionEvent",
+      "initWebKitWheelEvent",
+      "initWheelEvent",
+      "initialTime",
+      "initialize",
+      "initiatorType",
+      "inline-size",
+      "inlineSize",
+      "inlineVerticalFieldOfView",
+      "inner",
+      "innerHTML",
+      "innerHeight",
+      "innerText",
+      "innerWidth",
+      "input",
+      "inputBuffer",
+      "inputEncoding",
+      "inputMethod",
+      "inputMode",
+      "inputSource",
+      "inputSources",
+      "inputType",
+      "inputs",
+      "insertAdjacentElement",
+      "insertAdjacentHTML",
+      "insertAdjacentText",
+      "insertBefore",
+      "insertCell",
+      "insertDTMF",
+      "insertData",
+      "insertItemBefore",
+      "insertNode",
+      "insertRow",
+      "insertRule",
+      "inset",
+      "inset-block",
+      "inset-block-end",
+      "inset-block-start",
+      "inset-inline",
+      "inset-inline-end",
+      "inset-inline-start",
+      "insetBlock",
+      "insetBlockEnd",
+      "insetBlockStart",
+      "insetInline",
+      "insetInlineEnd",
+      "insetInlineStart",
+      "installing",
+      "instanceRoot",
+      "instantiate",
+      "instantiateStreaming",
+      "instruments",
+      "int16",
+      "int32",
+      "int8",
+      "integrity",
+      "interactionMode",
+      "intercept",
+      "interfaceClass",
+      "interfaceName",
+      "interfaceNumber",
+      "interfaceProtocol",
+      "interfaceSubclass",
+      "interfaces",
+      "interimResults",
+      "internalSubset",
+      "interpretation",
+      "intersectionRatio",
+      "intersectionRect",
+      "intersectsNode",
+      "interval",
+      "invalidIteratorState",
+      "invalidateFramebuffer",
+      "invalidateSubFramebuffer",
+      "inverse",
+      "invertSelf",
+      "is",
+      "is2D",
+      "isActive",
+      "isAlternate",
+      "isArray",
+      "isBingCurrentSearchDefault",
+      "isBuffer",
+      "isCandidateWindowVisible",
+      "isChar",
+      "isCollapsed",
+      "isComposing",
+      "isConcatSpreadable",
+      "isConnected",
+      "isContentEditable",
+      "isContentHandlerRegistered",
+      "isContextLost",
+      "isDefaultNamespace",
+      "isDirectory",
+      "isDisabled",
+      "isEnabled",
+      "isEqual",
+      "isEqualNode",
+      "isExtensible",
+      "isExternalCTAP2SecurityKeySupported",
+      "isFile",
+      "isFinite",
+      "isFramebuffer",
+      "isFrozen",
+      "isGenerator",
+      "isHTML",
+      "isHistoryNavigation",
+      "isId",
+      "isIdentity",
+      "isInjected",
+      "isInteger",
+      "isIntersecting",
+      "isLockFree",
+      "isMap",
+      "isMultiLine",
+      "isNaN",
+      "isOpen",
+      "isPointInFill",
+      "isPointInPath",
+      "isPointInRange",
+      "isPointInStroke",
+      "isPrefAlternate",
+      "isPresenting",
+      "isPrimary",
+      "isProgram",
+      "isPropertyImplicit",
+      "isProtocolHandlerRegistered",
+      "isPrototypeOf",
+      "isQuery",
+      "isRenderbuffer",
+      "isSafeInteger",
+      "isSameNode",
+      "isSampler",
+      "isScript",
+      "isScriptURL",
+      "isSealed",
+      "isSecureContext",
+      "isSessionSupported",
+      "isShader",
+      "isSupported",
+      "isSync",
+      "isTextEdit",
+      "isTexture",
+      "isTransformFeedback",
+      "isTrusted",
+      "isTypeSupported",
+      "isUserVerifyingPlatformAuthenticatorAvailable",
+      "isVertexArray",
+      "isView",
+      "isVisible",
+      "isochronousTransferIn",
+      "isochronousTransferOut",
+      "isolation",
+      "italics",
+      "item",
+      "itemId",
+      "itemProp",
+      "itemRef",
+      "itemScope",
+      "itemType",
+      "itemValue",
+      "items",
+      "iterateNext",
+      "iterationComposite",
+      "iterator",
+      "javaEnabled",
+      "jobTitle",
+      "join",
+      "json",
+      "justify-content",
+      "justify-items",
+      "justify-self",
+      "justifyContent",
+      "justifyItems",
+      "justifySelf",
+      "k1",
+      "k2",
+      "k3",
+      "k4",
+      "kHz",
+      "keepalive",
+      "kernelMatrix",
+      "kernelUnitLengthX",
+      "kernelUnitLengthY",
+      "kerning",
+      "key",
+      "keyCode",
+      "keyFor",
+      "keyIdentifier",
+      "keyLightEnabled",
+      "keyLocation",
+      "keyPath",
+      "keyStatuses",
+      "keySystem",
+      "keyText",
+      "keyUsage",
+      "keyboard",
+      "keys",
+      "keytype",
+      "kind",
+      "knee",
+      "label",
+      "labels",
+      "lang",
+      "language",
+      "languages",
+      "largeArcFlag",
+      "lastChild",
+      "lastElementChild",
+      "lastEventId",
+      "lastIndex",
+      "lastIndexOf",
+      "lastInputTime",
+      "lastMatch",
+      "lastMessageSubject",
+      "lastMessageType",
+      "lastModified",
+      "lastModifiedDate",
+      "lastPage",
+      "lastParen",
+      "lastState",
+      "lastStyleSheetSet",
+      "latitude",
+      "layerX",
+      "layerY",
+      "layoutFlow",
+      "layoutGrid",
+      "layoutGridChar",
+      "layoutGridLine",
+      "layoutGridMode",
+      "layoutGridType",
+      "lbound",
+      "left",
+      "leftContext",
+      "leftDegrees",
+      "leftMargin",
+      "leftProjectionMatrix",
+      "leftViewMatrix",
+      "length",
+      "lengthAdjust",
+      "lengthComputable",
+      "letter-spacing",
+      "letterSpacing",
+      "level",
+      "lighting-color",
+      "lightingColor",
+      "limitingConeAngle",
+      "line",
+      "line-break",
+      "line-height",
+      "lineAlign",
+      "lineBreak",
+      "lineCap",
+      "lineDashOffset",
+      "lineHeight",
+      "lineJoin",
+      "lineNumber",
+      "lineTo",
+      "lineWidth",
+      "linearAcceleration",
+      "linearRampToValueAtTime",
+      "linearVelocity",
+      "lineno",
+      "lines",
+      "link",
+      "linkColor",
+      "linkProgram",
+      "links",
+      "list",
+      "list-style",
+      "list-style-image",
+      "list-style-position",
+      "list-style-type",
+      "listStyle",
+      "listStyleImage",
+      "listStylePosition",
+      "listStyleType",
+      "listener",
+      "load",
+      "loadEventEnd",
+      "loadEventStart",
+      "loadTime",
+      "loadTimes",
+      "loaded",
+      "loading",
+      "localDescription",
+      "localName",
+      "localService",
+      "localStorage",
+      "locale",
+      "localeCompare",
+      "location",
+      "locationbar",
+      "lock",
+      "locked",
+      "lockedFile",
+      "locks",
+      "log",
+      "log10",
+      "log1p",
+      "log2",
+      "logicalXDPI",
+      "logicalYDPI",
+      "longDesc",
+      "longitude",
+      "lookupNamespaceURI",
+      "lookupPrefix",
+      "loop",
+      "loopEnd",
+      "loopStart",
+      "looping",
+      "low",
+      "lower",
+      "lowerBound",
+      "lowerOpen",
+      "lowsrc",
+      "m11",
+      "m12",
+      "m13",
+      "m14",
+      "m21",
+      "m22",
+      "m23",
+      "m24",
+      "m31",
+      "m32",
+      "m33",
+      "m34",
+      "m41",
+      "m42",
+      "m43",
+      "m44",
+      "makeXRCompatible",
+      "manifest",
+      "manufacturer",
+      "manufacturerName",
+      "map",
+      "mapping",
+      "margin",
+      "margin-block",
+      "margin-block-end",
+      "margin-block-start",
+      "margin-bottom",
+      "margin-inline",
+      "margin-inline-end",
+      "margin-inline-start",
+      "margin-left",
+      "margin-right",
+      "margin-top",
+      "marginBlock",
+      "marginBlockEnd",
+      "marginBlockStart",
+      "marginBottom",
+      "marginHeight",
+      "marginInline",
+      "marginInlineEnd",
+      "marginInlineStart",
+      "marginLeft",
+      "marginRight",
+      "marginTop",
+      "marginWidth",
+      "mark",
+      "marker",
+      "marker-end",
+      "marker-mid",
+      "marker-offset",
+      "marker-start",
+      "markerEnd",
+      "markerHeight",
+      "markerMid",
+      "markerOffset",
+      "markerStart",
+      "markerUnits",
+      "markerWidth",
+      "marks",
+      "mask",
+      "mask-clip",
+      "mask-composite",
+      "mask-image",
+      "mask-mode",
+      "mask-origin",
+      "mask-position",
+      "mask-position-x",
+      "mask-position-y",
+      "mask-repeat",
+      "mask-size",
+      "mask-type",
+      "maskClip",
+      "maskComposite",
+      "maskContentUnits",
+      "maskImage",
+      "maskMode",
+      "maskOrigin",
+      "maskPosition",
+      "maskPositionX",
+      "maskPositionY",
+      "maskRepeat",
+      "maskSize",
+      "maskType",
+      "maskUnits",
+      "match",
+      "matchAll",
+      "matchMedia",
+      "matchMedium",
+      "matches",
+      "matrix",
+      "matrixTransform",
+      "max",
+      "max-block-size",
+      "max-height",
+      "max-inline-size",
+      "max-width",
+      "maxActions",
+      "maxAlternatives",
+      "maxBlockSize",
+      "maxChannelCount",
+      "maxChannels",
+      "maxConnectionsPerServer",
+      "maxDecibels",
+      "maxDistance",
+      "maxHeight",
+      "maxInlineSize",
+      "maxLayers",
+      "maxLength",
+      "maxMessageSize",
+      "maxPacketLifeTime",
+      "maxRetransmits",
+      "maxTouchPoints",
+      "maxValue",
+      "maxWidth",
+      "measure",
+      "measureText",
+      "media",
+      "mediaCapabilities",
+      "mediaDevices",
+      "mediaElement",
+      "mediaGroup",
+      "mediaKeys",
+      "mediaSession",
+      "mediaStream",
+      "mediaText",
+      "meetOrSlice",
+      "memory",
+      "menubar",
+      "mergeAttributes",
+      "message",
+      "messageClass",
+      "messageHandlers",
+      "messageType",
+      "metaKey",
+      "metadata",
+      "method",
+      "methodDetails",
+      "methodName",
+      "mid",
+      "mimeType",
+      "mimeTypes",
+      "min",
+      "min-block-size",
+      "min-height",
+      "min-inline-size",
+      "min-width",
+      "minBlockSize",
+      "minDecibels",
+      "minHeight",
+      "minInlineSize",
+      "minLength",
+      "minValue",
+      "minWidth",
+      "miterLimit",
+      "mix-blend-mode",
+      "mixBlendMode",
+      "mm",
+      "mobile",
+      "mode",
+      "model",
+      "modify",
+      "mount",
+      "move",
+      "moveBy",
+      "moveEnd",
+      "moveFirst",
+      "moveFocusDown",
+      "moveFocusLeft",
+      "moveFocusRight",
+      "moveFocusUp",
+      "moveNext",
+      "moveRow",
+      "moveStart",
+      "moveTo",
+      "moveToBookmark",
+      "moveToElementText",
+      "moveToPoint",
+      "movementX",
+      "movementY",
+      "mozAdd",
+      "mozAnimationStartTime",
+      "mozAnon",
+      "mozApps",
+      "mozAudioCaptured",
+      "mozAudioChannelType",
+      "mozAutoplayEnabled",
+      "mozCancelAnimationFrame",
+      "mozCancelFullScreen",
+      "mozCancelRequestAnimationFrame",
+      "mozCaptureStream",
+      "mozCaptureStreamUntilEnded",
+      "mozClearDataAt",
+      "mozContact",
+      "mozContacts",
+      "mozCreateFileHandle",
+      "mozCurrentTransform",
+      "mozCurrentTransformInverse",
+      "mozCursor",
+      "mozDash",
+      "mozDashOffset",
+      "mozDecodedFrames",
+      "mozExitPointerLock",
+      "mozFillRule",
+      "mozFragmentEnd",
+      "mozFrameDelay",
+      "mozFullScreen",
+      "mozFullScreenElement",
+      "mozFullScreenEnabled",
+      "mozGetAll",
+      "mozGetAllKeys",
+      "mozGetAsFile",
+      "mozGetDataAt",
+      "mozGetMetadata",
+      "mozGetUserMedia",
+      "mozHasAudio",
+      "mozHasItem",
+      "mozHidden",
+      "mozImageSmoothingEnabled",
+      "mozIndexedDB",
+      "mozInnerScreenX",
+      "mozInnerScreenY",
+      "mozInputSource",
+      "mozIsTextField",
+      "mozItem",
+      "mozItemCount",
+      "mozItems",
+      "mozLength",
+      "mozLockOrientation",
+      "mozMatchesSelector",
+      "mozMovementX",
+      "mozMovementY",
+      "mozOpaque",
+      "mozOrientation",
+      "mozPaintCount",
+      "mozPaintedFrames",
+      "mozParsedFrames",
+      "mozPay",
+      "mozPointerLockElement",
+      "mozPresentedFrames",
+      "mozPreservesPitch",
+      "mozPressure",
+      "mozPrintCallback",
+      "mozRTCIceCandidate",
+      "mozRTCPeerConnection",
+      "mozRTCSessionDescription",
+      "mozRemove",
+      "mozRequestAnimationFrame",
+      "mozRequestFullScreen",
+      "mozRequestPointerLock",
+      "mozSetDataAt",
+      "mozSetImageElement",
+      "mozSourceNode",
+      "mozSrcObject",
+      "mozSystem",
+      "mozTCPSocket",
+      "mozTextStyle",
+      "mozTypesAt",
+      "mozUnlockOrientation",
+      "mozUserCancelled",
+      "mozVisibilityState",
+      "ms",
+      "msAnimation",
+      "msAnimationDelay",
+      "msAnimationDirection",
+      "msAnimationDuration",
+      "msAnimationFillMode",
+      "msAnimationIterationCount",
+      "msAnimationName",
+      "msAnimationPlayState",
+      "msAnimationStartTime",
+      "msAnimationTimingFunction",
+      "msBackfaceVisibility",
+      "msBlockProgression",
+      "msCSSOMElementFloatMetrics",
+      "msCaching",
+      "msCachingEnabled",
+      "msCancelRequestAnimationFrame",
+      "msCapsLockWarningOff",
+      "msClearImmediate",
+      "msClose",
+      "msContentZoomChaining",
+      "msContentZoomFactor",
+      "msContentZoomLimit",
+      "msContentZoomLimitMax",
+      "msContentZoomLimitMin",
+      "msContentZoomSnap",
+      "msContentZoomSnapPoints",
+      "msContentZoomSnapType",
+      "msContentZooming",
+      "msConvertURL",
+      "msCrypto",
+      "msDoNotTrack",
+      "msElementsFromPoint",
+      "msElementsFromRect",
+      "msExitFullscreen",
+      "msExtendedCode",
+      "msFillRule",
+      "msFirstPaint",
+      "msFlex",
+      "msFlexAlign",
+      "msFlexDirection",
+      "msFlexFlow",
+      "msFlexItemAlign",
+      "msFlexLinePack",
+      "msFlexNegative",
+      "msFlexOrder",
+      "msFlexPack",
+      "msFlexPositive",
+      "msFlexPreferredSize",
+      "msFlexWrap",
+      "msFlowFrom",
+      "msFlowInto",
+      "msFontFeatureSettings",
+      "msFullscreenElement",
+      "msFullscreenEnabled",
+      "msGetInputContext",
+      "msGetRegionContent",
+      "msGetUntransformedBounds",
+      "msGraphicsTrustStatus",
+      "msGridColumn",
+      "msGridColumnAlign",
+      "msGridColumnSpan",
+      "msGridColumns",
+      "msGridRow",
+      "msGridRowAlign",
+      "msGridRowSpan",
+      "msGridRows",
+      "msHidden",
+      "msHighContrastAdjust",
+      "msHyphenateLimitChars",
+      "msHyphenateLimitLines",
+      "msHyphenateLimitZone",
+      "msHyphens",
+      "msImageSmoothingEnabled",
+      "msImeAlign",
+      "msIndexedDB",
+      "msInterpolationMode",
+      "msIsStaticHTML",
+      "msKeySystem",
+      "msKeys",
+      "msLaunchUri",
+      "msLockOrientation",
+      "msManipulationViewsEnabled",
+      "msMatchMedia",
+      "msMatchesSelector",
+      "msMaxTouchPoints",
+      "msOrientation",
+      "msOverflowStyle",
+      "msPerspective",
+      "msPerspectiveOrigin",
+      "msPlayToDisabled",
+      "msPlayToPreferredSourceUri",
+      "msPlayToPrimary",
+      "msPointerEnabled",
+      "msRegionOverflow",
+      "msReleasePointerCapture",
+      "msRequestAnimationFrame",
+      "msRequestFullscreen",
+      "msSaveBlob",
+      "msSaveOrOpenBlob",
+      "msScrollChaining",
+      "msScrollLimit",
+      "msScrollLimitXMax",
+      "msScrollLimitXMin",
+      "msScrollLimitYMax",
+      "msScrollLimitYMin",
+      "msScrollRails",
+      "msScrollSnapPointsX",
+      "msScrollSnapPointsY",
+      "msScrollSnapType",
+      "msScrollSnapX",
+      "msScrollSnapY",
+      "msScrollTranslation",
+      "msSetImmediate",
+      "msSetMediaKeys",
+      "msSetPointerCapture",
+      "msTextCombineHorizontal",
+      "msTextSizeAdjust",
+      "msToBlob",
+      "msTouchAction",
+      "msTouchSelect",
+      "msTraceAsyncCallbackCompleted",
+      "msTraceAsyncCallbackStarting",
+      "msTraceAsyncOperationCompleted",
+      "msTraceAsyncOperationStarting",
+      "msTransform",
+      "msTransformOrigin",
+      "msTransformStyle",
+      "msTransition",
+      "msTransitionDelay",
+      "msTransitionDuration",
+      "msTransitionProperty",
+      "msTransitionTimingFunction",
+      "msUnlockOrientation",
+      "msUpdateAsyncCallbackRelation",
+      "msUserSelect",
+      "msVisibilityState",
+      "msWrapFlow",
+      "msWrapMargin",
+      "msWrapThrough",
+      "msWriteProfilerMark",
+      "msZoom",
+      "msZoomTo",
+      "mt",
+      "mul",
+      "multiEntry",
+      "multiSelectionObj",
+      "multiline",
+      "multiple",
+      "multiply",
+      "multiplySelf",
+      "mutableFile",
+      "muted",
+      "n",
+      "name",
+      "nameProp",
+      "namedItem",
+      "namedRecordset",
+      "names",
+      "namespaceURI",
+      "namespaces",
+      "naturalHeight",
+      "naturalWidth",
+      "navigate",
+      "navigation",
+      "navigationMode",
+      "navigationPreload",
+      "navigationStart",
+      "navigator",
+      "near",
+      "nearestViewportElement",
+      "negative",
+      "negotiated",
+      "netscape",
+      "networkState",
+      "newScale",
+      "newTranslate",
+      "newURL",
+      "newValue",
+      "newValueSpecifiedUnits",
+      "newVersion",
+      "newhome",
+      "next",
+      "nextElementSibling",
+      "nextHopProtocol",
+      "nextNode",
+      "nextPage",
+      "nextSibling",
+      "nickname",
+      "noHref",
+      "noModule",
+      "noResize",
+      "noShade",
+      "noValidate",
+      "noWrap",
+      "node",
+      "nodeName",
+      "nodeType",
+      "nodeValue",
+      "nonce",
+      "normalize",
+      "normalizedPathSegList",
+      "notationName",
+      "notations",
+      "note",
+      "noteGrainOn",
+      "noteOff",
+      "noteOn",
+      "notify",
+      "now",
+      "numOctaves",
+      "number",
+      "numberOfChannels",
+      "numberOfInputs",
+      "numberOfItems",
+      "numberOfOutputs",
+      "numberValue",
+      "oMatchesSelector",
+      "object",
+      "object-fit",
+      "object-position",
+      "objectFit",
+      "objectPosition",
+      "objectStore",
+      "objectStoreNames",
+      "objectType",
+      "observe",
+      "of",
+      "offscreenBuffering",
+      "offset",
+      "offset-anchor",
+      "offset-distance",
+      "offset-path",
+      "offset-rotate",
+      "offsetAnchor",
+      "offsetDistance",
+      "offsetHeight",
+      "offsetLeft",
+      "offsetNode",
+      "offsetParent",
+      "offsetPath",
+      "offsetRotate",
+      "offsetTop",
+      "offsetWidth",
+      "offsetX",
+      "offsetY",
+      "ok",
+      "oldURL",
+      "oldValue",
+      "oldVersion",
+      "olderShadowRoot",
+      "onLine",
+      "onabort",
+      "onabsolutedeviceorientation",
+      "onactivate",
+      "onactive",
+      "onaddsourcebuffer",
+      "onaddstream",
+      "onaddtrack",
+      "onafterprint",
+      "onafterscriptexecute",
+      "onafterupdate",
+      "onanimationcancel",
+      "onanimationend",
+      "onanimationiteration",
+      "onanimationstart",
+      "onappinstalled",
+      "onaudioend",
+      "onaudioprocess",
+      "onaudiostart",
+      "onautocomplete",
+      "onautocompleteerror",
+      "onauxclick",
+      "onbeforeactivate",
+      "onbeforecopy",
+      "onbeforecut",
+      "onbeforedeactivate",
+      "onbeforeeditfocus",
+      "onbeforeinstallprompt",
+      "onbeforepaste",
+      "onbeforeprint",
+      "onbeforescriptexecute",
+      "onbeforeunload",
+      "onbeforeupdate",
+      "onbeforexrselect",
+      "onbegin",
+      "onblocked",
+      "onblur",
+      "onbounce",
+      "onboundary",
+      "onbufferedamountlow",
+      "oncached",
+      "oncancel",
+      "oncandidatewindowhide",
+      "oncandidatewindowshow",
+      "oncandidatewindowupdate",
+      "oncanplay",
+      "oncanplaythrough",
+      "once",
+      "oncellchange",
+      "onchange",
+      "oncharacteristicvaluechanged",
+      "onchargingchange",
+      "onchargingtimechange",
+      "onchecking",
+      "onclick",
+      "onclose",
+      "onclosing",
+      "oncompassneedscalibration",
+      "oncomplete",
+      "onconnect",
+      "onconnecting",
+      "onconnectionavailable",
+      "onconnectionstatechange",
+      "oncontextmenu",
+      "oncontrollerchange",
+      "oncontrolselect",
+      "oncopy",
+      "oncuechange",
+      "oncut",
+      "ondataavailable",
+      "ondatachannel",
+      "ondatasetchanged",
+      "ondatasetcomplete",
+      "ondblclick",
+      "ondeactivate",
+      "ondevicechange",
+      "ondevicelight",
+      "ondevicemotion",
+      "ondeviceorientation",
+      "ondeviceorientationabsolute",
+      "ondeviceproximity",
+      "ondischargingtimechange",
+      "ondisconnect",
+      "ondisplay",
+      "ondownloading",
+      "ondrag",
+      "ondragend",
+      "ondragenter",
+      "ondragexit",
+      "ondragleave",
+      "ondragover",
+      "ondragstart",
+      "ondrop",
+      "ondurationchange",
+      "onemptied",
+      "onencrypted",
+      "onend",
+      "onended",
+      "onenter",
+      "onenterpictureinpicture",
+      "onerror",
+      "onerrorupdate",
+      "onexit",
+      "onfilterchange",
+      "onfinish",
+      "onfocus",
+      "onfocusin",
+      "onfocusout",
+      "onformdata",
+      "onfreeze",
+      "onfullscreenchange",
+      "onfullscreenerror",
+      "ongatheringstatechange",
+      "ongattserverdisconnected",
+      "ongesturechange",
+      "ongestureend",
+      "ongesturestart",
+      "ongotpointercapture",
+      "onhashchange",
+      "onhelp",
+      "onicecandidate",
+      "onicecandidateerror",
+      "oniceconnectionstatechange",
+      "onicegatheringstatechange",
+      "oninactive",
+      "oninput",
+      "oninputsourceschange",
+      "oninvalid",
+      "onkeydown",
+      "onkeypress",
+      "onkeystatuseschange",
+      "onkeyup",
+      "onlanguagechange",
+      "onlayoutcomplete",
+      "onleavepictureinpicture",
+      "onlevelchange",
+      "onload",
+      "onloadeddata",
+      "onloadedmetadata",
+      "onloadend",
+      "onloading",
+      "onloadingdone",
+      "onloadingerror",
+      "onloadstart",
+      "onlosecapture",
+      "onlostpointercapture",
+      "only",
+      "onmark",
+      "onmessage",
+      "onmessageerror",
+      "onmidimessage",
+      "onmousedown",
+      "onmouseenter",
+      "onmouseleave",
+      "onmousemove",
+      "onmouseout",
+      "onmouseover",
+      "onmouseup",
+      "onmousewheel",
+      "onmove",
+      "onmoveend",
+      "onmovestart",
+      "onmozfullscreenchange",
+      "onmozfullscreenerror",
+      "onmozorientationchange",
+      "onmozpointerlockchange",
+      "onmozpointerlockerror",
+      "onmscontentzoom",
+      "onmsfullscreenchange",
+      "onmsfullscreenerror",
+      "onmsgesturechange",
+      "onmsgesturedoubletap",
+      "onmsgestureend",
+      "onmsgesturehold",
+      "onmsgesturestart",
+      "onmsgesturetap",
+      "onmsgotpointercapture",
+      "onmsinertiastart",
+      "onmslostpointercapture",
+      "onmsmanipulationstatechanged",
+      "onmsneedkey",
+      "onmsorientationchange",
+      "onmspointercancel",
+      "onmspointerdown",
+      "onmspointerenter",
+      "onmspointerhover",
+      "onmspointerleave",
+      "onmspointermove",
+      "onmspointerout",
+      "onmspointerover",
+      "onmspointerup",
+      "onmssitemodejumplistitemremoved",
+      "onmsthumbnailclick",
+      "onmute",
+      "onnegotiationneeded",
+      "onnomatch",
+      "onnoupdate",
+      "onobsolete",
+      "onoffline",
+      "ononline",
+      "onopen",
+      "onorientationchange",
+      "onpagechange",
+      "onpagehide",
+      "onpageshow",
+      "onpaste",
+      "onpause",
+      "onpayerdetailchange",
+      "onpaymentmethodchange",
+      "onplay",
+      "onplaying",
+      "onpluginstreamstart",
+      "onpointercancel",
+      "onpointerdown",
+      "onpointerenter",
+      "onpointerleave",
+      "onpointerlockchange",
+      "onpointerlockerror",
+      "onpointermove",
+      "onpointerout",
+      "onpointerover",
+      "onpointerrawupdate",
+      "onpointerup",
+      "onpopstate",
+      "onprocessorerror",
+      "onprogress",
+      "onpropertychange",
+      "onratechange",
+      "onreading",
+      "onreadystatechange",
+      "onrejectionhandled",
+      "onrelease",
+      "onremove",
+      "onremovesourcebuffer",
+      "onremovestream",
+      "onremovetrack",
+      "onrepeat",
+      "onreset",
+      "onresize",
+      "onresizeend",
+      "onresizestart",
+      "onresourcetimingbufferfull",
+      "onresult",
+      "onresume",
+      "onrowenter",
+      "onrowexit",
+      "onrowsdelete",
+      "onrowsinserted",
+      "onscroll",
+      "onsearch",
+      "onsecuritypolicyviolation",
+      "onseeked",
+      "onseeking",
+      "onselect",
+      "onselectedcandidatepairchange",
+      "onselectend",
+      "onselectionchange",
+      "onselectstart",
+      "onshippingaddresschange",
+      "onshippingoptionchange",
+      "onshow",
+      "onsignalingstatechange",
+      "onsoundend",
+      "onsoundstart",
+      "onsourceclose",
+      "onsourceclosed",
+      "onsourceended",
+      "onsourceopen",
+      "onspeechend",
+      "onspeechstart",
+      "onsqueeze",
+      "onsqueezeend",
+      "onsqueezestart",
+      "onstalled",
+      "onstart",
+      "onstatechange",
+      "onstop",
+      "onstorage",
+      "onstoragecommit",
+      "onsubmit",
+      "onsuccess",
+      "onsuspend",
+      "onterminate",
+      "ontextinput",
+      "ontimeout",
+      "ontimeupdate",
+      "ontoggle",
+      "ontonechange",
+      "ontouchcancel",
+      "ontouchend",
+      "ontouchmove",
+      "ontouchstart",
+      "ontrack",
+      "ontransitioncancel",
+      "ontransitionend",
+      "ontransitionrun",
+      "ontransitionstart",
+      "onunhandledrejection",
+      "onunload",
+      "onunmute",
+      "onupdate",
+      "onupdateend",
+      "onupdatefound",
+      "onupdateready",
+      "onupdatestart",
+      "onupgradeneeded",
+      "onuserproximity",
+      "onversionchange",
+      "onvisibilitychange",
+      "onvoiceschanged",
+      "onvolumechange",
+      "onvrdisplayactivate",
+      "onvrdisplayconnect",
+      "onvrdisplaydeactivate",
+      "onvrdisplaydisconnect",
+      "onvrdisplaypresentchange",
+      "onwaiting",
+      "onwaitingforkey",
+      "onwarning",
+      "onwebkitanimationend",
+      "onwebkitanimationiteration",
+      "onwebkitanimationstart",
+      "onwebkitcurrentplaybacktargetiswirelesschanged",
+      "onwebkitfullscreenchange",
+      "onwebkitfullscreenerror",
+      "onwebkitkeyadded",
+      "onwebkitkeyerror",
+      "onwebkitkeymessage",
+      "onwebkitneedkey",
+      "onwebkitorientationchange",
+      "onwebkitplaybacktargetavailabilitychanged",
+      "onwebkitpointerlockchange",
+      "onwebkitpointerlockerror",
+      "onwebkitresourcetimingbufferfull",
+      "onwebkittransitionend",
+      "onwheel",
+      "onzoom",
+      "opacity",
+      "open",
+      "openCursor",
+      "openDatabase",
+      "openKeyCursor",
+      "opened",
+      "opener",
+      "opera",
+      "operationType",
+      "operator",
+      "opr",
+      "optimum",
+      "options",
+      "or",
+      "order",
+      "orderX",
+      "orderY",
+      "ordered",
+      "org",
+      "organization",
+      "orient",
+      "orientAngle",
+      "orientType",
+      "orientation",
+      "orientationX",
+      "orientationY",
+      "orientationZ",
+      "origin",
+      "originalPolicy",
+      "originalTarget",
+      "orphans",
+      "oscpu",
+      "outerHTML",
+      "outerHeight",
+      "outerText",
+      "outerWidth",
+      "outline",
+      "outline-color",
+      "outline-offset",
+      "outline-style",
+      "outline-width",
+      "outlineColor",
+      "outlineOffset",
+      "outlineStyle",
+      "outlineWidth",
+      "outputBuffer",
+      "outputLatency",
+      "outputs",
+      "overflow",
+      "overflow-anchor",
+      "overflow-block",
+      "overflow-inline",
+      "overflow-wrap",
+      "overflow-x",
+      "overflow-y",
+      "overflowAnchor",
+      "overflowBlock",
+      "overflowInline",
+      "overflowWrap",
+      "overflowX",
+      "overflowY",
+      "overrideMimeType",
+      "oversample",
+      "overscroll-behavior",
+      "overscroll-behavior-block",
+      "overscroll-behavior-inline",
+      "overscroll-behavior-x",
+      "overscroll-behavior-y",
+      "overscrollBehavior",
+      "overscrollBehaviorBlock",
+      "overscrollBehaviorInline",
+      "overscrollBehaviorX",
+      "overscrollBehaviorY",
+      "ownKeys",
+      "ownerDocument",
+      "ownerElement",
+      "ownerNode",
+      "ownerRule",
+      "ownerSVGElement",
+      "owningElement",
+      "p1",
+      "p2",
+      "p3",
+      "p4",
+      "packetSize",
+      "packets",
+      "pad",
+      "padEnd",
+      "padStart",
+      "padding",
+      "padding-block",
+      "padding-block-end",
+      "padding-block-start",
+      "padding-bottom",
+      "padding-inline",
+      "padding-inline-end",
+      "padding-inline-start",
+      "padding-left",
+      "padding-right",
+      "padding-top",
+      "paddingBlock",
+      "paddingBlockEnd",
+      "paddingBlockStart",
+      "paddingBottom",
+      "paddingInline",
+      "paddingInlineEnd",
+      "paddingInlineStart",
+      "paddingLeft",
+      "paddingRight",
+      "paddingTop",
+      "page",
+      "page-break-after",
+      "page-break-before",
+      "page-break-inside",
+      "pageBreakAfter",
+      "pageBreakBefore",
+      "pageBreakInside",
+      "pageCount",
+      "pageLeft",
+      "pageTop",
+      "pageX",
+      "pageXOffset",
+      "pageY",
+      "pageYOffset",
+      "pages",
+      "paint-order",
+      "paintOrder",
+      "paintRequests",
+      "paintType",
+      "paintWorklet",
+      "palette",
+      "pan",
+      "panningModel",
+      "parameters",
+      "parent",
+      "parentElement",
+      "parentNode",
+      "parentRule",
+      "parentStyleSheet",
+      "parentTextEdit",
+      "parentWindow",
+      "parse",
+      "parseAll",
+      "parseFloat",
+      "parseFromString",
+      "parseInt",
+      "part",
+      "participants",
+      "passive",
+      "password",
+      "pasteHTML",
+      "path",
+      "pathLength",
+      "pathSegList",
+      "pathSegType",
+      "pathSegTypeAsLetter",
+      "pathname",
+      "pattern",
+      "patternContentUnits",
+      "patternMismatch",
+      "patternTransform",
+      "patternUnits",
+      "pause",
+      "pauseAnimations",
+      "pauseOnExit",
+      "pauseProfilers",
+      "pauseTransformFeedback",
+      "paused",
+      "payerEmail",
+      "payerName",
+      "payerPhone",
+      "paymentManager",
+      "pc",
+      "peerIdentity",
+      "pending",
+      "pendingLocalDescription",
+      "pendingRemoteDescription",
+      "percent",
+      "performance",
+      "periodicSync",
+      "permission",
+      "permissionState",
+      "permissions",
+      "persist",
+      "persisted",
+      "personalbar",
+      "perspective",
+      "perspective-origin",
+      "perspectiveOrigin",
+      "phone",
+      "phoneticFamilyName",
+      "phoneticGivenName",
+      "photo",
+      "pictureInPictureElement",
+      "pictureInPictureEnabled",
+      "pictureInPictureWindow",
+      "ping",
+      "pipeThrough",
+      "pipeTo",
+      "pitch",
+      "pixelBottom",
+      "pixelDepth",
+      "pixelHeight",
+      "pixelLeft",
+      "pixelRight",
+      "pixelStorei",
+      "pixelTop",
+      "pixelUnitToMillimeterX",
+      "pixelUnitToMillimeterY",
+      "pixelWidth",
+      "place-content",
+      "place-items",
+      "place-self",
+      "placeContent",
+      "placeItems",
+      "placeSelf",
+      "placeholder",
+      "platformVersion",
+      "platform",
+      "platforms",
+      "play",
+      "playEffect",
+      "playState",
+      "playbackRate",
+      "playbackState",
+      "playbackTime",
+      "played",
+      "playoutDelayHint",
+      "playsInline",
+      "plugins",
+      "pluginspage",
+      "pname",
+      "pointer-events",
+      "pointerBeforeReferenceNode",
+      "pointerEnabled",
+      "pointerEvents",
+      "pointerId",
+      "pointerLockElement",
+      "pointerType",
+      "points",
+      "pointsAtX",
+      "pointsAtY",
+      "pointsAtZ",
+      "polygonOffset",
+      "pop",
+      "populateMatrix",
+      "popupWindowFeatures",
+      "popupWindowName",
+      "popupWindowURI",
+      "port",
+      "port1",
+      "port2",
+      "ports",
+      "posBottom",
+      "posHeight",
+      "posLeft",
+      "posRight",
+      "posTop",
+      "posWidth",
+      "pose",
+      "position",
+      "positionAlign",
+      "positionX",
+      "positionY",
+      "positionZ",
+      "postError",
+      "postMessage",
+      "postalCode",
+      "poster",
+      "pow",
+      "powerEfficient",
+      "powerOff",
+      "preMultiplySelf",
+      "precision",
+      "preferredStyleSheetSet",
+      "preferredStylesheetSet",
+      "prefix",
+      "preload",
+      "prepend",
+      "presentation",
+      "preserveAlpha",
+      "preserveAspectRatio",
+      "preserveAspectRatioString",
+      "pressed",
+      "pressure",
+      "prevValue",
+      "preventDefault",
+      "preventExtensions",
+      "preventSilentAccess",
+      "previousElementSibling",
+      "previousNode",
+      "previousPage",
+      "previousRect",
+      "previousScale",
+      "previousSibling",
+      "previousTranslate",
+      "primaryKey",
+      "primitiveType",
+      "primitiveUnits",
+      "principals",
+      "print",
+      "priority",
+      "privateKey",
+      "probablySupportsContext",
+      "process",
+      "processIceMessage",
+      "processingEnd",
+      "processingStart",
+      "product",
+      "productId",
+      "productName",
+      "productSub",
+      "profile",
+      "profileEnd",
+      "profiles",
+      "projectionMatrix",
+      "promise",
+      "prompt",
+      "properties",
+      "propertyIsEnumerable",
+      "propertyName",
+      "protocol",
+      "protocolLong",
+      "prototype",
+      "provider",
+      "pseudoClass",
+      "pseudoElement",
+      "pt",
+      "publicId",
+      "publicKey",
+      "published",
+      "pulse",
+      "push",
+      "pushManager",
+      "pushNotification",
+      "pushState",
+      "put",
+      "putImageData",
+      "px",
+      "quadraticCurveTo",
+      "qualifier",
+      "quaternion",
+      "query",
+      "queryCommandEnabled",
+      "queryCommandIndeterm",
+      "queryCommandState",
+      "queryCommandSupported",
+      "queryCommandText",
+      "queryCommandValue",
+      "querySelector",
+      "querySelectorAll",
+      "queueMicrotask",
+      "quote",
+      "quotes",
+      "r",
+      "r1",
+      "r2",
+      "race",
+      "rad",
+      "radiogroup",
+      "radiusX",
+      "radiusY",
+      "random",
+      "range",
+      "rangeCount",
+      "rangeMax",
+      "rangeMin",
+      "rangeOffset",
+      "rangeOverflow",
+      "rangeParent",
+      "rangeUnderflow",
+      "rate",
+      "ratio",
+      "raw",
+      "rawId",
+      "read",
+      "readAsArrayBuffer",
+      "readAsBinaryString",
+      "readAsBlob",
+      "readAsDataURL",
+      "readAsText",
+      "readBuffer",
+      "readEntries",
+      "readOnly",
+      "readPixels",
+      "readReportRequested",
+      "readText",
+      "readValue",
+      "readable",
+      "ready",
+      "readyState",
+      "reason",
+      "reboot",
+      "receivedAlert",
+      "receiver",
+      "receivers",
+      "recipient",
+      "reconnect",
+      "recordNumber",
+      "recordsAvailable",
+      "recordset",
+      "rect",
+      "red",
+      "redEyeReduction",
+      "redirect",
+      "redirectCount",
+      "redirectEnd",
+      "redirectStart",
+      "redirected",
+      "reduce",
+      "reduceRight",
+      "reduction",
+      "refDistance",
+      "refX",
+      "refY",
+      "referenceNode",
+      "referenceSpace",
+      "referrer",
+      "referrerPolicy",
+      "refresh",
+      "region",
+      "regionAnchorX",
+      "regionAnchorY",
+      "regionId",
+      "regions",
+      "register",
+      "registerContentHandler",
+      "registerElement",
+      "registerProperty",
+      "registerProtocolHandler",
+      "reject",
+      "rel",
+      "relList",
+      "relatedAddress",
+      "relatedNode",
+      "relatedPort",
+      "relatedTarget",
+      "release",
+      "releaseCapture",
+      "releaseEvents",
+      "releaseInterface",
+      "releaseLock",
+      "releasePointerCapture",
+      "releaseShaderCompiler",
+      "reliable",
+      "reliableWrite",
+      "reload",
+      "rem",
+      "remainingSpace",
+      "remote",
+      "remoteDescription",
+      "remove",
+      "removeAllRanges",
+      "removeAttribute",
+      "removeAttributeNS",
+      "removeAttributeNode",
+      "removeBehavior",
+      "removeChild",
+      "removeCue",
+      "removeEventListener",
+      "removeFilter",
+      "removeImport",
+      "removeItem",
+      "removeListener",
+      "removeNamedItem",
+      "removeNamedItemNS",
+      "removeNode",
+      "removeParameter",
+      "removeProperty",
+      "removeRange",
+      "removeRegion",
+      "removeRule",
+      "removeSiteSpecificTrackingException",
+      "removeSourceBuffer",
+      "removeStream",
+      "removeTrack",
+      "removeVariable",
+      "removeWakeLockListener",
+      "removeWebWideTrackingException",
+      "removed",
+      "removedNodes",
+      "renderHeight",
+      "renderState",
+      "renderTime",
+      "renderWidth",
+      "renderbufferStorage",
+      "renderbufferStorageMultisample",
+      "renderedBuffer",
+      "renderingMode",
+      "renotify",
+      "repeat",
+      "replace",
+      "replaceAdjacentText",
+      "replaceAll",
+      "replaceChild",
+      "replaceChildren",
+      "replaceData",
+      "replaceId",
+      "replaceItem",
+      "replaceNode",
+      "replaceState",
+      "replaceSync",
+      "replaceTrack",
+      "replaceWholeText",
+      "replaceWith",
+      "reportValidity",
+      "request",
+      "requestAnimationFrame",
+      "requestAutocomplete",
+      "requestData",
+      "requestDevice",
+      "requestFrame",
+      "requestFullscreen",
+      "requestHitTestSource",
+      "requestHitTestSourceForTransientInput",
+      "requestId",
+      "requestIdleCallback",
+      "requestMIDIAccess",
+      "requestMediaKeySystemAccess",
+      "requestPermission",
+      "requestPictureInPicture",
+      "requestPointerLock",
+      "requestPresent",
+      "requestReferenceSpace",
+      "requestSession",
+      "requestStart",
+      "requestStorageAccess",
+      "requestSubmit",
+      "requestVideoFrameCallback",
+      "requestingWindow",
+      "requireInteraction",
+      "required",
+      "requiredExtensions",
+      "requiredFeatures",
+      "reset",
+      "resetPose",
+      "resetTransform",
+      "resize",
+      "resizeBy",
+      "resizeTo",
+      "resolve",
+      "response",
+      "responseBody",
+      "responseEnd",
+      "responseReady",
+      "responseStart",
+      "responseText",
+      "responseType",
+      "responseURL",
+      "responseXML",
+      "restartIce",
+      "restore",
+      "result",
+      "resultIndex",
+      "resultType",
+      "results",
+      "resume",
+      "resumeProfilers",
+      "resumeTransformFeedback",
+      "retry",
+      "returnValue",
+      "rev",
+      "reverse",
+      "reversed",
+      "revocable",
+      "revokeObjectURL",
+      "rgbColor",
+      "right",
+      "rightContext",
+      "rightDegrees",
+      "rightMargin",
+      "rightProjectionMatrix",
+      "rightViewMatrix",
+      "role",
+      "rolloffFactor",
+      "root",
+      "rootBounds",
+      "rootElement",
+      "rootMargin",
+      "rotate",
+      "rotateAxisAngle",
+      "rotateAxisAngleSelf",
+      "rotateFromVector",
+      "rotateFromVectorSelf",
+      "rotateSelf",
+      "rotation",
+      "rotationAngle",
+      "rotationRate",
+      "round",
+      "row-gap",
+      "rowGap",
+      "rowIndex",
+      "rowSpan",
+      "rows",
+      "rtcpTransport",
+      "rtt",
+      "ruby-align",
+      "ruby-position",
+      "rubyAlign",
+      "rubyOverhang",
+      "rubyPosition",
+      "rules",
+      "runtime",
+      "runtimeStyle",
+      "rx",
+      "ry",
+      "s",
+      "safari",
+      "sample",
+      "sampleCoverage",
+      "sampleRate",
+      "samplerParameterf",
+      "samplerParameteri",
+      "sandbox",
+      "save",
+      "saveData",
+      "scale",
+      "scale3d",
+      "scale3dSelf",
+      "scaleNonUniform",
+      "scaleNonUniformSelf",
+      "scaleSelf",
+      "scheme",
+      "scissor",
+      "scope",
+      "scopeName",
+      "scoped",
+      "screen",
+      "screenBrightness",
+      "screenEnabled",
+      "screenLeft",
+      "screenPixelToMillimeterX",
+      "screenPixelToMillimeterY",
+      "screenTop",
+      "screenX",
+      "screenY",
+      "scriptURL",
+      "scripts",
+      "scroll",
+      "scroll-behavior",
+      "scroll-margin",
+      "scroll-margin-block",
+      "scroll-margin-block-end",
+      "scroll-margin-block-start",
+      "scroll-margin-bottom",
+      "scroll-margin-inline",
+      "scroll-margin-inline-end",
+      "scroll-margin-inline-start",
+      "scroll-margin-left",
+      "scroll-margin-right",
+      "scroll-margin-top",
+      "scroll-padding",
+      "scroll-padding-block",
+      "scroll-padding-block-end",
+      "scroll-padding-block-start",
+      "scroll-padding-bottom",
+      "scroll-padding-inline",
+      "scroll-padding-inline-end",
+      "scroll-padding-inline-start",
+      "scroll-padding-left",
+      "scroll-padding-right",
+      "scroll-padding-top",
+      "scroll-snap-align",
+      "scroll-snap-type",
+      "scrollAmount",
+      "scrollBehavior",
+      "scrollBy",
+      "scrollByLines",
+      "scrollByPages",
+      "scrollDelay",
+      "scrollHeight",
+      "scrollIntoView",
+      "scrollIntoViewIfNeeded",
+      "scrollLeft",
+      "scrollLeftMax",
+      "scrollMargin",
+      "scrollMarginBlock",
+      "scrollMarginBlockEnd",
+      "scrollMarginBlockStart",
+      "scrollMarginBottom",
+      "scrollMarginInline",
+      "scrollMarginInlineEnd",
+      "scrollMarginInlineStart",
+      "scrollMarginLeft",
+      "scrollMarginRight",
+      "scrollMarginTop",
+      "scrollMaxX",
+      "scrollMaxY",
+      "scrollPadding",
+      "scrollPaddingBlock",
+      "scrollPaddingBlockEnd",
+      "scrollPaddingBlockStart",
+      "scrollPaddingBottom",
+      "scrollPaddingInline",
+      "scrollPaddingInlineEnd",
+      "scrollPaddingInlineStart",
+      "scrollPaddingLeft",
+      "scrollPaddingRight",
+      "scrollPaddingTop",
+      "scrollRestoration",
+      "scrollSnapAlign",
+      "scrollSnapType",
+      "scrollTo",
+      "scrollTop",
+      "scrollTopMax",
+      "scrollWidth",
+      "scrollX",
+      "scrollY",
+      "scrollbar-color",
+      "scrollbar-width",
+      "scrollbar3dLightColor",
+      "scrollbarArrowColor",
+      "scrollbarBaseColor",
+      "scrollbarColor",
+      "scrollbarDarkShadowColor",
+      "scrollbarFaceColor",
+      "scrollbarHighlightColor",
+      "scrollbarShadowColor",
+      "scrollbarTrackColor",
+      "scrollbarWidth",
+      "scrollbars",
+      "scrolling",
+      "scrollingElement",
+      "sctp",
+      "sctpCauseCode",
+      "sdp",
+      "sdpLineNumber",
+      "sdpMLineIndex",
+      "sdpMid",
+      "seal",
+      "search",
+      "searchBox",
+      "searchBoxJavaBridge_",
+      "searchParams",
+      "sectionRowIndex",
+      "secureConnectionStart",
+      "security",
+      "seed",
+      "seekToNextFrame",
+      "seekable",
+      "seeking",
+      "select",
+      "selectAllChildren",
+      "selectAlternateInterface",
+      "selectConfiguration",
+      "selectNode",
+      "selectNodeContents",
+      "selectNodes",
+      "selectSingleNode",
+      "selectSubString",
+      "selected",
+      "selectedIndex",
+      "selectedOptions",
+      "selectedStyleSheetSet",
+      "selectedStylesheetSet",
+      "selection",
+      "selectionDirection",
+      "selectionEnd",
+      "selectionStart",
+      "selector",
+      "selectorText",
+      "self",
+      "send",
+      "sendAsBinary",
+      "sendBeacon",
+      "sender",
+      "sentAlert",
+      "sentTimestamp",
+      "separator",
+      "serialNumber",
+      "serializeToString",
+      "serverTiming",
+      "service",
+      "serviceWorker",
+      "session",
+      "sessionId",
+      "sessionStorage",
+      "set",
+      "setActionHandler",
+      "setActive",
+      "setAlpha",
+      "setAppBadge",
+      "setAttribute",
+      "setAttributeNS",
+      "setAttributeNode",
+      "setAttributeNodeNS",
+      "setBaseAndExtent",
+      "setBigInt64",
+      "setBigUint64",
+      "setBingCurrentSearchDefault",
+      "setCapture",
+      "setCodecPreferences",
+      "setColor",
+      "setCompositeOperation",
+      "setConfiguration",
+      "setCurrentTime",
+      "setCustomValidity",
+      "setData",
+      "setDate",
+      "setDragImage",
+      "setEnd",
+      "setEndAfter",
+      "setEndBefore",
+      "setEndPoint",
+      "setFillColor",
+      "setFilterRes",
+      "setFloat32",
+      "setFloat64",
+      "setFloatValue",
+      "setFormValue",
+      "setFullYear",
+      "setHeaderValue",
+      "setHours",
+      "setIdentityProvider",
+      "setImmediate",
+      "setInt16",
+      "setInt32",
+      "setInt8",
+      "setInterval",
+      "setItem",
+      "setKeyframes",
+      "setLineCap",
+      "setLineDash",
+      "setLineJoin",
+      "setLineWidth",
+      "setLiveSeekableRange",
+      "setLocalDescription",
+      "setMatrix",
+      "setMatrixValue",
+      "setMediaKeys",
+      "setMilliseconds",
+      "setMinutes",
+      "setMiterLimit",
+      "setMonth",
+      "setNamedItem",
+      "setNamedItemNS",
+      "setNonUserCodeExceptions",
+      "setOrientToAngle",
+      "setOrientToAuto",
+      "setOrientation",
+      "setOverrideHistoryNavigationMode",
+      "setPaint",
+      "setParameter",
+      "setParameters",
+      "setPeriodicWave",
+      "setPointerCapture",
+      "setPosition",
+      "setPositionState",
+      "setPreference",
+      "setProperty",
+      "setPrototypeOf",
+      "setRGBColor",
+      "setRGBColorICCColor",
+      "setRadius",
+      "setRangeText",
+      "setRemoteDescription",
+      "setRequestHeader",
+      "setResizable",
+      "setResourceTimingBufferSize",
+      "setRotate",
+      "setScale",
+      "setSeconds",
+      "setSelectionRange",
+      "setServerCertificate",
+      "setShadow",
+      "setSinkId",
+      "setSkewX",
+      "setSkewY",
+      "setStart",
+      "setStartAfter",
+      "setStartBefore",
+      "setStdDeviation",
+      "setStreams",
+      "setStringValue",
+      "setStrokeColor",
+      "setSuggestResult",
+      "setTargetAtTime",
+      "setTargetValueAtTime",
+      "setTime",
+      "setTimeout",
+      "setTransform",
+      "setTranslate",
+      "setUTCDate",
+      "setUTCFullYear",
+      "setUTCHours",
+      "setUTCMilliseconds",
+      "setUTCMinutes",
+      "setUTCMonth",
+      "setUTCSeconds",
+      "setUint16",
+      "setUint32",
+      "setUint8",
+      "setUri",
+      "setValidity",
+      "setValueAtTime",
+      "setValueCurveAtTime",
+      "setVariable",
+      "setVelocity",
+      "setVersion",
+      "setYear",
+      "settingName",
+      "settingValue",
+      "sex",
+      "shaderSource",
+      "shadowBlur",
+      "shadowColor",
+      "shadowOffsetX",
+      "shadowOffsetY",
+      "shadowRoot",
+      "shape",
+      "shape-image-threshold",
+      "shape-margin",
+      "shape-outside",
+      "shape-rendering",
+      "shapeImageThreshold",
+      "shapeMargin",
+      "shapeOutside",
+      "shapeRendering",
+      "sheet",
+      "shift",
+      "shiftKey",
+      "shiftLeft",
+      "shippingAddress",
+      "shippingOption",
+      "shippingType",
+      "show",
+      "showHelp",
+      "showModal",
+      "showModalDialog",
+      "showModelessDialog",
+      "showNotification",
+      "sidebar",
+      "sign",
+      "signal",
+      "signalingState",
+      "signature",
+      "silent",
+      "sin",
+      "singleNodeValue",
+      "sinh",
+      "sinkId",
+      "sittingToStandingTransform",
+      "size",
+      "sizeToContent",
+      "sizeX",
+      "sizeZ",
+      "sizes",
+      "skewX",
+      "skewXSelf",
+      "skewY",
+      "skewYSelf",
+      "slice",
+      "slope",
+      "slot",
+      "small",
+      "smil",
+      "smooth",
+      "smoothingTimeConstant",
+      "snapToLines",
+      "snapshotItem",
+      "snapshotLength",
+      "some",
+      "sort",
+      "sortingCode",
+      "source",
+      "sourceBuffer",
+      "sourceBuffers",
+      "sourceCapabilities",
+      "sourceFile",
+      "sourceIndex",
+      "sources",
+      "spacing",
+      "span",
+      "speak",
+      "speakAs",
+      "speaking",
+      "species",
+      "specified",
+      "specularConstant",
+      "specularExponent",
+      "speechSynthesis",
+      "speed",
+      "speedOfSound",
+      "spellcheck",
+      "splice",
+      "split",
+      "splitText",
+      "spreadMethod",
+      "sqrt",
+      "src",
+      "srcElement",
+      "srcFilter",
+      "srcObject",
+      "srcUrn",
+      "srcdoc",
+      "srclang",
+      "srcset",
+      "stack",
+      "stackTraceLimit",
+      "stacktrace",
+      "stageParameters",
+      "standalone",
+      "standby",
+      "start",
+      "startContainer",
+      "startIce",
+      "startMessages",
+      "startNotifications",
+      "startOffset",
+      "startProfiling",
+      "startRendering",
+      "startShark",
+      "startTime",
+      "startsWith",
+      "state",
+      "status",
+      "statusCode",
+      "statusMessage",
+      "statusText",
+      "statusbar",
+      "stdDeviationX",
+      "stdDeviationY",
+      "stencilFunc",
+      "stencilFuncSeparate",
+      "stencilMask",
+      "stencilMaskSeparate",
+      "stencilOp",
+      "stencilOpSeparate",
+      "step",
+      "stepDown",
+      "stepMismatch",
+      "stepUp",
+      "sticky",
+      "stitchTiles",
+      "stop",
+      "stop-color",
+      "stop-opacity",
+      "stopColor",
+      "stopImmediatePropagation",
+      "stopNotifications",
+      "stopOpacity",
+      "stopProfiling",
+      "stopPropagation",
+      "stopShark",
+      "stopped",
+      "storage",
+      "storageArea",
+      "storageName",
+      "storageStatus",
+      "store",
+      "storeSiteSpecificTrackingException",
+      "storeWebWideTrackingException",
+      "stpVersion",
+      "stream",
+      "streams",
+      "stretch",
+      "strike",
+      "string",
+      "stringValue",
+      "stringify",
+      "stroke",
+      "stroke-dasharray",
+      "stroke-dashoffset",
+      "stroke-linecap",
+      "stroke-linejoin",
+      "stroke-miterlimit",
+      "stroke-opacity",
+      "stroke-width",
+      "strokeDasharray",
+      "strokeDashoffset",
+      "strokeLinecap",
+      "strokeLinejoin",
+      "strokeMiterlimit",
+      "strokeOpacity",
+      "strokeRect",
+      "strokeStyle",
+      "strokeText",
+      "strokeWidth",
+      "style",
+      "styleFloat",
+      "styleMap",
+      "styleMedia",
+      "styleSheet",
+      "styleSheetSets",
+      "styleSheets",
+      "sub",
+      "subarray",
+      "subject",
+      "submit",
+      "submitFrame",
+      "submitter",
+      "subscribe",
+      "substr",
+      "substring",
+      "substringData",
+      "subtle",
+      "subtree",
+      "suffix",
+      "suffixes",
+      "summary",
+      "sup",
+      "supported",
+      "supportedContentEncodings",
+      "supportedEntryTypes",
+      "supports",
+      "supportsSession",
+      "surfaceScale",
+      "surroundContents",
+      "suspend",
+      "suspendRedraw",
+      "swapCache",
+      "swapNode",
+      "sweepFlag",
+      "symbols",
+      "sync",
+      "sysexEnabled",
+      "system",
+      "systemCode",
+      "systemId",
+      "systemLanguage",
+      "systemXDPI",
+      "systemYDPI",
+      "tBodies",
+      "tFoot",
+      "tHead",
+      "tabIndex",
+      "table",
+      "table-layout",
+      "tableLayout",
+      "tableValues",
+      "tag",
+      "tagName",
+      "tagUrn",
+      "tags",
+      "taintEnabled",
+      "takePhoto",
+      "takeRecords",
+      "tan",
+      "tangentialPressure",
+      "tanh",
+      "target",
+      "targetElement",
+      "targetRayMode",
+      "targetRaySpace",
+      "targetTouches",
+      "targetX",
+      "targetY",
+      "tcpType",
+      "tee",
+      "tel",
+      "terminate",
+      "test",
+      "texImage2D",
+      "texImage3D",
+      "texParameterf",
+      "texParameteri",
+      "texStorage2D",
+      "texStorage3D",
+      "texSubImage2D",
+      "texSubImage3D",
+      "text",
+      "text-align",
+      "text-align-last",
+      "text-anchor",
+      "text-combine-upright",
+      "text-decoration",
+      "text-decoration-color",
+      "text-decoration-line",
+      "text-decoration-skip-ink",
+      "text-decoration-style",
+      "text-decoration-thickness",
+      "text-emphasis",
+      "text-emphasis-color",
+      "text-emphasis-position",
+      "text-emphasis-style",
+      "text-indent",
+      "text-justify",
+      "text-orientation",
+      "text-overflow",
+      "text-rendering",
+      "text-shadow",
+      "text-transform",
+      "text-underline-offset",
+      "text-underline-position",
+      "textAlign",
+      "textAlignLast",
+      "textAnchor",
+      "textAutospace",
+      "textBaseline",
+      "textCombineUpright",
+      "textContent",
+      "textDecoration",
+      "textDecorationBlink",
+      "textDecorationColor",
+      "textDecorationLine",
+      "textDecorationLineThrough",
+      "textDecorationNone",
+      "textDecorationOverline",
+      "textDecorationSkipInk",
+      "textDecorationStyle",
+      "textDecorationThickness",
+      "textDecorationUnderline",
+      "textEmphasis",
+      "textEmphasisColor",
+      "textEmphasisPosition",
+      "textEmphasisStyle",
+      "textIndent",
+      "textJustify",
+      "textJustifyTrim",
+      "textKashida",
+      "textKashidaSpace",
+      "textLength",
+      "textOrientation",
+      "textOverflow",
+      "textRendering",
+      "textShadow",
+      "textTracks",
+      "textTransform",
+      "textUnderlineOffset",
+      "textUnderlinePosition",
+      "then",
+      "threadId",
+      "threshold",
+      "thresholds",
+      "tiltX",
+      "tiltY",
+      "time",
+      "timeEnd",
+      "timeLog",
+      "timeOrigin",
+      "timeRemaining",
+      "timeStamp",
+      "timecode",
+      "timeline",
+      "timelineTime",
+      "timeout",
+      "timestamp",
+      "timestampOffset",
+      "timing",
+      "title",
+      "to",
+      "toArray",
+      "toBlob",
+      "toDataURL",
+      "toDateString",
+      "toElement",
+      "toExponential",
+      "toFixed",
+      "toFloat32Array",
+      "toFloat64Array",
+      "toGMTString",
+      "toISOString",
+      "toJSON",
+      "toLocaleDateString",
+      "toLocaleFormat",
+      "toLocaleLowerCase",
+      "toLocaleString",
+      "toLocaleTimeString",
+      "toLocaleUpperCase",
+      "toLowerCase",
+      "toMatrix",
+      "toMethod",
+      "toPrecision",
+      "toPrimitive",
+      "toSdp",
+      "toSource",
+      "toStaticHTML",
+      "toString",
+      "toStringTag",
+      "toSum",
+      "toTimeString",
+      "toUTCString",
+      "toUpperCase",
+      "toggle",
+      "toggleAttribute",
+      "toggleLongPressEnabled",
+      "tone",
+      "toneBuffer",
+      "tooLong",
+      "tooShort",
+      "toolbar",
+      "top",
+      "topMargin",
+      "total",
+      "totalFrameDelay",
+      "totalVideoFrames",
+      "touch-action",
+      "touchAction",
+      "touched",
+      "touches",
+      "trace",
+      "track",
+      "trackVisibility",
+      "transaction",
+      "transactions",
+      "transceiver",
+      "transferControlToOffscreen",
+      "transferFromImageBitmap",
+      "transferImageBitmap",
+      "transferIn",
+      "transferOut",
+      "transferSize",
+      "transferToImageBitmap",
+      "transform",
+      "transform-box",
+      "transform-origin",
+      "transform-style",
+      "transformBox",
+      "transformFeedbackVaryings",
+      "transformOrigin",
+      "transformPoint",
+      "transformString",
+      "transformStyle",
+      "transformToDocument",
+      "transformToFragment",
+      "transition",
+      "transition-delay",
+      "transition-duration",
+      "transition-property",
+      "transition-timing-function",
+      "transitionDelay",
+      "transitionDuration",
+      "transitionProperty",
+      "transitionTimingFunction",
+      "translate",
+      "translateSelf",
+      "translationX",
+      "translationY",
+      "transport",
+      "trim",
+      "trimEnd",
+      "trimLeft",
+      "trimRight",
+      "trimStart",
+      "trueSpeed",
+      "trunc",
+      "truncate",
+      "trustedTypes",
+      "turn",
+      "twist",
+      "type",
+      "typeDetail",
+      "typeMismatch",
+      "typeMustMatch",
+      "types",
+      "u2f",
+      "ubound",
+      "uint16",
+      "uint32",
+      "uint8",
+      "uint8Clamped",
+      "undefined",
+      "unescape",
+      "uneval",
+      "unicode",
+      "unicode-bidi",
+      "unicodeBidi",
+      "unicodeRange",
+      "uniform1f",
+      "uniform1fv",
+      "uniform1i",
+      "uniform1iv",
+      "uniform1ui",
+      "uniform1uiv",
+      "uniform2f",
+      "uniform2fv",
+      "uniform2i",
+      "uniform2iv",
+      "uniform2ui",
+      "uniform2uiv",
+      "uniform3f",
+      "uniform3fv",
+      "uniform3i",
+      "uniform3iv",
+      "uniform3ui",
+      "uniform3uiv",
+      "uniform4f",
+      "uniform4fv",
+      "uniform4i",
+      "uniform4iv",
+      "uniform4ui",
+      "uniform4uiv",
+      "uniformBlockBinding",
+      "uniformMatrix2fv",
+      "uniformMatrix2x3fv",
+      "uniformMatrix2x4fv",
+      "uniformMatrix3fv",
+      "uniformMatrix3x2fv",
+      "uniformMatrix3x4fv",
+      "uniformMatrix4fv",
+      "uniformMatrix4x2fv",
+      "uniformMatrix4x3fv",
+      "unique",
+      "uniqueID",
+      "uniqueNumber",
+      "unit",
+      "unitType",
+      "units",
+      "unloadEventEnd",
+      "unloadEventStart",
+      "unlock",
+      "unmount",
+      "unobserve",
+      "unpause",
+      "unpauseAnimations",
+      "unreadCount",
+      "unregister",
+      "unregisterContentHandler",
+      "unregisterProtocolHandler",
+      "unscopables",
+      "unselectable",
+      "unshift",
+      "unsubscribe",
+      "unsuspendRedraw",
+      "unsuspendRedrawAll",
+      "unwatch",
+      "unwrapKey",
+      "upDegrees",
+      "upX",
+      "upY",
+      "upZ",
+      "update",
+      "updateCommands",
+      "updateIce",
+      "updateInterval",
+      "updatePlaybackRate",
+      "updateRenderState",
+      "updateSettings",
+      "updateTiming",
+      "updateViaCache",
+      "updateWith",
+      "updated",
+      "updating",
+      "upgrade",
+      "upload",
+      "uploadTotal",
+      "uploaded",
+      "upper",
+      "upperBound",
+      "upperOpen",
+      "uri",
+      "url",
+      "urn",
+      "urns",
+      "usages",
+      "usb",
+      "usbVersionMajor",
+      "usbVersionMinor",
+      "usbVersionSubminor",
+      "useCurrentView",
+      "useMap",
+      "useProgram",
+      "usedSpace",
+      "user-select",
+      "userActivation",
+      "userAgent",
+      "userAgentData",
+      "userChoice",
+      "userHandle",
+      "userHint",
+      "userLanguage",
+      "userSelect",
+      "userVisibleOnly",
+      "username",
+      "usernameFragment",
+      "utterance",
+      "uuid",
+      "v8BreakIterator",
+      "vAlign",
+      "vLink",
+      "valid",
+      "validate",
+      "validateProgram",
+      "validationMessage",
+      "validity",
+      "value",
+      "valueAsDate",
+      "valueAsNumber",
+      "valueAsString",
+      "valueInSpecifiedUnits",
+      "valueMissing",
+      "valueOf",
+      "valueText",
+      "valueType",
+      "values",
+      "variable",
+      "variant",
+      "variationSettings",
+      "vector-effect",
+      "vectorEffect",
+      "velocityAngular",
+      "velocityExpansion",
+      "velocityX",
+      "velocityY",
+      "vendor",
+      "vendorId",
+      "vendorSub",
+      "verify",
+      "version",
+      "vertexAttrib1f",
+      "vertexAttrib1fv",
+      "vertexAttrib2f",
+      "vertexAttrib2fv",
+      "vertexAttrib3f",
+      "vertexAttrib3fv",
+      "vertexAttrib4f",
+      "vertexAttrib4fv",
+      "vertexAttribDivisor",
+      "vertexAttribDivisorANGLE",
+      "vertexAttribI4i",
+      "vertexAttribI4iv",
+      "vertexAttribI4ui",
+      "vertexAttribI4uiv",
+      "vertexAttribIPointer",
+      "vertexAttribPointer",
+      "vertical",
+      "vertical-align",
+      "verticalAlign",
+      "verticalOverflow",
+      "vh",
+      "vibrate",
+      "vibrationActuator",
+      "videoBitsPerSecond",
+      "videoHeight",
+      "videoTracks",
+      "videoWidth",
+      "view",
+      "viewBox",
+      "viewBoxString",
+      "viewTarget",
+      "viewTargetString",
+      "viewport",
+      "viewportAnchorX",
+      "viewportAnchorY",
+      "viewportElement",
+      "views",
+      "violatedDirective",
+      "visibility",
+      "visibilityState",
+      "visible",
+      "visualViewport",
+      "vlinkColor",
+      "vmax",
+      "vmin",
+      "voice",
+      "voiceURI",
+      "volume",
+      "vrml",
+      "vspace",
+      "vw",
+      "w",
+      "wait",
+      "waitSync",
+      "waiting",
+      "wake",
+      "wakeLock",
+      "wand",
+      "warn",
+      "wasClean",
+      "wasDiscarded",
+      "watch",
+      "watchAvailability",
+      "watchPosition",
+      "webdriver",
+      "webkitAddKey",
+      "webkitAlignContent",
+      "webkitAlignItems",
+      "webkitAlignSelf",
+      "webkitAnimation",
+      "webkitAnimationDelay",
+      "webkitAnimationDirection",
+      "webkitAnimationDuration",
+      "webkitAnimationFillMode",
+      "webkitAnimationIterationCount",
+      "webkitAnimationName",
+      "webkitAnimationPlayState",
+      "webkitAnimationTimingFunction",
+      "webkitAppearance",
+      "webkitAudioContext",
+      "webkitAudioDecodedByteCount",
+      "webkitAudioPannerNode",
+      "webkitBackfaceVisibility",
+      "webkitBackground",
+      "webkitBackgroundAttachment",
+      "webkitBackgroundClip",
+      "webkitBackgroundColor",
+      "webkitBackgroundImage",
+      "webkitBackgroundOrigin",
+      "webkitBackgroundPosition",
+      "webkitBackgroundPositionX",
+      "webkitBackgroundPositionY",
+      "webkitBackgroundRepeat",
+      "webkitBackgroundSize",
+      "webkitBackingStorePixelRatio",
+      "webkitBorderBottomLeftRadius",
+      "webkitBorderBottomRightRadius",
+      "webkitBorderImage",
+      "webkitBorderImageOutset",
+      "webkitBorderImageRepeat",
+      "webkitBorderImageSlice",
+      "webkitBorderImageSource",
+      "webkitBorderImageWidth",
+      "webkitBorderRadius",
+      "webkitBorderTopLeftRadius",
+      "webkitBorderTopRightRadius",
+      "webkitBoxAlign",
+      "webkitBoxDirection",
+      "webkitBoxFlex",
+      "webkitBoxOrdinalGroup",
+      "webkitBoxOrient",
+      "webkitBoxPack",
+      "webkitBoxShadow",
+      "webkitBoxSizing",
+      "webkitCancelAnimationFrame",
+      "webkitCancelFullScreen",
+      "webkitCancelKeyRequest",
+      "webkitCancelRequestAnimationFrame",
+      "webkitClearResourceTimings",
+      "webkitClosedCaptionsVisible",
+      "webkitConvertPointFromNodeToPage",
+      "webkitConvertPointFromPageToNode",
+      "webkitCreateShadowRoot",
+      "webkitCurrentFullScreenElement",
+      "webkitCurrentPlaybackTargetIsWireless",
+      "webkitDecodedFrameCount",
+      "webkitDirectionInvertedFromDevice",
+      "webkitDisplayingFullscreen",
+      "webkitDroppedFrameCount",
+      "webkitEnterFullScreen",
+      "webkitEnterFullscreen",
+      "webkitEntries",
+      "webkitExitFullScreen",
+      "webkitExitFullscreen",
+      "webkitExitPointerLock",
+      "webkitFilter",
+      "webkitFlex",
+      "webkitFlexBasis",
+      "webkitFlexDirection",
+      "webkitFlexFlow",
+      "webkitFlexGrow",
+      "webkitFlexShrink",
+      "webkitFlexWrap",
+      "webkitFullScreenKeyboardInputAllowed",
+      "webkitFullscreenElement",
+      "webkitFullscreenEnabled",
+      "webkitGenerateKeyRequest",
+      "webkitGetAsEntry",
+      "webkitGetDatabaseNames",
+      "webkitGetEntries",
+      "webkitGetEntriesByName",
+      "webkitGetEntriesByType",
+      "webkitGetFlowByName",
+      "webkitGetGamepads",
+      "webkitGetImageDataHD",
+      "webkitGetNamedFlows",
+      "webkitGetRegionFlowRanges",
+      "webkitGetUserMedia",
+      "webkitHasClosedCaptions",
+      "webkitHidden",
+      "webkitIDBCursor",
+      "webkitIDBDatabase",
+      "webkitIDBDatabaseError",
+      "webkitIDBDatabaseException",
+      "webkitIDBFactory",
+      "webkitIDBIndex",
+      "webkitIDBKeyRange",
+      "webkitIDBObjectStore",
+      "webkitIDBRequest",
+      "webkitIDBTransaction",
+      "webkitImageSmoothingEnabled",
+      "webkitIndexedDB",
+      "webkitInitMessageEvent",
+      "webkitIsFullScreen",
+      "webkitJustifyContent",
+      "webkitKeys",
+      "webkitLineClamp",
+      "webkitLineDashOffset",
+      "webkitLockOrientation",
+      "webkitMask",
+      "webkitMaskClip",
+      "webkitMaskComposite",
+      "webkitMaskImage",
+      "webkitMaskOrigin",
+      "webkitMaskPosition",
+      "webkitMaskPositionX",
+      "webkitMaskPositionY",
+      "webkitMaskRepeat",
+      "webkitMaskSize",
+      "webkitMatchesSelector",
+      "webkitMediaStream",
+      "webkitNotifications",
+      "webkitOfflineAudioContext",
+      "webkitOrder",
+      "webkitOrientation",
+      "webkitPeerConnection00",
+      "webkitPersistentStorage",
+      "webkitPerspective",
+      "webkitPerspectiveOrigin",
+      "webkitPointerLockElement",
+      "webkitPostMessage",
+      "webkitPreservesPitch",
+      "webkitPutImageDataHD",
+      "webkitRTCPeerConnection",
+      "webkitRegionOverset",
+      "webkitRelativePath",
+      "webkitRequestAnimationFrame",
+      "webkitRequestFileSystem",
+      "webkitRequestFullScreen",
+      "webkitRequestFullscreen",
+      "webkitRequestPointerLock",
+      "webkitResolveLocalFileSystemURL",
+      "webkitSetMediaKeys",
+      "webkitSetResourceTimingBufferSize",
+      "webkitShadowRoot",
+      "webkitShowPlaybackTargetPicker",
+      "webkitSlice",
+      "webkitSpeechGrammar",
+      "webkitSpeechGrammarList",
+      "webkitSpeechRecognition",
+      "webkitSpeechRecognitionError",
+      "webkitSpeechRecognitionEvent",
+      "webkitStorageInfo",
+      "webkitSupportsFullscreen",
+      "webkitTemporaryStorage",
+      "webkitTextFillColor",
+      "webkitTextSizeAdjust",
+      "webkitTextStroke",
+      "webkitTextStrokeColor",
+      "webkitTextStrokeWidth",
+      "webkitTransform",
+      "webkitTransformOrigin",
+      "webkitTransformStyle",
+      "webkitTransition",
+      "webkitTransitionDelay",
+      "webkitTransitionDuration",
+      "webkitTransitionProperty",
+      "webkitTransitionTimingFunction",
+      "webkitURL",
+      "webkitUnlockOrientation",
+      "webkitUserSelect",
+      "webkitVideoDecodedByteCount",
+      "webkitVisibilityState",
+      "webkitWirelessVideoPlaybackDisabled",
+      "webkitdirectory",
+      "webkitdropzone",
+      "webstore",
+      "weight",
+      "whatToShow",
+      "wheelDelta",
+      "wheelDeltaX",
+      "wheelDeltaY",
+      "whenDefined",
+      "which",
+      "white-space",
+      "whiteSpace",
+      "wholeText",
+      "widows",
+      "width",
+      "will-change",
+      "willChange",
+      "willValidate",
+      "window",
+      "withCredentials",
+      "word-break",
+      "word-spacing",
+      "word-wrap",
+      "wordBreak",
+      "wordSpacing",
+      "wordWrap",
+      "workerStart",
+      "wow64",
+      "wrap",
+      "wrapKey",
+      "writable",
+      "writableAuxiliaries",
+      "write",
+      "writeText",
+      "writeValue",
+      "writeWithoutResponse",
+      "writeln",
+      "writing-mode",
+      "writingMode",
+      "x",
+      "x1",
+      "x2",
+      "xChannelSelector",
+      "xmlEncoding",
+      "xmlStandalone",
+      "xmlVersion",
+      "xmlbase",
+      "xmllang",
+      "xmlspace",
+      "xor",
+      "xr",
+      "y",
+      "y1",
+      "y2",
+      "yChannelSelector",
+      "yandex",
+      "z",
+      "z-index",
+      "zIndex",
+      "zoom",
+      "zoomAndPan",
+      "zoomRectScreen",
+  ];
+
+  /***********************************************************************
+
+    A JavaScript tokenizer / parser / beautifier / compressor.
+    https://github.com/mishoo/UglifyJS2
+
+    -------------------------------- (C) ---------------------------------
+
+                             Author: Mihai Bazon
+                           <mihai.bazon@gmail.com>
+                         http://mihai.bazon.net/blog
+
+    Distributed under the BSD license:
+
+      Copyright 2012 (c) Mihai Bazon <mihai.bazon@gmail.com>
+
+      Redistribution and use in source and binary forms, with or without
+      modification, are permitted provided that the following conditions
+      are met:
+
+          * Redistributions of source code must retain the above
+            copyright notice, this list of conditions and the following
+            disclaimer.
+
+          * Redistributions in binary form must reproduce the above
+            copyright notice, this list of conditions and the following
+            disclaimer in the documentation and/or other materials
+            provided with the distribution.
+
+      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER “AS IS” AND ANY
+      EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+      IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+      PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE
+      LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+      OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+      PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+      PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+      THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+      TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+      THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+      SUCH DAMAGE.
+
+   ***********************************************************************/
+
+  "use strict";
+
+  function find_builtins(reserved) {
+      domprops.forEach(add);
+
+      // Compatibility fix for some standard defined globals not defined on every js environment
+      var new_globals = ["Symbol", "Map", "Promise", "Proxy", "Reflect", "Set", "WeakMap", "WeakSet"];
+      var objects = {};
+      var global_ref = typeof global === "object" ? global : self;
+
+      new_globals.forEach(function (new_global) {
+          objects[new_global] = global_ref[new_global] || function() {};
+      });
+
+      [
+          "null",
+          "true",
+          "false",
+          "NaN",
+          "Infinity",
+          "-Infinity",
+          "undefined",
+      ].forEach(add);
+      [ Object, Array, Function, Number,
+        String, Boolean, Error, Math,
+        Date, RegExp, objects.Symbol, ArrayBuffer,
+        DataView, decodeURI, decodeURIComponent,
+        encodeURI, encodeURIComponent, eval, EvalError,
+        Float32Array, Float64Array, Int8Array, Int16Array,
+        Int32Array, isFinite, isNaN, JSON, objects.Map, parseFloat,
+        parseInt, objects.Promise, objects.Proxy, RangeError, ReferenceError,
+        objects.Reflect, objects.Set, SyntaxError, TypeError, Uint8Array,
+        Uint8ClampedArray, Uint16Array, Uint32Array, URIError,
+        objects.WeakMap, objects.WeakSet
+      ].forEach(function(ctor) {
+          Object.getOwnPropertyNames(ctor).map(add);
+          if (ctor.prototype) {
+              Object.getOwnPropertyNames(ctor.prototype).map(add);
+          }
+      });
+      function add(name) {
+          reserved.add(name);
+      }
+  }
+
+  function reserve_quoted_keys(ast, reserved) {
+      function add(name) {
+          push_uniq(reserved, name);
+      }
+
+      ast.walk(new TreeWalker(function(node) {
+          if (node instanceof AST_ObjectKeyVal && node.quote) {
+              add(node.key);
+          } else if (node instanceof AST_ObjectProperty && node.quote) {
+              add(node.key.name);
+          } else if (node instanceof AST_Sub) {
+              addStrings(node.property, add);
+          }
+      }));
+  }
+
+  function addStrings(node, add) {
+      node.walk(new TreeWalker(function(node) {
+          if (node instanceof AST_Sequence) {
+              addStrings(node.tail_node(), add);
+          } else if (node instanceof AST_String) {
+              add(node.value);
+          } else if (node instanceof AST_Conditional) {
+              addStrings(node.consequent, add);
+              addStrings(node.alternative, add);
+          }
+          return true;
+      }));
+  }
+
+  function mangle_private_properties(ast, options) {
+      var cprivate = -1;
+      var private_cache = new Map();
+      var nth_identifier = options.nth_identifier || base54;
+
+      ast =  ast.transform(new TreeTransformer(function(node) {
+          if (
+              node instanceof AST_ClassPrivateProperty
+              || node instanceof AST_PrivateMethod
+              || node instanceof AST_PrivateGetter
+              || node instanceof AST_PrivateSetter
+          ) {
+              node.key.name = mangle_private(node.key.name);
+          } else if (node instanceof AST_DotHash) {
+              node.property = mangle_private(node.property);
+          }
+      }));
+      return ast;
+
+      function mangle_private(name) {
+          let mangled = private_cache.get(name);
+          if (!mangled) {
+              mangled = nth_identifier.get(++cprivate);
+              private_cache.set(name, mangled);
+          }
+
+          return mangled;
+      }
+  }
+
+  function mangle_properties(ast, options) {
+      options = defaults(options, {
+          builtins: false,
+          cache: null,
+          debug: false,
+          keep_quoted: false,
+          nth_identifier: base54,
+          only_cache: false,
+          regex: null,
+          reserved: null,
+          undeclared: false,
+      }, true);
+
+      var nth_identifier = options.nth_identifier;
+
+      var reserved_option = options.reserved;
+      if (!Array.isArray(reserved_option)) reserved_option = [reserved_option];
+      var reserved = new Set(reserved_option);
+      if (!options.builtins) find_builtins(reserved);
+
+      var cname = -1;
+
+      var cache;
+      if (options.cache) {
+          cache = options.cache.props;
+      } else {
+          cache = new Map();
+      }
+
+      var regex = options.regex && new RegExp(options.regex);
+
+      // note debug is either false (disabled), or a string of the debug suffix to use (enabled).
+      // note debug may be enabled as an empty string, which is falsey. Also treat passing 'true'
+      // the same as passing an empty string.
+      var debug = options.debug !== false;
+      var debug_name_suffix;
+      if (debug) {
+          debug_name_suffix = (options.debug === true ? "" : options.debug);
+      }
+
+      var names_to_mangle = new Set();
+      var unmangleable = new Set();
+      // Track each already-mangled name to prevent nth_identifier from generating
+      // the same name.
+      cache.forEach((mangled_name) => unmangleable.add(mangled_name));
+
+      var keep_quoted = !!options.keep_quoted;
+
+      // step 1: find candidates to mangle
+      ast.walk(new TreeWalker(function(node) {
+          if (
+              node instanceof AST_ClassPrivateProperty
+              || node instanceof AST_PrivateMethod
+              || node instanceof AST_PrivateGetter
+              || node instanceof AST_PrivateSetter
+              || node instanceof AST_DotHash
+          ) {
+              // handled by mangle_private_properties
+          } else if (node instanceof AST_ObjectKeyVal) {
+              if (typeof node.key == "string" && (!keep_quoted || !node.quote)) {
+                  add(node.key);
+              }
+          } else if (node instanceof AST_ObjectProperty) {
+              // setter or getter, since KeyVal is handled above
+              if (!keep_quoted || !node.quote) {
+                  add(node.key.name);
+              }
+          } else if (node instanceof AST_Dot) {
+              var declared = !!options.undeclared;
+              if (!declared) {
+                  var root = node;
+                  while (root.expression) {
+                      root = root.expression;
+                  }
+                  declared = !(root.thedef && root.thedef.undeclared);
+              }
+              if (declared &&
+                  (!keep_quoted || !node.quote)) {
+                  add(node.property);
+              }
+          } else if (node instanceof AST_Sub) {
+              if (!keep_quoted) {
+                  addStrings(node.property, add);
+              }
+          } else if (node instanceof AST_Call
+              && node.expression.print_to_string() == "Object.defineProperty") {
+              addStrings(node.args[1], add);
+          } else if (node instanceof AST_Binary && node.operator === "in") {
+              addStrings(node.left, add);
+          }
+      }));
+
+      // step 2: transform the tree, renaming properties
+      return ast.transform(new TreeTransformer(function(node) {
+          if (
+              node instanceof AST_ClassPrivateProperty
+              || node instanceof AST_PrivateMethod
+              || node instanceof AST_PrivateGetter
+              || node instanceof AST_PrivateSetter
+              || node instanceof AST_DotHash
+          ) {
+              // handled by mangle_private_properties
+          } else if (node instanceof AST_ObjectKeyVal) {
+              if (typeof node.key == "string" && (!keep_quoted || !node.quote)) {
+                  node.key = mangle(node.key);
+              }
+          } else if (node instanceof AST_ObjectProperty) {
+              // setter, getter, method or class field
+              if (!keep_quoted || !node.quote) {
+                  node.key.name = mangle(node.key.name);
+              }
+          } else if (node instanceof AST_Dot) {
+              if (!keep_quoted || !node.quote) {
+                  node.property = mangle(node.property);
+              }
+          } else if (!keep_quoted && node instanceof AST_Sub) {
+              node.property = mangleStrings(node.property);
+          } else if (node instanceof AST_Call
+              && node.expression.print_to_string() == "Object.defineProperty") {
+              node.args[1] = mangleStrings(node.args[1]);
+          } else if (node instanceof AST_Binary && node.operator === "in") {
+              node.left = mangleStrings(node.left);
+          }
+      }));
+
+      // only function declarations after this line
+
+      function can_mangle(name) {
+          if (unmangleable.has(name)) return false;
+          if (reserved.has(name)) return false;
+          if (options.only_cache) {
+              return cache.has(name);
+          }
+          if (/^-?[0-9]+(\.[0-9]+)?(e[+-][0-9]+)?$/.test(name)) return false;
+          return true;
+      }
+
+      function should_mangle(name) {
+          if (regex && !regex.test(name)) return false;
+          if (reserved.has(name)) return false;
+          return cache.has(name)
+              || names_to_mangle.has(name);
+      }
+
+      function add(name) {
+          if (can_mangle(name))
+              names_to_mangle.add(name);
+
+          if (!should_mangle(name)) {
+              unmangleable.add(name);
+          }
+      }
+
+      function mangle(name) {
+          if (!should_mangle(name)) {
+              return name;
+          }
+
+          var mangled = cache.get(name);
+          if (!mangled) {
+              if (debug) {
+                  // debug mode: use a prefix and suffix to preserve readability, e.g. o.foo -> o._$foo$NNN_.
+                  var debug_mangled = "_$" + name + "$" + debug_name_suffix + "_";
+
+                  if (can_mangle(debug_mangled)) {
+                      mangled = debug_mangled;
+                  }
+              }
+
+              // either debug mode is off, or it is on and we could not use the mangled name
+              if (!mangled) {
+                  do {
+                      mangled = nth_identifier.get(++cname);
+                  } while (!can_mangle(mangled));
+              }
+
+              cache.set(name, mangled);
+          }
+          return mangled;
+      }
+
+      function mangleStrings(node) {
+          return node.transform(new TreeTransformer(function(node) {
+              if (node instanceof AST_Sequence) {
+                  var last = node.expressions.length - 1;
+                  node.expressions[last] = mangleStrings(node.expressions[last]);
+              } else if (node instanceof AST_String) {
+                  node.value = mangle(node.value);
+              } else if (node instanceof AST_Conditional) {
+                  node.consequent = mangleStrings(node.consequent);
+                  node.alternative = mangleStrings(node.alternative);
+              }
+              return node;
+          }));
+      }
+  }
+
+  "use strict";
+
+  var to_ascii = typeof atob == "undefined" ? function(b64) {
+      return Buffer.from(b64, "base64").toString();
+  } : atob;
+  var to_base64 = typeof btoa == "undefined" ? function(str) {
+      return Buffer.from(str).toString("base64");
+  } : btoa;
+
+  function read_source_map(code) {
+      var match = /(?:^|[^.])\/\/# sourceMappingURL=data:application\/json(;[\w=-]*)?;base64,([+/0-9A-Za-z]*=*)\s*$/.exec(code);
+      if (!match) {
+          console.warn("inline source map not found");
+          return null;
+      }
+      return to_ascii(match[2]);
+  }
+
+  function set_shorthand(name, options, keys) {
+      if (options[name]) {
+          keys.forEach(function(key) {
+              if (options[key]) {
+                  if (typeof options[key] != "object") options[key] = {};
+                  if (!(name in options[key])) options[key][name] = options[name];
+              }
+          });
+      }
+  }
+
+  function init_cache(cache) {
+      if (!cache) return;
+      if (!("props" in cache)) {
+          cache.props = new Map();
+      } else if (!(cache.props instanceof Map)) {
+          cache.props = map_from_object(cache.props);
+      }
+  }
+
+  function cache_to_json(cache) {
+      return {
+          props: map_to_object(cache.props)
+      };
+  }
+
+  function log_input(files, options, fs, debug_folder) {
+      if (!(fs && fs.writeFileSync && fs.mkdirSync)) {
+          return;
+      }
+
+      try {
+          fs.mkdirSync(debug_folder);
+      } catch (e) {
+          if (e.code !== "EEXIST") throw e;
+      }
+
+      const log_path = `${debug_folder}/terser-debug-${(Math.random() * 9999999) | 0}.log`;
+
+      options = options || {};
+
+      const options_str = JSON.stringify(options, (_key, thing) => {
+          if (typeof thing === "function") return "[Function " + thing.toString() + "]";
+          if (thing instanceof RegExp) return "[RegExp " + thing.toString() + "]";
+          return thing;
+      }, 4);
+
+      const files_str = (file) => {
+          if (typeof file === "object" && options.parse && options.parse.spidermonkey) {
+              return JSON.stringify(file, null, 2);
+          } else if (typeof file === "object") {
+              return Object.keys(file)
+                  .map((key) => key + ": " + files_str(file[key]))
+                  .join("\n\n");
+          } else if (typeof file === "string") {
+              return "```\n" + file + "\n```";
+          } else {
+              return file; // What do?
+          }
+      };
+
+      fs.writeFileSync(log_path, "Options: \n" + options_str + "\n\nInput files:\n\n" + files_str(files) + "\n");
+  }
+
+  async function minify(files, options, _fs_module) {
+      if (
+          _fs_module
+          && typeof process === "object"
+          && process.env
+          && typeof process.env.TERSER_DEBUG_DIR === "string"
+      ) {
+          log_input(files, options, _fs_module, process.env.TERSER_DEBUG_DIR);
+      }
+
+      options = defaults(options, {
+          compress: {},
+          ecma: undefined,
+          enclose: false,
+          ie8: false,
+          keep_classnames: undefined,
+          keep_fnames: false,
+          mangle: {},
+          module: false,
+          nameCache: null,
+          output: null,
+          format: null,
+          parse: {},
+          rename: undefined,
+          safari10: false,
+          sourceMap: false,
+          spidermonkey: false,
+          timings: false,
+          toplevel: false,
+          warnings: false,
+          wrap: false,
+      }, true);
+
+      var timings = options.timings && {
+          start: Date.now()
+      };
+      if (options.keep_classnames === undefined) {
+          options.keep_classnames = options.keep_fnames;
+      }
+      if (options.rename === undefined) {
+          options.rename = options.compress && options.mangle;
+      }
+      if (options.output && options.format) {
+          throw new Error("Please only specify either output or format option, preferrably format.");
+      }
+      options.format = options.format || options.output || {};
+      set_shorthand("ecma", options, [ "parse", "compress", "format" ]);
+      set_shorthand("ie8", options, [ "compress", "mangle", "format" ]);
+      set_shorthand("keep_classnames", options, [ "compress", "mangle" ]);
+      set_shorthand("keep_fnames", options, [ "compress", "mangle" ]);
+      set_shorthand("module", options, [ "parse", "compress", "mangle" ]);
+      set_shorthand("safari10", options, [ "mangle", "format" ]);
+      set_shorthand("toplevel", options, [ "compress", "mangle" ]);
+      set_shorthand("warnings", options, [ "compress" ]); // legacy
+      var quoted_props;
+      if (options.mangle) {
+          options.mangle = defaults(options.mangle, {
+              cache: options.nameCache && (options.nameCache.vars || {}),
+              eval: false,
+              ie8: false,
+              keep_classnames: false,
+              keep_fnames: false,
+              module: false,
+              nth_identifier: base54,
+              properties: false,
+              reserved: [],
+              safari10: false,
+              toplevel: false,
+          }, true);
+          if (options.mangle.properties) {
+              if (typeof options.mangle.properties != "object") {
+                  options.mangle.properties = {};
+              }
+              if (options.mangle.properties.keep_quoted) {
+                  quoted_props = options.mangle.properties.reserved;
+                  if (!Array.isArray(quoted_props)) quoted_props = [];
+                  options.mangle.properties.reserved = quoted_props;
+              }
+              if (options.nameCache && !("cache" in options.mangle.properties)) {
+                  options.mangle.properties.cache = options.nameCache.props || {};
+              }
+          }
+          init_cache(options.mangle.cache);
+          init_cache(options.mangle.properties.cache);
+      }
+      if (options.sourceMap) {
+          options.sourceMap = defaults(options.sourceMap, {
+              asObject: false,
+              content: null,
+              filename: null,
+              includeSources: false,
+              root: null,
+              url: null,
+          }, true);
+      }
+
+      // -- Parse phase --
+      if (timings) timings.parse = Date.now();
+      var toplevel;
+      if (files instanceof AST_Toplevel) {
+          toplevel = files;
+      } else {
+          if (typeof files == "string" || (options.parse.spidermonkey && !Array.isArray(files))) {
+              files = [ files ];
+          }
+          options.parse = options.parse || {};
+          options.parse.toplevel = null;
+
+          if (options.parse.spidermonkey) {
+              options.parse.toplevel = AST_Node.from_mozilla_ast(Object.keys(files).reduce(function(toplevel, name) {
+                  if (!toplevel) return files[name];
+                  toplevel.body = toplevel.body.concat(files[name].body);
+                  return toplevel;
+              }, null));
+          } else {
+              delete options.parse.spidermonkey;
+
+              for (var name in files) if (HOP(files, name)) {
+                  options.parse.filename = name;
+                  options.parse.toplevel = parse(files[name], options.parse);
+                  if (options.sourceMap && options.sourceMap.content == "inline") {
+                      if (Object.keys(files).length > 1)
+                          throw new Error("inline source map only works with singular input");
+                      options.sourceMap.content = read_source_map(files[name]);
+                  }
+              }
+          }
+
+          toplevel = options.parse.toplevel;
+      }
+      if (quoted_props && options.mangle.properties.keep_quoted !== "strict") {
+          reserve_quoted_keys(toplevel, quoted_props);
+      }
+      if (options.wrap) {
+          toplevel = toplevel.wrap_commonjs(options.wrap);
+      }
+      if (options.enclose) {
+          toplevel = toplevel.wrap_enclose(options.enclose);
+      }
+      if (timings) timings.rename = Date.now();
+      // disable rename on harmony due to expand_names bug in for-of loops
+      // https://github.com/mishoo/UglifyJS2/issues/2794
+      if (0 && options.rename) {
+          toplevel.figure_out_scope(options.mangle);
+          toplevel.expand_names(options.mangle);
+      }
+
+      // -- Compress phase --
+      if (timings) timings.compress = Date.now();
+      if (options.compress) {
+          toplevel = new Compressor(options.compress, {
+              mangle_options: options.mangle
+          }).compress(toplevel);
+      }
+
+      // -- Mangle phase --
+      if (timings) timings.scope = Date.now();
+      if (options.mangle) toplevel.figure_out_scope(options.mangle);
+      if (timings) timings.mangle = Date.now();
+      if (options.mangle) {
+          toplevel.compute_char_frequency(options.mangle);
+          toplevel.mangle_names(options.mangle);
+          toplevel = mangle_private_properties(toplevel, options.mangle);
+      }
+      if (timings) timings.properties = Date.now();
+      if (options.mangle && options.mangle.properties) {
+          toplevel = mangle_properties(toplevel, options.mangle.properties);
+      }
+
+      // Format phase
+      if (timings) timings.format = Date.now();
+      var result = {};
+      if (options.format.ast) {
+          result.ast = toplevel;
+      }
+      if (options.format.spidermonkey) {
+          result.ast = toplevel.to_mozilla_ast();
+      }
+      if (!HOP(options.format, "code") || options.format.code) {
+          if (!options.format.ast) {
+              // Destroy stuff to save RAM. (unless the deprecated `ast` option is on)
+              options.format._destroy_ast = true;
+
+              walk(toplevel, node => {
+                  if (node instanceof AST_Scope) {
+                      node.variables = undefined;
+                      node.enclosed = undefined;
+                      node.parent_scope = undefined;
+                  }
+                  if (node.block_scope) {
+                      node.block_scope.variables = undefined;
+                      node.block_scope.enclosed = undefined;
+                      node.parent_scope = undefined;
+                  }
+              });
+          }
+
+          if (options.sourceMap) {
+              if (options.sourceMap.includeSources && files instanceof AST_Toplevel) {
+                  throw new Error("original source content unavailable");
+              }
+              options.format.source_map = await SourceMap({
+                  file: options.sourceMap.filename,
+                  orig: options.sourceMap.content,
+                  root: options.sourceMap.root,
+                  files: options.sourceMap.includeSources ? files : null,
+              });
+          }
+          delete options.format.ast;
+          delete options.format.code;
+          delete options.format.spidermonkey;
+          var stream = OutputStream(options.format);
+          toplevel.print(stream);
+          result.code = stream.get();
+          if (options.sourceMap) {
+              Object.defineProperty(result, "map", {
+                  configurable: true,
+                  enumerable: true,
+                  get() {
+                      const map = options.format.source_map.getEncoded();
+                      return (result.map = options.sourceMap.asObject ? map : JSON.stringify(map));
+                  },
+                  set(value) {
+                      Object.defineProperty(result, "map", {
+                          value,
+                          writable: true,
+                      });
+                  }
+              });
+              result.decoded_map = options.format.source_map.getDecoded();
+              if (options.sourceMap.url == "inline") {
+                  var sourceMap = typeof result.map === "object" ? JSON.stringify(result.map) : result.map;
+                  result.code += "\n//# sourceMappingURL=data:application/json;charset=utf-8;base64," + to_base64(sourceMap);
+              } else if (options.sourceMap.url) {
+                  result.code += "\n//# sourceMappingURL=" + options.sourceMap.url;
+              }
+          }
+      }
+      if (options.nameCache && options.mangle) {
+          if (options.mangle.cache) options.nameCache.vars = cache_to_json(options.mangle.cache);
+          if (options.mangle.properties && options.mangle.properties.cache) {
+              options.nameCache.props = cache_to_json(options.mangle.properties.cache);
+          }
+      }
+      if (options.format && options.format.source_map) {
+          options.format.source_map.destroy();
+      }
+      if (timings) {
+          timings.end = Date.now();
+          result.timings = {
+              parse: 1e-3 * (timings.rename - timings.parse),
+              rename: 1e-3 * (timings.compress - timings.rename),
+              compress: 1e-3 * (timings.scope - timings.compress),
+              scope: 1e-3 * (timings.mangle - timings.scope),
+              mangle: 1e-3 * (timings.properties - timings.mangle),
+              properties: 1e-3 * (timings.format - timings.properties),
+              format: 1e-3 * (timings.end - timings.format),
+              total: 1e-3 * (timings.end - timings.start)
+          };
+      }
+      return result;
+  }
+
+  async function run_cli({ program, packageJson, fs, path }) {
+      const skip_keys = new Set([ "cname", "parent_scope", "scope", "uses_eval", "uses_with" ]);
+      var files = {};
+      var options = {
+          compress: false,
+          mangle: false
+      };
+      const default_options = await _default_options();
+      program.version(packageJson.name + " " + packageJson.version);
+      program.parseArgv = program.parse;
+      program.parse = undefined;
+
+      if (process.argv.includes("ast")) program.helpInformation = describe_ast;
+      else if (process.argv.includes("options")) program.helpInformation = function() {
+          var text = [];
+          for (var option in default_options) {
+              text.push("--" + (option === "sourceMap" ? "source-map" : option) + " options:");
+              text.push(format_object(default_options[option]));
+              text.push("");
+          }
+          return text.join("\n");
+      };
+
+      program.option("-p, --parse <options>", "Specify parser options.", parse_js());
+      program.option("-c, --compress [options]", "Enable compressor/specify compressor options.", parse_js());
+      program.option("-m, --mangle [options]", "Mangle names/specify mangler options.", parse_js());
+      program.option("--mangle-props [options]", "Mangle properties/specify mangler options.", parse_js());
+      program.option("-f, --format [options]", "Format options.", parse_js());
+      program.option("-b, --beautify [options]", "Alias for --format.", parse_js());
+      program.option("-o, --output <file>", "Output file (default STDOUT).");
+      program.option("--comments [filter]", "Preserve copyright comments in the output.");
+      program.option("--config-file <file>", "Read minify() options from JSON file.");
+      program.option("-d, --define <expr>[=value]", "Global definitions.", parse_js("define"));
+      program.option("--ecma <version>", "Specify ECMAScript release: 5, 2015, 2016 or 2017...");
+      program.option("-e, --enclose [arg[,...][:value[,...]]]", "Embed output in a big function with configurable arguments and values.");
+      program.option("--ie8", "Support non-standard Internet Explorer 8.");
+      program.option("--keep-classnames", "Do not mangle/drop class names.");
+      program.option("--keep-fnames", "Do not mangle/drop function names. Useful for code relying on Function.prototype.name.");
+      program.option("--module", "Input is an ES6 module");
+      program.option("--name-cache <file>", "File to hold mangled name mappings.");
+      program.option("--rename", "Force symbol expansion.");
+      program.option("--no-rename", "Disable symbol expansion.");
+      program.option("--safari10", "Support non-standard Safari 10.");
+      program.option("--source-map [options]", "Enable source map/specify source map options.", parse_js());
+      program.option("--timings", "Display operations run time on STDERR.");
+      program.option("--toplevel", "Compress and/or mangle variables in toplevel scope.");
+      program.option("--wrap <name>", "Embed everything as a function with “exports” corresponding to “name” globally.");
+      program.arguments("[files...]").parseArgv(process.argv);
+      if (program.configFile) {
+          options = JSON.parse(read_file(program.configFile));
+      }
+      if (!program.output && program.sourceMap && program.sourceMap.url != "inline") {
+          fatal("ERROR: cannot write source map to STDOUT");
+      }
+
+      [
+          "compress",
+          "enclose",
+          "ie8",
+          "mangle",
+          "module",
+          "safari10",
+          "sourceMap",
+          "toplevel",
+          "wrap"
+      ].forEach(function(name) {
+          if (name in program) {
+              options[name] = program[name];
+          }
+      });
+
+      if ("ecma" in program) {
+          if (program.ecma != (program.ecma | 0)) fatal("ERROR: ecma must be an integer");
+          const ecma = program.ecma | 0;
+          if (ecma > 5 && ecma < 2015)
+              options.ecma = ecma + 2009;
+          else
+              options.ecma = ecma;
+      }
+      if (program.format || program.beautify) {
+          const chosenOption = program.format || program.beautify;
+          options.format = typeof chosenOption === "object" ? chosenOption : {};
+      }
+      if (program.comments) {
+          if (typeof options.format != "object") options.format = {};
+          options.format.comments = typeof program.comments == "string" ? (program.comments == "false" ? false : program.comments) : "some";
+      }
+      if (program.define) {
+          if (typeof options.compress != "object") options.compress = {};
+          if (typeof options.compress.global_defs != "object") options.compress.global_defs = {};
+          for (var expr in program.define) {
+              options.compress.global_defs[expr] = program.define[expr];
+          }
+      }
+      if (program.keepClassnames) {
+          options.keep_classnames = true;
+      }
+      if (program.keepFnames) {
+          options.keep_fnames = true;
+      }
+      if (program.mangleProps) {
+          if (program.mangleProps.domprops) {
+              delete program.mangleProps.domprops;
+          } else {
+              if (typeof program.mangleProps != "object") program.mangleProps = {};
+              if (!Array.isArray(program.mangleProps.reserved)) program.mangleProps.reserved = [];
+          }
+          if (typeof options.mangle != "object") options.mangle = {};
+          options.mangle.properties = program.mangleProps;
+      }
+      if (program.nameCache) {
+          options.nameCache = JSON.parse(read_file(program.nameCache, "{}"));
+      }
+      if (program.output == "ast") {
+          options.format = {
+              ast: true,
+              code: false
+          };
+      }
+      if (program.parse) {
+          if (!program.parse.acorn && !program.parse.spidermonkey) {
+              options.parse = program.parse;
+          } else if (program.sourceMap && program.sourceMap.content == "inline") {
+              fatal("ERROR: inline source map only works with built-in parser");
+          }
+      }
+      if (~program.rawArgs.indexOf("--rename")) {
+          options.rename = true;
+      } else if (!program.rename) {
+          options.rename = false;
+      }
+
+      let convert_path = name => name;
+      if (typeof program.sourceMap == "object" && "base" in program.sourceMap) {
+          convert_path = function() {
+              var base = program.sourceMap.base;
+              delete options.sourceMap.base;
+              return function(name) {
+                  return path.relative(base, name);
+              };
+          }();
+      }
+
+      let filesList;
+      if (options.files && options.files.length) {
+          filesList = options.files;
+
+          delete options.files;
+      } else if (program.args.length) {
+          filesList = program.args;
+      }
+
+      if (filesList) {
+          simple_glob(filesList).forEach(function(name) {
+              files[convert_path(name)] = read_file(name);
+          });
+      } else {
+          await new Promise((resolve) => {
+              var chunks = [];
+              process.stdin.setEncoding("utf8");
+              process.stdin.on("data", function(chunk) {
+                  chunks.push(chunk);
+              }).on("end", function() {
+                  files = [ chunks.join("") ];
+                  resolve();
+              });
+              process.stdin.resume();
+          });
+      }
+
+      await run_cli();
+
+      function convert_ast(fn) {
+          return AST_Node.from_mozilla_ast(Object.keys(files).reduce(fn, null));
+      }
+
+      async function run_cli() {
+          var content = program.sourceMap && program.sourceMap.content;
+          if (content && content !== "inline") {
+              options.sourceMap.content = read_file(content, content);
+          }
+          if (program.timings) options.timings = true;
+
+          try {
+              if (program.parse) {
+                  if (program.parse.acorn) {
+                      files = convert_ast(function(toplevel, name) {
+                          return require("acorn").parse(files[name], {
+                              ecmaVersion: 2018,
+                              locations: true,
+                              program: toplevel,
+                              sourceFile: name,
+                              sourceType: options.module || program.parse.module ? "module" : "script"
+                          });
+                      });
+                  } else if (program.parse.spidermonkey) {
+                      files = convert_ast(function(toplevel, name) {
+                          var obj = JSON.parse(files[name]);
+                          if (!toplevel) return obj;
+                          toplevel.body = toplevel.body.concat(obj.body);
+                          return toplevel;
+                      });
+                  }
+              }
+          } catch (ex) {
+              fatal(ex);
+          }
+
+          let result;
+          try {
+              result = await minify(files, options, fs);
+          } catch (ex) {
+              if (ex.name == "SyntaxError") {
+                  print_error("Parse error at " + ex.filename + ":" + ex.line + "," + ex.col);
+                  var col = ex.col;
+                  var lines = files[ex.filename].split(/\r?\n/);
+                  var line = lines[ex.line - 1];
+                  if (!line && !col) {
+                      line = lines[ex.line - 2];
+                      col = line.length;
+                  }
+                  if (line) {
+                      var limit = 70;
+                      if (col > limit) {
+                          line = line.slice(col - limit);
+                          col = limit;
+                      }
+                      print_error(line.slice(0, 80));
+                      print_error(line.slice(0, col).replace(/\S/g, " ") + "^");
+                  }
+              }
+              if (ex.defs) {
+                  print_error("Supported options:");
+                  print_error(format_object(ex.defs));
+              }
+              fatal(ex);
+              return;
+          }
+
+          if (program.output == "ast") {
+              if (!options.compress && !options.mangle) {
+                  result.ast.figure_out_scope({});
+              }
+              console.log(JSON.stringify(result.ast, function(key, value) {
+                  if (value) switch (key) {
+                    case "thedef":
+                      return symdef(value);
+                    case "enclosed":
+                      return value.length ? value.map(symdef) : undefined;
+                    case "variables":
+                    case "globals":
+                      return value.size ? collect_from_map(value, symdef) : undefined;
+                  }
+                  if (skip_keys.has(key)) return;
+                  if (value instanceof AST_Token) return;
+                  if (value instanceof Map) return;
+                  if (value instanceof AST_Node) {
+                      var result = {
+                          _class: "AST_" + value.TYPE
+                      };
+                      if (value.block_scope) {
+                          result.variables = value.block_scope.variables;
+                          result.enclosed = value.block_scope.enclosed;
+                      }
+                      value.CTOR.PROPS.forEach(function(prop) {
+                          result[prop] = value[prop];
+                      });
+                      return result;
+                  }
+                  return value;
+              }, 2));
+          } else if (program.output == "spidermonkey") {
+              try {
+                  const minified = await minify(
+                      result.code,
+                      {
+                          compress: false,
+                          mangle: false,
+                          format: {
+                              ast: true,
+                              code: false
+                          }
+                      },
+                      fs
+                  );
+                  console.log(JSON.stringify(minified.ast.to_mozilla_ast(), null, 2));
+              } catch (ex) {
+                  fatal(ex);
+                  return;
+              }
+          } else if (program.output) {
+              fs.writeFileSync(program.output, result.code);
+              if (options.sourceMap && options.sourceMap.url !== "inline" && result.map) {
+                  fs.writeFileSync(program.output + ".map", result.map);
+              }
+          } else {
+              console.log(result.code);
+          }
+          if (program.nameCache) {
+              fs.writeFileSync(program.nameCache, JSON.stringify(options.nameCache));
+          }
+          if (result.timings) for (var phase in result.timings) {
+              print_error("- " + phase + ": " + result.timings[phase].toFixed(3) + "s");
+          }
+      }
+
+      function fatal(message) {
+          if (message instanceof Error) message = message.stack.replace(/^\S*?Error:/, "ERROR:");
+          print_error(message);
+          process.exit(1);
+      }
+
+      // A file glob function that only supports "*" and "?" wildcards in the basename.
+      // Example: "foo/bar/*baz??.*.js"
+      // Argument `glob` may be a string or an array of strings.
+      // Returns an array of strings. Garbage in, garbage out.
+      function simple_glob(glob) {
+          if (Array.isArray(glob)) {
+              return [].concat.apply([], glob.map(simple_glob));
+          }
+          if (glob && glob.match(/[*?]/)) {
+              var dir = path.dirname(glob);
+              try {
+                  var entries = fs.readdirSync(dir);
+              } catch (ex) {}
+              if (entries) {
+                  var pattern = "^" + path.basename(glob)
+                      .replace(/[.+^$[\]\\(){}]/g, "\\$&")
+                      .replace(/\*/g, "[^/\\\\]*")
+                      .replace(/\?/g, "[^/\\\\]") + "$";
+                  var mod = process.platform === "win32" ? "i" : "";
+                  var rx = new RegExp(pattern, mod);
+                  var results = entries.filter(function(name) {
+                      return rx.test(name);
+                  }).map(function(name) {
+                      return path.join(dir, name);
+                  });
+                  if (results.length) return results;
+              }
+          }
+          return [ glob ];
+      }
+
+      function read_file(path, default_value) {
+          try {
+              return fs.readFileSync(path, "utf8");
+          } catch (ex) {
+              if ((ex.code == "ENOENT" || ex.code == "ENAMETOOLONG") && default_value != null) return default_value;
+              fatal(ex);
+          }
+      }
+
+      function parse_js(flag) {
+          return function(value, options) {
+              options = options || {};
+              try {
+                  walk(parse(value, { expression: true }), node => {
+                      if (node instanceof AST_Assign) {
+                          var name = node.left.print_to_string();
+                          var value = node.right;
+                          if (flag) {
+                              options[name] = value;
+                          } else if (value instanceof AST_Array) {
+                              options[name] = value.elements.map(to_string);
+                          } else if (value instanceof AST_RegExp) {
+                              value = value.value;
+                              options[name] = new RegExp(value.source, value.flags);
+                          } else {
+                              options[name] = to_string(value);
+                          }
+                          return true;
+                      }
+                      if (node instanceof AST_Symbol || node instanceof AST_PropAccess) {
+                          var name = node.print_to_string();
+                          options[name] = true;
+                          return true;
+                      }
+                      if (!(node instanceof AST_Sequence)) throw node;
+
+                      function to_string(value) {
+                          return value instanceof AST_Constant ? value.getValue() : value.print_to_string({
+                              quote_keys: true
+                          });
+                      }
+                  });
+              } catch(ex) {
+                  if (flag) {
+                      fatal("Error parsing arguments for '" + flag + "': " + value);
+                  } else {
+                      options[value] = null;
+                  }
+              }
+              return options;
+          };
+      }
+
+      function symdef(def) {
+          var ret = (1e6 + def.id) + " " + def.name;
+          if (def.mangled_name) ret += " " + def.mangled_name;
+          return ret;
+      }
+
+      function collect_from_map(map, callback) {
+          var result = [];
+          map.forEach(function (def) {
+              result.push(callback(def));
+          });
+          return result;
+      }
+
+      function format_object(obj) {
+          var lines = [];
+          var padding = "";
+          Object.keys(obj).map(function(name) {
+              if (padding.length < name.length) padding = Array(name.length + 1).join(" ");
+              return [ name, JSON.stringify(obj[name]) ];
+          }).forEach(function(tokens) {
+              lines.push("  " + tokens[0] + padding.slice(tokens[0].length - 2) + tokens[1]);
+          });
+          return lines.join("\n");
+      }
+
+      function print_error(msg) {
+          process.stderr.write(msg);
+          process.stderr.write("\n");
+      }
+
+      function describe_ast() {
+          var out = OutputStream({ beautify: true });
+          function doitem(ctor) {
+              out.print("AST_" + ctor.TYPE);
+              const props = ctor.SELF_PROPS.filter(prop => !/^\$/.test(prop));
+
+              if (props.length > 0) {
+                  out.space();
+                  out.with_parens(function() {
+                      props.forEach(function(prop, i) {
+                          if (i) out.space();
+                          out.print(prop);
+                      });
+                  });
+              }
+
+              if (ctor.documentation) {
+                  out.space();
+                  out.print_string(ctor.documentation);
+              }
+
+              if (ctor.SUBCLASSES.length > 0) {
+                  out.space();
+                  out.with_block(function() {
+                      ctor.SUBCLASSES.forEach(function(ctor) {
+                          out.indent();
+                          doitem(ctor);
+                          out.newline();
+                      });
+                  });
+              }
+          }
+          doitem(AST_Node);
+          return out + "\n";
+      }
+  }
+
+  async function _default_options() {
+      const defs = {};
+
+      Object.keys(infer_options({ 0: 0 })).forEach((component) => {
+          const options = infer_options({
+              [component]: {0: 0}
+          });
+
+          if (options) defs[component] = options;
+      });
+      return defs;
+  }
+
+  async function infer_options(options) {
+      try {
+          await minify("", options);
+      } catch (error) {
+          return error.defs;
+      }
+  }
+
+  global.toolTerser = function(content, callback) {
+      var options = {
+          format: {
+              ascii_only: true
+          },
+          compress: {},
+          mangle: true
+      };
+
+      minify(content, { sourceMap: false }).then( function($) {
+          callback($.code);
+      });
+  };
 
 })();

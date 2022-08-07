@@ -1,5 +1,5 @@
 all:
-	node_modules/.bin/rollup tools.js -f iife -o ./Pamphlet/tools.js -p @rollup/plugin-node-resolve
+	node_modules/.bin/rollup tools.js --banner "let global = {};" --no-treeshake -f iife -o ./Pamphlet/tools.js -p @rollup/plugin-node-resolve
     
 	
 

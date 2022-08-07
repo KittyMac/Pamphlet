@@ -1,6 +1,7 @@
 import Foundation
 import libmcpp
 import Hitch
+import JXKit
 
 func pathFor(executable name: String) -> String {
     if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/\(name)") {
@@ -187,8 +188,10 @@ public class PamphletFramework {
     
     var pamphletFilePath: String = ""
     
+    let jxCtx = JXContext()
+    
     public init() {
-        
+        try! jxCtx.eval(script: ToolsPamphlet.ToolsJs().description)
     }
     
     private func createPamphletFile(_ pamphletName: String,
@@ -463,9 +466,9 @@ public class PamphletFramework {
             }
         }
         
-        minifyHtml(inFile: inFile, fileContents: &fileContents)
-        minifyJs(inFile: inFile, fileContents: &fileContents)
-        minifyJson(inFile: inFile, fileContents: &fileContents)
+        minifyHtml(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
+        minifyJs(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
+        minifyJson(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
         
         return fileContents
     }

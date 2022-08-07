@@ -1,7 +1,6 @@
 import { minify } from "terser";
 
-function terser(content) {
-    
+global.toolTerser = function(content, callback) {
     var options = {
         format: {
             ascii_only: true
@@ -10,11 +9,7 @@ function terser(content) {
         mangle: true
     };
 
-    var result = "";
-    return minify(content, { sourceMap: false }).then( function($) {
-        result = $.code;
+    minify(content, { sourceMap: false }).then( function($) {
+        callback($.code);
     });
-    
-    return result;
-    
 }

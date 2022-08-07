@@ -39,14 +39,25 @@ final class PamphletTests: XCTestCase {
                                     options:[.clean, .collapse, .swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     */
+    
+    func testProcessTools() {
+        PamphletFramework().process(prefix: "Tools",
+                                    extensions: [],
+                                    inDirectory: path(to: "Pamphlet/../../../Tools/Pamphlet"),
+                                    outDirectory: path(to: "Pamphlet/../../../Sources/PamphletFramework/Tools"),
+                                    options:[.collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+    }
+    
     func testProcessCollapseAll() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,
                                     extensions: extensions,
                                     inDirectory: path(to: "Pamphlet"),
                                     outDirectory: "/tmp/Pamphlet",
-                                    options:[.clean, .collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+                               
+                                    options:[.collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
+    
     /*
     func testProcessReleaseOnly() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]

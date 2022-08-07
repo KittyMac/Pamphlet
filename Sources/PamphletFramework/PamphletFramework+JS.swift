@@ -1,59 +1,28 @@
 import Foundation
 import libmcpp
+import JXKit
 
-var warnTerser = true
 
 extension PamphletFramework {
-    func minifyJs(inFile: String, fileContents: inout String) {
+    func minifyJs(jxCtx: JXContext, inFile: String, fileContents: inout String) {
         if options.contains(.minifyJs) {
             guard inFile.hasSuffix(".min.js") == false else { return }
             if (inFile.hasSuffix(".js")) {
-                let nodePath = pathFor(executable: "node")
-                let terserPath = pathFor(executable: "terser")
-                
-                if warnTerser {
-                    warnTerser = false
-                    print("warning: \(terserPath) not found")
+                                
+                var callbackResults = "undefined"
+                let callback = JXValue(newFunctionIn: jxCtx) { context, this, arguments in
+                    callbackResults = arguments[0].stringValue ?? "undefined"
+                    return JXValue(undefinedIn: jxCtx)
                 }
+
+                let terserFunc = try! jxCtx.eval(script: "global.toolTerser")
+                                
+                try! terserFunc.call(withArguments: [
+                    jxCtx.encode(fileContents),
+                    callback
+                ])
                 
-                /*
-                let nodePath = pathFor(executable: "node")
-                let terserPath = pathFor(executable: "terser")
-                
-                if FileManager.default.fileExists(atPath: nodePath) &&
-                    FileManager.default.fileExists(atPath: terserPath) {
-                    do {
-                        let task = Process()
-                        task.executableURL = URL(fileURLWithPath: nodePath)
-                        let inputPipe = Pipe()
-                        let outputPipe = Pipe()
-                        
-                        task.environment = ProcessInfo.processInfo.environment
-                        task.standardInput = inputPipe
-                        task.standardOutput = outputPipe
-                        task.arguments = [terserPath, "--compress", "--mangle", "--format", "ascii_only=true"]
-                        
-                        try task.run()
-                        if let fileContentsAsData = fileContents.data(using: .utf8) {
-                            DispatchQueue.global(qos: .userInitiated).async {
-                                inputPipe.fileHandleForWriting.write(fileContentsAsData)
-                                inputPipe.fileHandleForWriting.closeFile()
-                            }
-                            let minifiedData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                            fileContents = String(data: minifiedData, encoding: .utf8) ?? fileContents
-                        } else {
-                            throw ""
-                        }
-                    } catch {
-                        fatalError("Failed to use \(terserPath) to compress the requested file")
-                    }
-                } else {
-                    if warnTerser {
-                        warnTerser = false
-                        print("warning: \(terserPath) not found")
-                    }
-                }
-                */
+                fileContents = callbackResults
             }
         }
     }

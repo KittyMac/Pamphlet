@@ -45,6 +45,7 @@
 
 #include <sys/types.h>
 
+extern char    *strdup(const char *__s1);
 extern ssize_t  readlink(const char * __restrict, char * __restrict, size_t);
 extern char    *realpath(const char * __restrict, char * __restrict);
 

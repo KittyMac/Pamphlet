@@ -1,10 +1,11 @@
 import Foundation
 import libmcpp
+import JXKit
 
 var warnJJ = true
 
 extension PamphletFramework {
-    func minifyJson(inFile: String, fileContents: inout String) {
+    func minifyJson(jxCtx: JXContext, inFile: String, fileContents: inout String) {
         if options.contains(.minifyJson) {
             if (inFile.hasSuffix(".json")) {
                 let path = pathFor(executable: "jj")
