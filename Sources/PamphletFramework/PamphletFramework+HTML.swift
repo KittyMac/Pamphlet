@@ -7,10 +7,12 @@ extension PamphletFramework {
     func minifyHtml(inFile: String, fileContents: inout String) {
         if options.contains(.minifyHtml) {
             if inFile.hasSuffix(".css") || inFile.hasSuffix(".html") {
-                if FileManager.default.fileExists(atPath: "\(userBinPath)/htmlcompressor") {
+                let path = pathFor(executable: "htmlcompressor")
+                
+                if FileManager.default.fileExists(atPath: path) {
                     do {
                         let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "\(userBinPath)/htmlcompressor")
+                        task.executableURL = URL(fileURLWithPath: path)
                         let inputPipe = Pipe()
                         let outputPipe = Pipe()
                         task.standardInput = inputPipe
@@ -29,12 +31,12 @@ extension PamphletFramework {
                             throw ""
                         }
                     } catch {
-                        fatalError("Failed to use \(userBinPath)/htmlcompressor to compress the requested file")
+                        fatalError("Failed to use \(path) to compress the requested file")
                     }
                 } else {
                     if warnHtmlCompressor {
                         warnHtmlCompressor = false
-                        print("warning: \(userBinPath)/htmlcompressor not found")
+                        print("warning: \(path) not found")
                     }
                 }
             }

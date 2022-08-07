@@ -8,18 +8,21 @@ extension PamphletFramework {
         if options.contains(.minifyJs) {
             guard inFile.hasSuffix(".min.js") == false else { return }
             if (inFile.hasSuffix(".js")) {
-                if FileManager.default.fileExists(atPath: "\(userBinPath)/node") &&
-                    FileManager.default.fileExists(atPath: "\(userBinPath)/terser") {
+                let nodePath = pathFor(executable: "node")
+                let terserPath = pathFor(executable: "terser")
+                
+                if FileManager.default.fileExists(atPath: nodePath) &&
+                    FileManager.default.fileExists(atPath: terserPath) {
                     do {
                         let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "\(userBinPath)/node")
+                        task.executableURL = URL(fileURLWithPath: nodePath)
                         let inputPipe = Pipe()
                         let outputPipe = Pipe()
                         
                         task.environment = ProcessInfo.processInfo.environment
                         task.standardInput = inputPipe
                         task.standardOutput = outputPipe
-                        task.arguments = ["\(userBinPath)/terser", "--compress", "--mangle", "--format", "ascii_only=true"]
+                        task.arguments = [terserPath, "--compress", "--mangle", "--format", "ascii_only=true"]
                         
                         try task.run()
                         if let fileContentsAsData = fileContents.data(using: .utf8) {
@@ -33,12 +36,12 @@ extension PamphletFramework {
                             throw ""
                         }
                     } catch {
-                        fatalError("Failed to use \(userBinPath)/terser to compress the requested file")
+                        fatalError("Failed to use \(terserPath) to compress the requested file")
                     }
                 } else {
                     if warnTerser {
                         warnTerser = false
-                        print("warning: \(userBinPath)/terser not found")
+                        print("warning: \(terserPath) not found")
                     }
                 }
                 

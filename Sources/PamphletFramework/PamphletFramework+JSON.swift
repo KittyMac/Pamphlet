@@ -7,11 +7,13 @@ extension PamphletFramework {
     func minifyJson(inFile: String, fileContents: inout String) {
         if options.contains(.minifyJson) {
             if (inFile.hasSuffix(".json")) {
-                if FileManager.default.fileExists(atPath: "\(userBinPath)/jj") {
+                let path = pathFor(executable: "jj")
+                
+                if FileManager.default.fileExists(atPath: path) {
                     // If this is a javascript file and closure-compiler is installed
                     do {
                         let task = Process()
-                        task.executableURL = URL(fileURLWithPath: "\(userBinPath)/jj")
+                        task.executableURL = URL(fileURLWithPath: path)
                         let inputPipe = Pipe()
                         let outputPipe = Pipe()
                         task.standardInput = inputPipe
@@ -31,12 +33,12 @@ extension PamphletFramework {
                             throw ""
                         }
                     } catch {
-                        fatalError("Failed to use \(userBinPath)/jj to compress the requested file")
+                        fatalError("Failed to use \(path) to compress the requested file")
                     }
                 } else {
                     if warnJJ {
                         warnJJ = false
-                        print("warning: \(userBinPath)/jj not found")
+                        print("warning: \(path) not found")
                     }
                 }
             }

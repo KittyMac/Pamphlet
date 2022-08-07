@@ -2,7 +2,18 @@ import Foundation
 import libmcpp
 import Hitch
 
-var userBinPath = "/usr/local/bin"
+func pathFor(executable name: String) -> String {
+    if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/\(name)") {
+        return "/opt/homebrew/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/usr/bin/\(name)") {
+        return "/usr/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/usr/local/bin/\(name)") {
+        return "/usr/local/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/bin/\(name)") {
+        return "/bin/\(name)"
+    }
+    return "./\(name)"
+}
 
 class JsonDirectory: Codable {
     var files:[String:String] = [:]
@@ -177,9 +188,7 @@ public class PamphletFramework {
     var pamphletFilePath: String = ""
     
     public init() {
-        if FileManager.default.fileExists(atPath: "/opt/homebrew/bin") {
-            userBinPath = "/opt/homebrew/bin"
-        }
+        
     }
     
     private func createPamphletFile(_ pamphletName: String,

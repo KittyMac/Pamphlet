@@ -4,9 +4,11 @@ import libmcpp
 extension PamphletFramework {
     func gzip(fileContents: String) -> String? {
         if options.contains(.includeGzip) {
+            let path = pathFor(executable: "gzip")
+            
             do {
                 let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/bin/gzip")
+                task.executableURL = URL(fileURLWithPath: path)
                 task.arguments = ["-9", "-n"]
                 let inputPipe = Pipe()
                 let outputPipe = Pipe()
@@ -26,7 +28,7 @@ extension PamphletFramework {
                     throw ""
                 }
             } catch {
-                fatalError("Failed to use /usr/bin/gzip to compress the requested file")
+                fatalError("Failed to use \(path) to compress the requested file")
             }
         }
         return nil
