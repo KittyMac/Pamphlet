@@ -64,7 +64,7 @@ struct FilePath {
     let parentExtensionName: String
     let myStructName: String
     var isStaticString: Bool = false
-    
+        
     init(_ pamphletName: String,
          _ inPath: String,
          _ options: PamphletOptions) {
@@ -185,6 +185,7 @@ public class PamphletFramework {
     private func createPamphletFile(_ pamphletName: String,
                                     _ inTextPages: [FilePath],
                                     _ inDataPages: [FilePath],
+                                    _ inDirectoryPages: [FilePath],
                                     _ outFile: String) {
         
         
@@ -196,6 +197,18 @@ public class PamphletFramework {
         
         let dataPages = inDataPages.sorted { (lhs, rhs) -> Bool in
             return lhs.fileName < rhs.fileName
+        }
+        
+        for page in inDirectoryPages {
+            if page.parts.count > 1 {
+                let code = ####"""
+                    public extension {?} { enum {?} { } }
+                    
+                    """#### << [page.parentExtensionName, page.myStructName]
+                if allDirectoryExtensions.contains(code.description) == false {
+                    allDirectoryExtensions.append(code.description)
+                }
+            }
         }
         
         for page in (textPages + dataPages) {
@@ -767,6 +780,7 @@ public class PamphletFramework {
         
         let textPages = BoxedArray<FilePath>()
         let dataPages = BoxedArray<FilePath>()
+        let directoryPages = BoxedArray<FilePath>()
         
         //print("in: " + inDirectory)
         //print("out: " + generateFilesDirectory)
@@ -776,18 +790,23 @@ public class PamphletFramework {
         // we want to process all files in a directory at the same time, so we need to pre-walk
         // the enumeration
         
+        var allDirectories: [URL] = []
         var filesByDirectory: [URL: BoxedArray<URL>] = [:]
         
         for case let fileURL as URL in enumerator {
             if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
-                if let isDirectory = resourceValues.isDirectory, isDirectory == false {
-                    let pathExtension = (fileURL.path as NSString).pathExtension
-                    if (extensions.count == 0 || extensions.contains(pathExtension)) {
-                        let directoryURL = fileURL.deletingLastPathComponent()
-                        if filesByDirectory[directoryURL] == nil {
-                            filesByDirectory[directoryURL] = BoxedArray<URL>()
+                if let isDirectory = resourceValues.isDirectory {
+                    if isDirectory {
+                        allDirectories.append(fileURL)
+                    } else {
+                        let pathExtension = (fileURL.path as NSString).pathExtension
+                        if (extensions.count == 0 || extensions.contains(pathExtension)) {
+                            let directoryURL = fileURL.deletingLastPathComponent()
+                            if filesByDirectory[directoryURL] == nil {
+                                filesByDirectory[directoryURL] = BoxedArray<URL>()
+                            }
+                            filesByDirectory[directoryURL]?.append(fileURL)
                         }
-                        filesByDirectory[directoryURL]?.append(fileURL)
                     }
                 }
             }
@@ -806,9 +825,16 @@ public class PamphletFramework {
                     dataPages: dataPages)
         }
         
+        for directory in allDirectories {
+            let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
+            let filePath = FilePath(pamphletName, partialPath, options)
+            directoryPages.append(filePath)
+        }
+        
         createPamphletFile(pamphletName,
                            textPages.array,
                            dataPages.array,
+                           directoryPages.array,
                            pamphletFilePath)
     }
     

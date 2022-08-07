@@ -38,7 +38,9 @@ let package = Package(
             name: "libmcpp"),
         .testTarget(
             name: "PamphletFrameworkTests",
-            dependencies: ["PamphletFramework"],
+            dependencies: [
+                "PamphletFramework"
+            ],
             plugins: [
                 .plugin(name: "PamphletPlugin")
             ]),
