@@ -30,6 +30,7 @@
 #include    "system.H"
 #include    "internal.H"
 #include <libgen.h>
+#include <string.h>
 
 void mcpp_help() {
     char * argv[] = {
