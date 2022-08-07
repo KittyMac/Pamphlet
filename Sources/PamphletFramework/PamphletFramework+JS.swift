@@ -15,13 +15,13 @@ extension PamphletFramework {
                     return JXValue(undefinedIn: jxCtx)
                 }
 
-                let terserFunc = try! jxCtx.eval(script: "global.toolTerser")
+                let terserFunc = try! jxCtx.eval(script: "global.toolTerserJS")
                                 
                 try! terserFunc.call(withArguments: [
                     jxCtx.encode(fileContents),
                     callback
                 ])
-                
+                                
                 fileContents = callbackResults
             }
         }

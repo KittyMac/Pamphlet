@@ -44,7 +44,7 @@ install: build
 .PHONY: install
 tools: install
 	make -C Tools
-	./bin/pamphlet --prefix=Tools --release --collapse-all ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+	./bin/pamphlet --prefix=Tools --release --collapse-all --disable-html --disable-js --disable-json --disable-ts ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 docker:
 	-docker buildx create --name local_builder

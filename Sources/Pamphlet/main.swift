@@ -50,16 +50,16 @@ struct Pamphlet: ParsableCommand {
         @Flag(inversion: .prefixedEnableDisable, help: "Include the gzip'd file content")
         var gzip: Bool = true
         
-        @Flag(inversion: .prefixedEnableDisable, help: "Minify html content (if htmlcompressor found)")
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify html content")
         var html: Bool = true
         
-        @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content (if terser found)")
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify javascript content")
         var js: Bool = true
         
-        @Flag(inversion: .prefixedEnableDisable, help: "Compile typescript content (if tsc found)")
+        @Flag(inversion: .prefixedEnableDisable, help: "Compile typescript content")
         var ts: Bool = true
         
-        @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content (if jj found)")
+        @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content")
         var json: Bool = true
                 
         mutating func run() throws {

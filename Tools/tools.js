@@ -1,6 +1,10 @@
-import { minify } from "terser";
+const { minify } = require('terser');
+const Minimize = require('minimize');
 
-global.toolTerser = function(content, callback) {
+const minifyHTML = new Minimize();
+
+global.toolTerserJS = function(content, callback) {
+        
     var options = {
         format: {
             ascii_only: true
@@ -8,8 +12,12 @@ global.toolTerser = function(content, callback) {
         compress: {},
         mangle: true
     };
-
-    minify(content, { sourceMap: false }).then( function($) {
+        
+    minify(content, options).then( function($) {
         callback($.code);
     });
+}
+
+global.toolTerserHTML = function(content) {
+    return minifyHTML.parse(content);
 }
