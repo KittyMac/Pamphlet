@@ -42,6 +42,8 @@
 #include    "internal.H"
 #endif
 
+extern FILE *open_memstream(char **__bufp, size_t *__sizep);
+
     /* Function pointer to expand_macro() functions.    */
     char *   (*expand_macro)( DEFBUF * defp, char * out, char * out_end
             , LINE_COL line_col, int * pragma_op);

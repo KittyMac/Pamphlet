@@ -44,7 +44,5 @@ let package = Package(
             plugins: [
                 .plugin(name: "PamphletPlugin")
             ]),
-    ],
-    cLanguageStandard: .gnu11,
-    cxxLanguageStandard: .gnucxx11
+    ]
 )
