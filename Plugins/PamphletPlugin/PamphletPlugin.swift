@@ -3,8 +3,6 @@ import PackagePlugin
 
 @main struct PamphletPlugin: BuildToolPlugin {
     
-    let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg", "base64"]
-    
     func gatherInputFiles(target: Target,
                           inputFiles: inout [PackagePlugin.Path]) {
         
@@ -15,7 +13,7 @@ import PackagePlugin
             for case let fileURL as URL in enumerator {
                 do {
                     let fileAttributes = try fileURL.resourceValues(forKeys:[.isRegularFileKey])
-                    if fileAttributes.isRegularFile == true && extensions.contains(fileURL.pathExtension) {
+                    if fileAttributes.isRegularFile == true {
                         inputFiles.append(PackagePlugin.Path(fileURL.path))
                     }
                 } catch { print(error, fileURL) }
