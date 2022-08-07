@@ -26,6 +26,9 @@ struct Pamphlet: ParsableCommand {
         @Flag(help: "Collapse files in directory into a single .swift file")
         var collapse: Bool = false
         
+        @Flag(help: "Collapse all files into a single Pamphlet.swift file")
+        var collapseAll: Bool = false
+        
         @Flag(help: "Generate Kotlin code instead of Swift code")
         var kotlin: Bool = false
         
@@ -71,6 +74,7 @@ struct Pamphlet: ParsableCommand {
             if js { options.insert(.minifyJs) }
             if json { options.insert(.minifyJson) }
             if collapse { options.insert(.collapse) }
+            if collapseAll { options.insert(.collapseAll) }
             if kotlin { options.insert(.kotlin) }
             if let kotlinPackage = kotlinPackage { options.kotlinPackage = kotlinPackage }
             

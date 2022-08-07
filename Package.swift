@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.6
 
 import PackageDescription
 
@@ -10,20 +10,26 @@ let package = Package(
     products: [
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
-		.library(name: "libmcpp", targets: ["libmcpp"])
+		.library(name: "libmcpp", targets: ["libmcpp"]),
+        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"])
     ],
     dependencies: [
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.0"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "Pamphlet",
             dependencies: [
                 "Hitch",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 "PamphletFramework"
             ]
+        ),
+        .plugin(
+            name: "PamphletPlugin",
+            capability: .buildTool(),
+            dependencies: ["Pamphlet"]
         ),
         .target(
             name: "PamphletFramework",
@@ -32,6 +38,9 @@ let package = Package(
             name: "libmcpp"),
         .testTarget(
             name: "PamphletFrameworkTests",
-            dependencies: ["PamphletFramework"]),
+            dependencies: ["PamphletFramework"],
+            plugins: [
+                .plugin(name: "PamphletPlugin")
+            ]),
     ]
 )

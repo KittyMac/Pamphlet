@@ -63,6 +63,7 @@ struct FilePath {
     let extensionName: String
     let parentExtensionName: String
     let myStructName: String
+    var isStaticString: Bool = false
     
     init(_ pamphletName: String,
          _ inPath: String,
@@ -164,6 +165,7 @@ public struct PamphletOptions: OptionSet {
     public static let minifyJson = PamphletOptions(rawValue:  1 << 7)
     public static let collapse = PamphletOptions(rawValue:  1 << 8)
     public static let kotlin = PamphletOptions(rawValue:  1 << 9)
+    public static let collapseAll = PamphletOptions(rawValue:  1 << 10)
     
     public static let `default`: PamphletOptions = [.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson]
 }
@@ -171,6 +173,8 @@ public struct PamphletOptions: OptionSet {
 public class PamphletFramework {
     
     var options = PamphletOptions.default
+    
+    var pamphletFilePath: String = ""
     
     public init() {
         if FileManager.default.fileExists(atPath: "/opt/homebrew/bin") {
@@ -226,7 +230,7 @@ public class PamphletFramework {
             #else
             public static func get(string member: String) -> StaticString? {
                 switch member {
-        {1}
+        {2}
                 default: break
                 }
                 return nil
@@ -237,7 +241,7 @@ public class PamphletFramework {
                     return nil
                 #else
                     switch member {
-        {2}
+        {3}
                     default: break
                     }
                     return nil
@@ -245,13 +249,13 @@ public class PamphletFramework {
             }
             public static func get(data member: String) -> Data? {
                 switch member {
-        {3}
+        {4}
                 default: break
                 }
                 return nil
             }
         }
-        {4}
+        {5}
         """
         
         let templateReleaseOnlySwift = """
@@ -269,20 +273,20 @@ public class PamphletFramework {
             }
             public static func get(gzip member: String) -> Data? {
                 switch member {
-        {2}
+        {3}
                 default: break
                 }
                 return nil
             }
             public static func get(data member: String) -> Data? {
                 switch member {
-        {3}
+        {4}
                 default: break
                 }
                 return nil
             }
         }
-        {4}
+        {5}
         """
         
         // ------------- KOTLIN -------------
@@ -304,19 +308,19 @@ public class PamphletFramework {
                     return null
                 } else {
                     return when (member) {
-        {2}
+        {3}
                         else -> null
                     }
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
                 return when (member) {
-        {3}
+        {4}
                     else -> null
                 }
             }
         }
-        {4}
+        {5}
         """
         
         
@@ -333,18 +337,18 @@ public class PamphletFramework {
             }
             fun getAsGzip(member: String): ByteArray? {
                 return when (member) {
-        {2}
+        {3}
                     else -> null
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
                 return when (member) {
-        {3}
+        {4}
                     else -> null
                 }
             }
         }
-        {4}
+        {5}
         """
         
         var fileHeader = "import Foundation\n\n// swiftlint:disable all\n\n"
@@ -363,13 +367,30 @@ public class PamphletFramework {
             }
         }
         
-        let textPagesCode = textPages.filter { _ in options.contains(.includeOriginal) }.map {
+        let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
                 return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)()"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                if $0.isStaticString {
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)().description"
+                } else {
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                }
             }
         }.joined(separator: "\n")
+        
+        let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
+            if options.contains(.kotlin) {
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)()"
+            } else {
+                if $0.isStaticString {
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                } else {
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                }
+            }
+        }.joined(separator: "\n")
+        
         let compressedPagesCode = textPages.filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
                 return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)Gzip()"
@@ -384,18 +405,24 @@ public class PamphletFramework {
                 return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
             }
         }.joined(separator: "\n")
-        do {
-            let template = options.contains(.releaseOnly) ? templateReleaseOnly : template
-            let swift = template << [
-                fileHeader,
-                textPagesCode,
-                compressedPagesCode,
-                dataPagesCode,
-                allDirectoryExtensions
-            ]
-            try swift.description.write(toFile: outFile, atomically: true, encoding: .utf8)
-        } catch {
-            fatalError("Processing failed for file: \(outFile)")
+
+        let pamphletTemplate = options.contains(.releaseOnly) ? templateReleaseOnly : template
+        let swift = pamphletTemplate << [
+            fileHeader,
+            textPagesCodeDebug,
+            textPagesCodeRelease,
+            compressedPagesCode,
+            dataPagesCode,
+            allDirectoryExtensions
+        ]
+        
+        if let stringData = swift.description.data(using: .utf8),
+           let handle = FileHandle(forWritingAtPath: outFile) {
+            if options.contains(.collapseAll) {
+                handle.seekToEndOfFile()
+            }
+            handle.write(stringData)
+            handle.closeFile()
         }
     }
     
@@ -723,8 +750,12 @@ public class PamphletFramework {
             }
         }
         
-        
         removeOldFiles(inDirectory, generateFilesDirectory, options.contains(.clean))
+        
+        pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
+        
+        try? FileManager.default.removeItem(atPath: pamphletFilePath)
+        try? "".write(toFile: pamphletFilePath, atomically: false, encoding: .utf8)
         
         let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                         includingPropertiesForKeys: resourceKeys,
@@ -775,7 +806,10 @@ public class PamphletFramework {
                     dataPages: dataPages)
         }
         
-        createPamphletFile(pamphletName, textPages.array, dataPages.array, generateFilesDirectory + "/\(pamphletName)\(options.fileExt())")
+        createPamphletFile(pamphletName,
+                           textPages.array,
+                           dataPages.array,
+                           pamphletFilePath)
     }
     
     private func process(directory: URL,
@@ -790,7 +824,7 @@ public class PamphletFramework {
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         
         let directoryPartialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
-        let directoryFilePath = FilePath(pamphletName, directoryPartialPath, options)
+        var directoryFilePath = FilePath(pamphletName, directoryPartialPath, options)
         
         var fileDirectoryPartialPath = directoryPartialPath.replacingOccurrences(of: "/", with: ".")
         if fileDirectoryPartialPath.hasPrefix(".") {
@@ -830,14 +864,27 @@ public class PamphletFramework {
 
                 let jsonDirectoryOutputPath = "\(outputDirectory)/\(directoryFilePath.fileName)\(options.fileExt())"
                 if let fileContent = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, true, options) {
-                    try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
+                    
+                    if options.contains(.collapseAll) {
+                        if let stringData = fileContent.data(using: .utf8),
+                           let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
+                            handle.seekToEndOfFile()
+                            handle.write(stringData)
+                            handle.closeFile()
+                        }
+                    } else {
+                        try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
+                    }
+                    
+                    directoryFilePath.isStaticString = true
+                    
                     textPages.append(directoryFilePath)
                 }
             }
             return
         }
         
-        if options.contains(.collapse) {
+        if options.contains(.collapse) || options.contains(.collapseAll) {
             // When we collapse a directory, all swift files in the directory go into a single files
             let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
             let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
@@ -901,7 +948,17 @@ public class PamphletFramework {
                 }
             }
             
-            try! collapsedContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+            
+            if options.contains(.collapseAll) {
+                if let stringData = collapsedContent.data(using: .utf8),
+                   let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
+                    handle.seekToEndOfFile()
+                    handle.write(stringData)
+                    handle.closeFile()
+                }
+            } else {
+                try! collapsedContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+            }
             
             return
         }
