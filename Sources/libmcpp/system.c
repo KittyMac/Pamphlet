@@ -43,6 +43,9 @@
 #include    "internal.H"
 #endif
 
+extern ssize_t  readlink(const char * __restrict, char * __restrict, size_t);
+extern char    *realpath(const char * __restrict, char * __restrict);
+
 #include "b64.h"
 
 #if     HOST_SYS_FAMILY == SYS_UNIX
