@@ -4,11 +4,18 @@ import libmcpp
 extension PamphletFramework {
     func git() -> String? {
         do {
-            let path = pathFor(executable: "gzip")
+            let path = pathFor(executable: "git")
+            
+            let repoPath = URL(fileURLWithPath: #file)
+                .deletingLastPathComponent().path
             
             let task = Process()
             task.executableURL = URL(fileURLWithPath: path)
-            task.arguments = ["describe"]
+            task.arguments = [
+                "-C",
+                repoPath,
+                "describe"
+            ]
             let inputPipe = Pipe()
             let outputPipe = Pipe()
             task.standardInput = inputPipe

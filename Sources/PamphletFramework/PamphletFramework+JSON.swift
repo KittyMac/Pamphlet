@@ -9,6 +9,12 @@ extension PamphletFramework {
             if (inFile.hasSuffix(".json")) {
                 let path = pathFor(executable: "jj")
                 
+                if warnJJ {
+                    warnJJ = false
+                    print("warning: \(path) not found")
+                }
+                
+                /*
                 if FileManager.default.fileExists(atPath: path) {
                     // If this is a javascript file and closure-compiler is installed
                     do {
@@ -40,7 +46,7 @@ extension PamphletFramework {
                         warnJJ = false
                         print("warning: \(path) not found")
                     }
-                }
+                }*/
             }
         }
     }

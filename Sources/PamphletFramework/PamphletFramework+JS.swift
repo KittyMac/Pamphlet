@@ -11,6 +11,15 @@ extension PamphletFramework {
                 let nodePath = pathFor(executable: "node")
                 let terserPath = pathFor(executable: "terser")
                 
+                if warnTerser {
+                    warnTerser = false
+                    print("warning: \(terserPath) not found")
+                }
+                
+                /*
+                let nodePath = pathFor(executable: "node")
+                let terserPath = pathFor(executable: "terser")
+                
                 if FileManager.default.fileExists(atPath: nodePath) &&
                     FileManager.default.fileExists(atPath: terserPath) {
                     do {
@@ -44,7 +53,7 @@ extension PamphletFramework {
                         print("warning: \(terserPath) not found")
                     }
                 }
-                
+                */
             }
         }
     }

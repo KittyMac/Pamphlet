@@ -3178,7 +3178,8 @@ found_name:
     
     if (parentFile != NULL) {
         // Add the directory for the parent file to the include list
-        char * parentFileName = dirname(parentFile->filename);
+        char * parentDirectory = strdup(parentFile->filename);
+        char * parentFileName = dirname(parentDirectory);
         //set_a_dir(parentFileName);
         
         int combinedLen = strlen(parentFileName) + strlen(filename) + 10;
@@ -3190,9 +3191,11 @@ found_name:
         if (open_include( combined, (delim == '"'), next)) {
             /* 'fname' should not be free()ed, it is used as file->         */
             /*      real_fname and has been registered into fnamelist[]     */
+            free(parentDirectory);
             return  TRUE;
         }
         
+        free(parentDirectory);
         free(combined);
     }else{
         if (open_include( filename, (delim == '"'), next)) {

@@ -41,7 +41,8 @@ void mcpp_help() {
 }
 char * mcpp_preprocessFile(const char * srcFile) {
     
-    char * directory = dirname(strdup(srcFile));
+    char * srcFileCopy = strdup(srcFile);
+    char * directory = dirname(srcFileCopy);
     
     char * argv[] = {
         "mcpp",
@@ -51,5 +52,8 @@ char * mcpp_preprocessFile(const char * srcFile) {
         (char *)srcFile,
         NULL
     };
-    return mcpp_lib_main(5, argv);
+    
+    char * retVal = mcpp_lib_main(5, argv);
+    free(srcFileCopy);
+    return retVal;
 }

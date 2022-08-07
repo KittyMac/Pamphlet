@@ -9,6 +9,12 @@ extension PamphletFramework {
             if inFile.hasSuffix(".css") || inFile.hasSuffix(".html") {
                 let path = pathFor(executable: "htmlcompressor")
                 
+                if warnHtmlCompressor {
+                    warnHtmlCompressor = false
+                    print("warning: \(path) not found")
+                }
+                
+                /*
                 if FileManager.default.fileExists(atPath: path) {
                     do {
                         let task = Process()
@@ -38,7 +44,7 @@ extension PamphletFramework {
                         warnHtmlCompressor = false
                         print("warning: \(path) not found")
                     }
-                }
+                }*/
             }
         }
     }

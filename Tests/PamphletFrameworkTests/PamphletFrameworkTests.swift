@@ -45,7 +45,7 @@ final class PamphletTests: XCTestCase {
                                     extensions: extensions,
                                     inDirectory: path(to: "Pamphlet"),
                                     outDirectory: "/tmp/Pamphlet",
-                                    options:[.clean, .collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])        
+                                    options:[.clean, .collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     /*
     func testProcessReleaseOnly() {
