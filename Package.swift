@@ -16,14 +16,15 @@ let package = Package(
     dependencies: [
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
+        .package(url: "https://github.com/1024jp/GzipSwift.git", branch: "develop"),
     ],
     targets: [
         .executableTarget(
             name: "Pamphlet",
             dependencies: [
                 "Hitch",
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                "PamphletFramework"
+                "PamphletFramework",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]
         ),
         .plugin(
@@ -33,7 +34,12 @@ let package = Package(
         ),
         .target(
             name: "PamphletFramework",
-            dependencies: ["Hitch", "libmcpp"]),
+            dependencies: [
+                "Hitch",
+                "libmcpp",
+                .product(name: "Gzip", package: "GzipSwift")
+            ]
+        ),
         .target(
             name: "libmcpp"),
         .testTarget(

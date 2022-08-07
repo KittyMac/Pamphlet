@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "gzipswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1024jp/GzipSwift.git",
+      "state" : {
+        "branch" : "develop",
+        "revision" : "e99ced22d05d7933377cd24cc147651f58948a65"
+      }
+    },
+    {
       "identity" : "hitch",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
