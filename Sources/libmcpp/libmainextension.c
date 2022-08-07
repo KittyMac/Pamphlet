@@ -32,6 +32,8 @@
 #include <libgen.h>
 #include <string.h>
 
+extern char    *strdup(const char *__s1);
+
 void mcpp_help() {
     char * argv[] = {
         "mcpp",
