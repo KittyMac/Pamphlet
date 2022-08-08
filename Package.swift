@@ -2,6 +2,27 @@
 
 import PackageDescription
 
+#if canImport(JavaScriptCore)
+let jxKitTargets: [Target] = [
+    .target(name: "JXKit")
+]
+#else
+let jxKitTargets: [Target] = [
+    .target(
+        name: "CJSCore",
+        linkerSettings: [
+            .linkedLibrary("javascriptcoregtk-4.0", .when(platforms: [.linux])),
+        ]
+    ),
+    .target(
+        name: "JXKit",
+        dependencies: [
+            "CJSCore"
+        ]
+    ),
+]
+#endif
+
 let package = Package(
     name: "Pamphlet",
     platforms: [
@@ -18,7 +39,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0")
     ],
-    targets: [
+    targets: jxKitTargets + [
         .executableTarget(
             name: "Pamphlet",
             dependencies: [
@@ -42,22 +63,8 @@ let package = Package(
             ]
         ),
         .target(
-            name: "libmcpp"),
-        
-        .target(
-            name: "CJSCore",
-            linkerSettings: [
-                .linkedLibrary("javascriptcoregtk-4.0", .when(platforms: [.linux])),
-            ]
+            name: "libmcpp"
         ),
-        .target(
-            name: "JXKit",
-            dependencies: [
-                "CJSCore"
-            ]
-        ),
-        
-        
         .testTarget(
             name: "PamphletFrameworkTests",
             dependencies: [
