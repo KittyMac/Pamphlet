@@ -1,5 +1,17 @@
 import Foundation
 
+struct RuntimeError: Error {
+    let message: String
+
+    init(_ message: String) {
+        self.message = message
+    }
+
+    public var localizedDescription: String {
+        return message
+    }
+}
+
 private let suppressDefaultValuesKey = CodingUserInfoKey(rawValue: "SuppressDefaultValues")!
 
 public extension Encodable {
@@ -34,7 +46,7 @@ public extension Data {
 public extension String {
     func decoded<T: Decodable>() throws -> T {
         guard let jsonData = self.data(using: .utf8) else {
-            throw "Unable to convert json String to Data"
+            throw RuntimeError("Unable to convert json String to Data")
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
