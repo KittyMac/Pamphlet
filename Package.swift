@@ -17,7 +17,7 @@ let package = Package(
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0"),
-        .package(url: "https://github.com/jectivex/JXKit.git", branch: "1.0.1")
+        .package(url: "https://github.com/jectivex/JXKit.git", from: "1.0.1")
     ],
     targets: [
         .executableTarget(
