@@ -15,8 +15,8 @@ import PackagePlugin
     private func copyFile(sourceFile: String,
                           destinationFile: String) {
         if modificationDate(filePath: destinationFile) < modificationDate(filePath: sourceFile) {
-            try? FileManager.default.copyItem(atPath: sourceFile,
-                                              toPath: destinationFile)
+            try? FileManager.default.createSymbolicLink(atPath: destinationFile,
+                                                        withDestinationPath: sourceFile)
         }
     }
     

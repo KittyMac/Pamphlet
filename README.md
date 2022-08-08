@@ -4,7 +4,7 @@ Pamphlet is a **Swift Package Manager Build Tool** for preprocessing, minifying 
 
 To use Pamphlet make sure you are using **Swift 5.6** or later and make the following changes to your Package.swift
 
-Add to your Package's dependencies:
+Add to your Package:
 
 ```swift
 dependencies: [
@@ -12,11 +12,14 @@ dependencies: [
 ]
 ```
 
-Add to your Target's plugins:
+Add to the desired Target:
 
 ```swift
+dependencies: [
+	.product(name: "PamphletFramework", package: "Pamphlet")
+]
 plugins: [
-    .plugin(name: "PamphletPlugin", package: "Pamphlet")
+	.plugin(name: "PamphletPlugin", package: "Pamphlet")
 ]
 ```
 
