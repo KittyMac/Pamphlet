@@ -46,7 +46,6 @@
 #include <sys/types.h>
 
 extern char    *strdup(const char *__s1);
-extern ssize_t  readlink(const char * __restrict, char * __restrict, size_t);
 extern char    *realpath(const char * __restrict, char * __restrict);
 
 #include "b64.h"
@@ -2516,18 +2515,6 @@ static char *   norm_path(
         len = strlen( slbuf1);
         strcat( slbuf1, fname);
         deref_syml( slbuf1, slbuf2, slbuf1 + len);
-                                /* Symbolic link check of directory */
-        if ((len = readlink( slbuf1, slbuf2, PATHMAX)) > 0) {
-            /* Dereference symbolic linked file (not directory) */
-            *(slbuf2 + len) = EOS;
-            cp1 = slbuf1;
-            if (slbuf2[ 0] != PATH_DELIM) {     /* Relative path    */
-                cp2 = strrchr( slbuf1, PATH_DELIM);
-                if (cp2)        /* Append to the source directory   */
-                    cp1 = cp2 + 1;
-            }
-            strcpy( cp1, slbuf2);
-        }
     }
     if (inf) {
         if (slbuf2[ 0])
@@ -2692,25 +2679,7 @@ static void     deref_syml(
 
     while ((chk_start = strchr( chk_start, PATH_DELIM)) != NULL) {
         *chk_start = EOS;
-        if ((len = readlink( slbuf1, slbuf2, PATHMAX)) > 0) {
-            /* Dereference symbolic linked directory    */
-            cp2 = strrchr( slbuf1, PATH_DELIM); /* Previous delimiter       */
-            *chk_start = PATH_DELIM;
-            strcpy( slbuf2 + len, chk_start);
-            if (slbuf2[ 0] == PATH_DELIM) {     /* Absolute path    */
-                strcpy( slbuf1, slbuf2);
-                chk_start = slbuf1 + len + 1;
-            } else {
-                if (cp2)
-                    chk_start = cp2 + 1;
-                else
-                    chk_start = slbuf1;
-                strcpy( chk_start, slbuf2);     /* Rewrite the path */
-                chk_start += len;
-            }
-        } else {
-            *chk_start++ = PATH_DELIM;
-        }
+        *chk_start++ = PATH_DELIM;
     }
 }
 #endif

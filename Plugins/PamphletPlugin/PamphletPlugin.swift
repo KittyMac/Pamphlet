@@ -35,6 +35,10 @@ import PackagePlugin
                                     try! FileManager.default.createDirectory(atPath: destinationDirectory,
                                                                              withIntermediateDirectories: true)
                                     
+                                    try? FileManager.default.createSymbolicLink(atPath: destinationPath,
+                                                                                withDestinationPath: sourcePath)
+                                    
+                                    /*
                                     if isDependency {
                                         try? FileManager.default.copyItem(atPath: sourcePath,
                                                                           toPath: destinationPath)
@@ -42,6 +46,7 @@ import PackagePlugin
                                         try? FileManager.default.createSymbolicLink(atPath: destinationPath,
                                                                                     withDestinationPath: sourcePath)
                                     }
+                                     */
                                 }
                                 
                                 inputFiles.append(PackagePlugin.Path(fileURL.path))
