@@ -90,7 +90,7 @@ struct Pamphlet: ParsableCommand {
         var inFile: String
         
         mutating func run() {
-            PamphletFramework().preprocess(inFile)
+            PamphletFramework().preprocess(file: inFile)
         }
     }
     

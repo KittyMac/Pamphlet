@@ -1,46 +1,52 @@
-# Pamphlet
+Pamphlet is a **Swift Package Manager Build Tool** for preprocessing, minifying and storing resource files in generated Swift code. Pamphlet supports Swift development on macOS and Linux.
 
-Pamphlet turns resource files into Swift code, allowing those resources to be easily embedded into your executable. Resource availability is then checked by the compiler, and will error if the resource is removed from the project.
+## Quick Start
 
-Regardless of file extension, if the file is can be loaded by String(contentsOfFile:) then it is saved and is accessible as a String or as a gzip'd version of said string.  If the file fails to be loaded as a string, then it is loaded using Data() and accessible as Data().
+To use Pamphlet make sure you are using **Swift 5.6** or later and make the following changes to your Package.swift
 
-Pamphlet also includes a built-in C/C++ preprocessor, which can be used for ANY text files processed by pamphlet. This is incredibly powerful, as it allows you to use the power of the preprocessor anywhere.  See the Preprocessor section for more details.
-
-For **DEBUG** builds, Pamphet will load the content from disk and not use the embedded content. This is particularly useful when you want resource reloading during development, but embedded resources during release.
-
-
-**Example**
-
-Let suppose we were making a simple web server where the contents of the server are compiled in using Pamphlet.  Our directory structure might look like this:
-
-```
-www  
-├── index.html  
-├── style.css  
-├── script.js  
-├── Images/  
-     ├── logo.png  
-```
-
-
-And Pamphlet could be called like this:
-
-```bash
-pamphlet generate /path/to/www ./Sources/server/ 
-```
-
-When finished, you would access the content in your Swift code like this:
+Add to your Package's dependencies:
 
 ```swift
+dependencies: [
+    .package(url: "https://github.com/KittyMac/Pamphlet.git", from: "0.2.0"),
+]
+```
+
+Add to your Target's plugins:
+
+```swift
+plugins: [
+    .plugin(name: "PamphletPlugin", package: "Pamphlet")
+]
+```
+
+Now when you build your Swift package the PamphletPlugin will **convert all files in the Pamphlet directory** of the target you assigned the plugin to.
+
+For example, let's pretend your project directory looks like this:
+
+```
+My Swift Project  
+├── Package.swift
+├── Sources
+	├── main.swift
+		├── Pamphlet
+			├── index.html  
+			├── style.css  
+			├── script.js  
+			├── Images/  
+				├── logo.png  
+```
+
+When you run ```swift build```, PamphletPlugin will generate a Pamphlet.swift which contains the processed contents of all resources in the Pamphlet directory. This allows you to access those resources elsewhere in your project like this:
+
+```swift
+// Direct access
 let html: String = Pamphlet.IndexHtml()
 let style: String = Pamphlet.StyleCss()
 let js: String = Pamphlet.ScriptJs()
 let logo: Data = Pamphlet.Images.LogoPng()
-```
 
-or you can look them up dynamically by their file name like this:
-
-```swift
+// Indirect access
 if let html = Pamphlet.get(string: "/index.html") {
     // use html
 }
@@ -53,83 +59,28 @@ if let logo = Pamphlet.get(data: "Images/logo.png") {
 ```
 
 
-The files that Pamphlet generates will look like these:
-
-*Pamphlet.swift*
-
-```swift
-public enum Pamphlet {
-    public static func get(string member: String) -> String? {
-        switch member {
-        case "/index.html": return Pamphlet.IndexHtml()
-        case "/script.js": return Pamphlet.ScriptJs()
-        case "/style.css": return Pamphlet.StyleCss()
-        default: break
-        }
-        return nil
-    }
-    public static func get(gzip member: String) -> Data? {
-        #if DEBUG
-            return nil
-        #else
-            switch member {
-            case "/index.html": return Pamphlet.IndexHtmlGzip()
-            case "/script.js": return Pamphlet.ScriptJsGzip()
-            case "/style.css": return Pamphlet.StyleCssGzip()
-            default: break
-            }
-            return nil
-        #endif
-    }
-    public static func get(data member: String) -> Data? {
-        switch member {
-        case "/Images/logo.png": return Pamphlet.Images.LogoPng()
-        default: break
-        }
-        return nil
-    }
-}
-public extension Pamphlet { enum Images { } }
-```
-
-*Pamphlet+index.html.swift*
-
-```swift
-import Foundation
-
-// swiftlint:disable all
-
-public extension Pamphlet {
-    static func IndexHtml() -> String {
-#if DEBUG
-if let contents = try? String(contentsOfFile:"/Volumes/Development/Development/chimerasw2/Pamphlet/meta/test/index.html") {
-    return contents
-}
-return "file not found"
-#else
-return ###"""
-<html>
-  <head>
-  </head>
-  <body>
-    Hello World!
-  </body>
-</html>
-
-"""###
-#endif
-}
-}
-"""###
-```
-
 ## Preprocessing
 
-Pamphlet includes a version of the powerful [mcpp](http://mcpp.sourceforge.net) preprocessor, a C99 compliant C/C++ preprocessor.  While this may seem perplexing, it instantly adds powerful template programming to any text-based files processed using Pamphlet.
+Pamphlet will minify several resource types automatically. This processing is done using well-known tools vendored inside Pamphlet for convenience (see Tools/tools.js).
+
+**HTML** -> [HTML Minifier Terser](https://github.com/terser/html-minifier-terser)
+
+**JavaScript** -> [Terser](https://github.com/terser/terser)
+
+**JSON** -> [JSON.minify](https://github.com/fkei/JSON.minify)
+
+**C Preprocessor** -> [mcpp](http://mcpp.sourceforge.net)
+
+### Hot loading when running in debug
+When debugging it is often desirable to reprocess the source content on the fly, instead of using the version generated at build time. Pamphlet will do this automatically for debug builds.
+
+## C Preprocessing (for any text file)
+
+Pamphlet includes a forked version of the powerful [mcpp](http://mcpp.sourceforge.net) preprocessor, a C99 compliant C/C++ preprocessor.  This feature instantly adds powerful preprocessing capabilities to any text-based files processed using Pamphlet. To add the C preprocessor to your file, simply start the file with ```#define PAMPHLET_PREPROCESSOR```
 
 **Example**
 
-Only files which start with ```#define PAMPHLET_PREPROCESSOR``` will be preprocessed, so there is no concern that the preprocessor might interfere with normal pamplet operation.
+Before preprocessing:
 
 ```
 #define PAMPHLET_PREPROCESSOR
@@ -147,7 +98,7 @@ Only files which start with ```#define PAMPHLET_PREPROCESSOR``` will be preproce
 </html>
 ```
 
-Would result in this preprocessed output:
+After preprocessing:
 
 ```
 <html>
@@ -162,9 +113,7 @@ Would result in this preprocessed output:
 </html>
 ```
 
-The preprocessed file is then stored in the generated Swift code.
 
-For **DEBUG** builds, Pamphet dynamically loaded content relies on the pamphlet existing on the development system at ```/usr/local/bin/pamphlet``` or .  When the resource is requested, its contents will be preprocessed using the CLI tool like this ```pamphlet preprocess /path/to/index.html```.
 
 ### Differences from standard C Preprocessor
 
@@ -218,23 +167,3 @@ Both result in:
 ```
 "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 ```
-
-## Additional Processing
-
-Pamphlet will perform the following additional pre-processing steps on specific file formats (if the associative tool is found to be installed on the system in either /usr/local/bin or /opt/homebrew/bin/).
-
-**.css** **.html**  
-htmlcompressor - minifies html and css content  
-```brew install htmlcompressor```
-
-**.js** **.ts**  
-terser - minifies JavaScript using [terser](https://github.com/terser/terser)  
-```
-brew install node
-npm install terser -g
-```
-
-**.json**    
-jj - minifies JSON content using [jj](https://github.com/tidwall/jj)  
-```brew install tidwall/jj/jj```
-
