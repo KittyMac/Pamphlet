@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1024jp/GzipSwift.git",
       "state" : {
-        "branch" : "develop",
-        "revision" : "e99ced22d05d7933377cd24cc147651f58948a65"
+        "revision" : "7a7f17761c76a932662ab77028a4329f67d645a4",
+        "version" : "5.2.0"
       }
     },
     {
@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "d23eb8308f44b813ac778e5f36a2b537a6eac9d8",
-        "version" : "0.4.25"
+        "revision" : "eec08edd53a0d433f707d241483e03e59becafe9",
+        "version" : "0.4.36"
       }
     },
     {
@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jectivex/JXKit.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "b1310c8a93cf862f9d673f52a025d4724475dd86"
+        "branch" : "1.0.1",
+        "revision" : "115ae6842f70a3d957017d7a86acd6d822733785"
       }
     },
     {
