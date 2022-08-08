@@ -2,24 +2,7 @@ import Foundation
 import PackagePlugin
 
 @main struct PamphletPlugin: BuildToolPlugin {
-    
-    private func modificationDate(filePath: String) -> Date {
-        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey]
-        let fileURL = URL(fileURLWithPath: filePath)
-        if let values = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
-            return values.contentModificationDate ?? Date.distantPast
-        }
-        return Date.distantPast
-    }
-    
-    private func copyFile(sourceFile: String,
-                          destinationFile: String) {
-        if modificationDate(filePath: destinationFile) < modificationDate(filePath: sourceFile) {
-            try? FileManager.default.createSymbolicLink(atPath: destinationFile,
-                                                        withDestinationPath: sourceFile)
-        }
-    }
-    
+        
     func gatherInputFiles(targets: [Target],
                           copyTo: String?,
                           inputFiles: inout [PackagePlugin.Path]) {
@@ -52,8 +35,8 @@ import PackagePlugin
                                                                              withIntermediateDirectories: true)
                                     
                                     
-                                    copyFile(sourceFile: sourcePath,
-                                             destinationFile: destinationPath)
+                                    try? FileManager.default.createSymbolicLink(atPath: destinationPath,
+                                                                                withDestinationPath: sourcePath)
                                 }
                                 
                                 inputFiles.append(PackagePlugin.Path(fileURL.path))
@@ -61,36 +44,6 @@ import PackagePlugin
                         }
                     } catch { print(error, fileURL) }
                 }
-            }
-        }
-    }
-    
-    func removeExtraFiles(from base: String,
-                          inputFiles: [PackagePlugin.Path]) {
-        // Recursively walk from path. Any file which does not exist in inputFiles should be removed.
-        
-        let url = URL(fileURLWithPath: base)
-        if let enumerator = FileManager.default.enumerator(at: url,
-                                                           includingPropertiesForKeys: [.isRegularFileKey],
-                                                           options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
-            for case let fileURL as URL in enumerator {
-                do {
-                    let fileAttributes = try fileURL.resourceValues(forKeys:[.isRegularFileKey])
-                    if fileAttributes.isRegularFile == true {
-                        
-                        let relativePath = "/Pamphlet/" + fileURL.path.replacingOccurrences(of: base, with: "")
-                        
-                        var hasInputFile = false
-                        for inputFile in inputFiles where inputFile.string.hasSuffix(relativePath) {
-                            hasInputFile = true
-                            break
-                        }
-                        
-                        if hasInputFile == false {
-                            try? FileManager.default.removeItem(at: fileURL)
-                        }
-                    }
-                } catch { print(error, fileURL) }
             }
         }
     }
@@ -105,6 +58,7 @@ import PackagePlugin
         
         let copiesDirectory = context.pluginWorkDirectory.string + "/Pamphlet/"
         
+        try? FileManager.default.removeItem(atPath: copiesDirectory)
         try? FileManager.default.createDirectory(atPath: copiesDirectory, withIntermediateDirectories: false)
         
         var inputFiles: [PackagePlugin.Path] = [
@@ -118,10 +72,7 @@ import PackagePlugin
         gatherInputFiles(targets: target.recursiveTargetDependencies,
                          copyTo: copiesDirectory,
                          inputFiles: &inputFiles)
-        
-        removeExtraFiles(from: copiesDirectory,
-                         inputFiles: inputFiles)
-                
+                        
         let outputFiles: [String] = [
             context.pluginWorkDirectory.string + "/Pamphlet.swift"
         ]
