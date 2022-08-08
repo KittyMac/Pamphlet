@@ -10,9 +10,13 @@ extension PamphletFramework {
             if (inFile.hasSuffix(".json")) {
                 let terserFunc = try! jxCtx.eval(script: "global.toolJSON")
                                 
-                fileContents = try! terserFunc.call(withArguments: [
+                if let callbackResults = try! terserFunc.call(withArguments: [
                     jxCtx.encode(fileContents)
-                ]).stringValue ?? fileContents
+                ]).stringValue {
+                    fileContents = callbackResults
+                } else {
+                    print("failed to minify \(inFile)")
+                }
             }
         }
     }

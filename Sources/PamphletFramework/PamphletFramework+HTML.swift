@@ -9,9 +9,8 @@ extension PamphletFramework {
         if options.contains(.minifyHtml) {
             if inFile.hasSuffix(".css") || inFile.hasSuffix(".html") {
                 
-                var callbackResults = fileContents
+                var callbackResults = "undefined"
                 let callback = JXValue(newFunctionIn: jxCtx) { context, this, arguments in
-                    print(inFile)
                     callbackResults = arguments[0].stringValue ?? "undefined"
                     return JXValue(undefinedIn: jxCtx)
                 }
@@ -22,6 +21,11 @@ extension PamphletFramework {
                     jxCtx.encode(fileContents),
                     callback
                 ])
+                
+                guard callbackResults != "undefined" else {
+                    print("failed to minify \(inFile)")
+                    return
+                }
                                 
                 fileContents = callbackResults
                 
