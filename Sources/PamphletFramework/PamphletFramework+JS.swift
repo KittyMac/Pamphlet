@@ -9,13 +9,13 @@ extension PamphletFramework {
             guard inFile.hasSuffix(".min.js") == false else { return }
             if (inFile.hasSuffix(".js")) {
                                 
-                var callbackResults = "undefined"
+                var callbackResults = fileContents
                 let callback = JXValue(newFunctionIn: jxCtx) { context, this, arguments in
                     callbackResults = arguments[0].stringValue ?? "undefined"
                     return JXValue(undefinedIn: jxCtx)
                 }
 
-                let terserFunc = try! jxCtx.eval(script: "global.toolTerserJS")
+                let terserFunc = try! jxCtx.eval(script: "global.toolJS")
                                 
                 try! terserFunc.call(withArguments: [
                     jxCtx.encode(fileContents),

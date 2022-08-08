@@ -1,28 +1,61 @@
-const { minify } = require('terser');
-const Minimize = require('minimize');
 const jsonminify = require("jsonminify");
+const { minify } = require('html-minifier-terser');
 
-const minifyHTML = new Minimize();
-
-global.toolTerserJS = function(content, callback) {
-        
+global.toolJS = function(content, callback) {
     var options = {
-        format: {
-            ascii_only: true
-        },
-        compress: {},
-        mangle: true
+        removeAttributeQuotes: true,
+        collapseWhitespace: true,
+        //minifyCSS: true,
+        minifyJS: true
     };
         
     minify(content, options).then( function($) {
-        callback($.code);
+        callback($);
     });
 }
 
-global.toolTerserHTML = function(content) {
-    return minifyHTML.parse(content);
+global.toolHTML = function(content, callback) {
+    var options = {
+        removeAttributeQuotes: true,
+        collapseWhitespace: true,
+        //minifyCSS: true,
+        minifyJS: true
+    };
+        
+    minify(content, options).then( function($) {
+        callback($);
+    });
 }
 
-global.toolTerserJSON = function(content) {
+global.toolJSON = function(content) {
     return jsonminify(content);
 }
+
+
+let sample = `
+<html>
+<head>
+    
+</head>
+<body>
+    <style>
+        p {
+        	color: red;
+        	text-align: center;
+        }
+    </style>
+    <script>
+        function helloWorld() {
+        	alert("Hello, World")
+        }
+
+
+        
+    </script>
+</body>
+</html>
+`;
+
+global.toolHTML(sample, function(result) {
+    console.log(result);
+})

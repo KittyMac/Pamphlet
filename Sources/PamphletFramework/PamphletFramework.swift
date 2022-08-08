@@ -191,8 +191,8 @@ public class PamphletFramework {
     let jxCtx = JXContext()
     
     public init() {
-        let _ = try? jxCtx.eval(script: "let global = {};")
-        let _ = try? jxCtx.eval(script: ToolsPamphlet.ToolsJs().description)
+        let _ = try! jxCtx.eval(script: "let global = {};")
+        let _ = try! jxCtx.eval(script: ToolsPamphlet.ToolsJs().description)
     }
     
     private func createPamphletFile(_ pamphletName: String,
