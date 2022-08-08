@@ -18,11 +18,8 @@ public class PamphletFramework {
     
     var pamphletFilePath: String = ""
     
-    let jxCtx = JXContext()
-    
     public init() {
-        let _ = try! jxCtx.eval(script: "let global = {};")
-        let _ = try! jxCtx.eval(script: ToolsPamphlet.ToolsJs().description)
+        
     }
     
     private func createPamphletFile(_ pamphletName: String,
@@ -296,9 +293,9 @@ public class PamphletFramework {
             }
         }
         
-        minifyHtml(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
-        minifyJs(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
-        minifyJson(jxCtx: jxCtx, inFile: inFile, fileContents: &fileContents)
+        minifyHtml(inFile: inFile, fileContents: &fileContents)
+        minifyJs(inFile: inFile, fileContents: &fileContents)
+        minifyJson(inFile: inFile, fileContents: &fileContents)
         
         return fileContents
     }

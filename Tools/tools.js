@@ -39,6 +39,6 @@ global.toolHTML = function(content, callback) {
     }
 }
 
-global.toolJSON = function(content) {
-    return jsonminify(content);
+global.toolJSON = function(content, callback) {
+    callback(jsonminify(content));
 }

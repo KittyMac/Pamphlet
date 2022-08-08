@@ -65192,8 +65192,8 @@ global.toolHTML = function(content, callback) {
     }
 }
 
-global.toolJSON = function(content) {
-    return jsonminify(content);
+global.toolJSON = function(content, callback) {
+    callback(jsonminify(content));
 }
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
