@@ -4,7 +4,8 @@ import PackagePlugin
 @main struct PamphletPlugin: BuildToolPlugin {
         
     func gatherInputFiles(targets: [Target],
-                          copyTo: String?,
+                          destinationDir: String?,
+                          isDependency: Bool,
                           inputFiles: inout [PackagePlugin.Path]) {
         
         for target in targets {
@@ -23,20 +24,24 @@ import PackagePlugin
                             // directory of their respective target
                             if fileURL.path.hasPrefix(base) {
                                 
-                                if let copyTo = copyTo {
+                                if let destinationDir = destinationDir {
                                     let relativePath = fileURL.path.replacingOccurrences(of: base, with: "")
                                     
                                     let sourcePath = fileURL.path
-                                    let destinationPath = copyTo + relativePath
+                                    let destinationPath = destinationDir + relativePath
                                     
                                     // ensure the directory path exists
                                     let destinationDirectory = URL(fileURLWithPath: destinationPath).deletingLastPathComponent().path
                                     try! FileManager.default.createDirectory(atPath: destinationDirectory,
                                                                              withIntermediateDirectories: true)
                                     
-                                    
-                                    try? FileManager.default.createSymbolicLink(atPath: destinationPath,
-                                                                                withDestinationPath: sourcePath)
+                                    if isDependency {
+                                        try? FileManager.default.copyItem(atPath: sourcePath,
+                                                                          toPath: destinationPath)
+                                    } else {
+                                        try? FileManager.default.createSymbolicLink(atPath: destinationPath,
+                                                                                    withDestinationPath: sourcePath)
+                                    }
                                 }
                                 
                                 inputFiles.append(PackagePlugin.Path(fileURL.path))
@@ -66,11 +71,13 @@ import PackagePlugin
         ]
         
         gatherInputFiles(targets: [target],
-                         copyTo: copiesDirectory,
+                         destinationDir: copiesDirectory,
+                         isDependency: false,
                          inputFiles: &inputFiles)
         
         gatherInputFiles(targets: target.recursiveTargetDependencies,
-                         copyTo: copiesDirectory,
+                         destinationDir: copiesDirectory,
+                         isDependency: true,
                          inputFiles: &inputFiles)
                         
         let outputFiles: [String] = [
