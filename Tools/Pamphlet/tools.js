@@ -65154,28 +65154,27 @@ function extend() {
 const jsonminify = require("jsonminify");
 const { minify } = require('html-minifier-terser');
 
+let terserOptions = {
+    removeAttributeQuotes: true,
+    collapseWhitespace: true,
+    //minifyCSS: true,
+    minifyJS: {
+        format: {
+            ascii_only: true
+        },
+        compress: {},
+        mangle: {}
+    }
+};
+
 global.toolJS = function(content, callback) {
-    var options = {
-        removeAttributeQuotes: true,
-        collapseWhitespace: true,
-        //minifyCSS: true,
-        minifyJS: true
-    };
-        
-    minify(content, options).then( function($) {
+    minify(content, terserOptions).then( function($) {
         callback($);
     });
 }
 
 global.toolHTML = function(content, callback) {
-    var options = {
-        removeAttributeQuotes: true,
-        collapseWhitespace: true,
-        //minifyCSS: true,
-        minifyJS: true
-    };
-        
-    minify(content, options).then( function($) {
+    minify(content, terserOptions).then( function($) {
         callback($);
     });
 }
@@ -65184,33 +65183,5 @@ global.toolJSON = function(content) {
     return jsonminify(content);
 }
 
-
-let sample = `
-<html>
-<head>
-    
-</head>
-<body>
-    <style>
-        p {
-        	color: red;
-        	text-align: center;
-        }
-    </style>
-    <script>
-        function helloWorld() {
-        	alert("Hello, World")
-        }
-
-
-        
-    </script>
-</body>
-</html>
-`;
-
-global.toolHTML(sample, function(result) {
-    console.log(result);
-})
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"html-minifier-terser":16,"jsonminify":142}]},{},[205]);
