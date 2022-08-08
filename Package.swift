@@ -16,8 +16,7 @@ let package = Package(
     dependencies: [
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0"),
-        .package(path: "JXKit")
+        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0")
     ],
     targets: [
         .executableTarget(
@@ -44,6 +43,21 @@ let package = Package(
         ),
         .target(
             name: "libmcpp"),
+        
+        .target(
+            name: "CJSCore",
+            linkerSettings: [
+                .linkedLibrary("javascriptcoregtk-4.0", .when(platforms: [.linux])),
+            ]
+        ),
+        .target(
+            name: "JXKit",
+            dependencies: [
+                "CJSCore"
+            ]
+        ),
+        
+        
         .testTarget(
             name: "PamphletFrameworkTests",
             dependencies: [

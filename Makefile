@@ -55,4 +55,5 @@ docker:
 	docker buildx build --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet .
 
 docker-shell:
+	docker pull kittymac/pamphlet
 	docker run --rm -it --entrypoint bash kittymac/pamphlet
