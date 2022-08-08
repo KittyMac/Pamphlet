@@ -31,7 +31,7 @@ let package = Package(
         .plugin(
             name: "PamphletPlugin",
             capability: .buildTool(),
-            dependencies: [ ]
+            dependencies: ["Pamphlet"]
         ),
         .target(
             name: "PamphletFramework",
