@@ -31,7 +31,8 @@ For example, let's pretend your project directory looks like this:
 My Swift Project  
 ├── Package.swift
 ├── Sources
-	├── main.swift
+	├── MyTarget
+		├── main.swift
 		├── Pamphlet
 			├── index.html  
 			├── style.css  
