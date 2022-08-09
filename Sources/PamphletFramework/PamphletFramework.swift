@@ -221,40 +221,40 @@ public class PamphletFramework {
         
         let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)()"
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
             } else {
                 if $0.isStaticString {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)().description"
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)().description"
                 } else {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
                 }
             }
         }.joined(separator: "\n")
         
         let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)()"
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
             } else {
                 if $0.isStaticString {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
                 } else {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
                 }
             }
         }.joined(separator: "\n")
         
         let compressedPagesCode = textPages.filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)Gzip()"
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)Gzip()"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariableName)Gzip()"
+                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)Gzip()"
             }
         }.joined(separator: "\n")
         let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariableName)()"
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariableName)()"
+                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
             }
         }.joined(separator: "\n")
 
@@ -342,14 +342,14 @@ public class PamphletFramework {
                 
                 scratch.append("    #else\n")
                 scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
-                scratch.append("        return uncompressed\(path.variableName)\n")
+                scratch.append("        return uncompressed\(path.fullVariableName)\n")
                 scratch.append("    }\n")
                 scratch.append("    #endif\n")
                 
             } else {
                 
                 scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
-                scratch.append("        return uncompressed\(path.variableName)\n")
+                scratch.append("        return uncompressed\(path.fullVariableName)\n")
                 scratch.append("    }\n")
             }
             
@@ -358,11 +358,11 @@ public class PamphletFramework {
         if compressed != nil && options.contains(.includeGzip) {
             if options.contains(.kotlin) {
                 scratch.append("fun Pamphlet.\(path.variableName)Gzip(): ByteArray {\n")
-                scratch.append("    return compressed\(path.variableName)\n")
+                scratch.append("    return compressed\(path.fullVariableName)\n")
                 scratch.append("}\n")
             } else {
                 scratch.append("    static func \(path.variableName)Gzip() -> Data {\n")
-                scratch.append("        return compressed\(path.variableName)\n")
+                scratch.append("        return compressed\(path.fullVariableName)\n")
                 scratch.append("    }\n")
             }
         }
@@ -377,23 +377,23 @@ public class PamphletFramework {
         if let uncompressed = uncompressed, options.contains(.includeOriginal) {
             if dataType == "String" {
                 if options.contains(.kotlin) {
-                    scratch.append("private val uncompressed\(path.variableName) = \"\n\(uncompressed)\n\"\n")
+                    scratch.append("private val uncompressed\(path.fullVariableName) = \"\n\(uncompressed)\n\"\n")
                 } else {
-                    scratch.append("private let uncompressed\(path.variableName): StaticString = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
+                    scratch.append("private let uncompressed\(path.fullVariableName): StaticString = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
                 }
             } else {
                 if options.contains(.kotlin) {
-                    scratch.append("private val uncompressed\(path.variableName) = Base64.decode(\"\(uncompressed)\", Base64.DEFAULT)\n")
+                    scratch.append("private val uncompressed\(path.fullVariableName) = Base64.decode(\"\(uncompressed)\", Base64.DEFAULT)\n")
                 } else {
-                    scratch.append("private let uncompressed\(path.variableName) = Data(base64Encoded:\"\(uncompressed)\")!\n")
+                    scratch.append("private let uncompressed\(path.fullVariableName) = Data(base64Encoded:\"\(uncompressed)\")!\n")
                 }
             }
         }
         if let compressed = compressed, options.contains(.includeGzip) {
             if options.contains(.kotlin) {
-                scratch.append("private val compressed\(path.variableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n")
+                scratch.append("private val compressed\(path.fullVariableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n")
             } else {
-                scratch.append("private let compressed\(path.variableName) = Data(base64Encoded:\"\(compressed)\")!\n")
+                scratch.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n")
             }
         }
         

@@ -69,6 +69,7 @@ struct FilePath {
     let fileName: String
     let fullVariableName: String
     let variableName: String
+    let fullVariablePath: String
     let swiftFileName: String
     let extensionName: String
     let parentExtensionName: String
@@ -104,11 +105,7 @@ struct FilePath {
         swiftFileName = scratch
         
         // variable name
-        scratch.removeAll(keepingCapacity: true)
-        for part in parts {
-            scratch.append(part)
-        }
-        variableName = scratch
+        variableName = toVariableName(fileName)
         
         // extensionName
         scratch.removeAll(keepingCapacity: true)
@@ -139,13 +136,21 @@ struct FilePath {
         
         // fullVariableName
         scratch.removeAll(keepingCapacity: true)
+        for part in parts.dropLast() {
+            scratch.append(part)
+        }
+        scratch.append(variableName)
+        fullVariableName = scratch
+        
+        // fullVariablePath
+        scratch.removeAll(keepingCapacity: true)
         scratch.append("\(pamphletName).")
         for part in parts.dropLast() {
             scratch.append(part)
             scratch.append(".")
         }
         scratch.append(variableName)
-        fullVariableName = scratch
+        fullVariablePath = scratch
     }
     
     private func fileNameToVariableName(_ fileName: String) -> String {
