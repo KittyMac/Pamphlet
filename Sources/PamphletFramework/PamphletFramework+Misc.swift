@@ -104,7 +104,11 @@ struct FilePath {
         swiftFileName = scratch
         
         // variable name
-        variableName = toVariableName(fileName)
+        scratch.removeAll(keepingCapacity: true)
+        for part in parts {
+            scratch.append(part)
+        }
+        variableName = scratch
         
         // extensionName
         scratch.removeAll(keepingCapacity: true)
