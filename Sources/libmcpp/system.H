@@ -289,7 +289,7 @@ typedef long            expr_t;
 #define NMACWORK            (NWORK * 4) /* Must be NWORK * 2 <= NMACWORK    */
 #endif
 #ifndef SBSIZE
-#define SBSIZE              0x400
+#define SBSIZE              1048576
 #endif
 #ifndef MKDEP_INIT
 #define MKDEP_INIT          0x100
