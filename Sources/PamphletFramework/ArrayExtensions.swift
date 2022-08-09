@@ -1,6 +1,7 @@
 import Foundation
 
 public class BoxedArray<T>: MutableCollection {
+    var lock = NSLock()
     var array: [T]
 
     public init() {
@@ -8,22 +9,32 @@ public class BoxedArray<T>: MutableCollection {
     }
 
     public var startIndex: Int {
+        lock.lock(); defer { lock.unlock() }
         return array.startIndex
     }
     public var endIndex: Int {
+        lock.lock(); defer { lock.unlock() }
         return array.endIndex
     }
     public func index(after idx: Int) -> Int {
-        array.index(after: idx)
+        lock.lock(); defer { lock.unlock() }
+        return array.index(after: idx)
     }
 
     public func append(_ value: T) {
+        lock.lock(); defer { lock.unlock() }
         array.append(value)
     }
 
     public subscript (index: Int) -> T {
-        get { return array[index] }
-        set(newValue) { array[index] = newValue }
+        get {
+            lock.lock(); defer { lock.unlock() }
+            return array[index]
+        }
+        set(newValue) {
+            lock.lock(); defer { lock.unlock() }
+            array[index] = newValue
+        }
     }
 }
 

@@ -31,6 +31,8 @@
 #include    "internal.H"
 #include <libgen.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 extern char    *strdup(const char *__s1);
 
@@ -42,21 +44,61 @@ void mcpp_help() {
     };
     mcpp_lib_main(2, argv);
 }
-char * mcpp_preprocessFile(const char * srcFile) {
-    
-    char * srcFileCopy = strdup(srcFile);
-    char * directory = dirname(srcFileCopy);
-    
+
+
+void * mcpp_thread(void * mcpp_source_file) {
+    char * srcFile = strdup(mcpp_source_file);
+    char * srcFileCopy = strdup(mcpp_source_file);
+            
     char * argv[] = {
         "mcpp",
         "-NPCk",
         "-I",
-        (char *)directory,
+        (char *)dirname(srcFileCopy),
         (char *)srcFile,
         NULL
     };
     
-    char * retVal = mcpp_lib_main(5, argv);
+    char * result = mcpp_lib_main(5, argv);
+    
+    free(srcFile);
     free(srcFileCopy);
-    return retVal;
+    
+    return result;
+}
+
+pthread_mutex_t mcppLock = PTHREAD_MUTEX_INITIALIZER;
+
+const char * mcpp_preprocessFile(const char * srcFile) {
+    
+    pthread_mutex_lock(&mcppLock);
+    
+    pthread_t thread_tid = 0;
+    
+    struct rlimit limit;
+    pthread_attr_t attr;
+    pthread_attr_t* attr_p = &attr;
+    pthread_attr_init(attr_p);
+    
+    // Some systems, e.g., macOS, hav a different default default
+    // stack size than the typical system's RLIMIT_STACK.
+    // Let's use RLIMIT_STACK's current limit if it is sane.
+    if(getrlimit(RLIMIT_STACK, &limit) == 0 &&
+       limit.rlim_cur != RLIM_INFINITY &&
+       limit.rlim_cur >= PTHREAD_STACK_MIN)
+    {
+        pthread_attr_setstacksize(&attr, (size_t)limit.rlim_cur);
+    } else {
+        attr_p = NULL;
+    }
+    
+    pthread_create(&thread_tid, attr_p, mcpp_thread, (void *)srcFile);
+    pthread_attr_destroy(&attr);
+    
+    void * result;
+    pthread_join(thread_tid, &result);
+    
+    pthread_mutex_unlock(&mcppLock);
+    
+    return result;
 }

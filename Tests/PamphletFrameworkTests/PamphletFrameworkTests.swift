@@ -10,7 +10,7 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
-        
+            
     func testProcessCollapseAll() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,

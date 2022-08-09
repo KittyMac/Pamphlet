@@ -14,6 +14,8 @@ public class PamphletFramework {
     
     """
     
+    private var writeLock = NSLock()
+    
     var options = PamphletOptions.default
     
     var pamphletFilePath: String = ""
@@ -517,6 +519,234 @@ public class PamphletFramework {
         }
     }
     
+    private func process(directory: URL,
+                         files: BoxedArray<URL>,
+                         pamphletName: String,
+                         pamphletExecPathValues: URLResourceValues,
+                         inDirectoryFullPath: String,
+                         generateFilesDirectory: String,
+                         options: PamphletOptions,
+                         textPages: BoxedArray<FilePath>,
+                         dataPages: BoxedArray<FilePath>) {
+        
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
+        
+        let directoryPartialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
+        var directoryFilePath = FilePath(pamphletName, directoryPartialPath, options)
+        
+        var fileDirectoryPartialPath = directoryPartialPath.replacingOccurrences(of: "/", with: ".")
+        if fileDirectoryPartialPath.hasPrefix(".") {
+            fileDirectoryPartialPath = String(fileDirectoryPartialPath.dropFirst())
+        }
+        if fileDirectoryPartialPath == "" {
+            fileDirectoryPartialPath = "Pamphlet"
+        }
+        
+        if directory.pathExtension == "json" {
+            // Pamphlet has a rule that if a directory ends in ".json", the files in said directory should be
+            // preprocessed but then stored in a pamphlet file named the same as the directory itself.
+            // For example:
+            // en.json -|
+            //          - main.md
+            //          - supplemental.md
+            //
+            // Will generate one pamphlet entry called EnJson.  That entry itself will have json content like this:
+            //
+            // { "main.md": "<content of main.md>", "supplemental.md": "<content of supplemental.md>" }
+            let jsonDirectory = JsonDirectory()
+            for fileURL in files {
+                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+                let filePath = FilePath(pamphletName, partialPath, options)
+                
+                if let fileContent = fileContentsForTextFile(fileURL.path) {
+                    jsonDirectory.files[filePath.fileName] = fileContent
+                } else if let fileContent = fileContentsForDataFile(fileURL.path) {
+                    jsonDirectory.files[filePath.fileName] = fileContent
+                } else {
+                    fatalError("Processing failed for file: \(fileURL.path)")
+                }
+            }
+            if let jsonDirectoryEncoded = try? jsonDirectory.json() {
+                let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + directoryPartialPath).deletingLastPathComponent().path
+                try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+
+                let jsonDirectoryOutputPath = "\(outputDirectory)/\(directoryFilePath.fileName)\(options.fileExt())"
+                if let fileContent = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, true, options) {
+                    
+                    if options.contains(.collapseAll) {
+                        if let stringData = fileContent.data(using: .utf8),
+                           let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
+                            handle.seekToEndOfFile()
+                            handle.write(stringData)
+                            handle.closeFile()
+                        }
+                    } else {
+                        try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
+                    }
+                    
+                    directoryFilePath.isStaticString = true
+                    
+                    textPages.append(directoryFilePath)
+                }
+            }
+            return
+        }
+        
+        if options.contains(.collapse) || options.contains(.collapseAll) {
+            // When we collapse a directory, all swift files in the directory go into a single files
+            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
+            let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
+            
+            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+                        
+            // 0. check for skipping
+            var shouldSkipAll = true
+            for fileURL in files {
+                var shouldSkip = false
+                if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
+                    // We need to check the main source output file, but also any files which are #include to this one
+                    // and any and all files #included from the dependencies
+                    shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
+                    if !shouldSkip {
+                        //print("DATE CHECK FAILED: \(fileURL.path)")
+                    }
+                    // also check against the modification date of pamphlet itself
+                    if shouldSkip {
+                        shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                    }
+                }
+                if shouldSkip == false {
+                    shouldSkipAll = false
+                    break
+                }
+            }
+            
+            if shouldSkipAll {
+                // Even if we skip generating files, we need to note them so that they are added to the
+                // Pamphlet.swift file
+                for fileURL in files {
+                    let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+                    let filePath = FilePath(pamphletName, partialPath, options)
+                    if let _ = try? String(contentsOfFile: fileURL.path) {
+                        textPages.append(filePath)
+                    } else {
+                        dataPages.append(filePath)
+                    }
+                }
+                return
+            }
+                        
+            // 1. at least one file was updated, regenerate all of the files
+            var collapsedContent = ""
+            var includeHeader = true
+            for fileURL in files {
+                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+                let filePath = FilePath(pamphletName, partialPath, options)
+                
+                if let fileContent = processTextFile(filePath, fileURL.path, includeHeader, options) {
+                    collapsedContent += fileContent + "\n"
+                    textPages.append(filePath)
+                    includeHeader = false
+                } else if let fileContent = processDataFile(filePath, fileURL.path, includeHeader, options) {
+                    collapsedContent += fileContent + "\n"
+                    dataPages.append(filePath)
+                    includeHeader = false
+                } else {
+                    fatalError("Processing failed for file: \(fileURL.path)")
+                }
+            }
+            
+            
+            if options.contains(.collapseAll) {
+                writeLock.lock()
+                if let stringData = collapsedContent.data(using: .utf8),
+                   let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
+                    handle.seekToEndOfFile()
+                    handle.write(stringData)
+                    handle.closeFile()
+                }
+                writeLock.unlock()
+            } else {
+                try! collapsedContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+            }
+            
+            return
+        }
+        
+        
+        
+        // normal processing: each file is matched to its own generated .swift file
+        for fileURL in files {
+            let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+            let filePath = FilePath(pamphletName, partialPath, options)
+            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
+            let outputFile = "\(outputDirectory)/\(filePath.fileName)\(options.fileExt())"
+
+            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
+            
+            var shouldSkip = false
+            if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
+                // We need to check the main source output file, but also any files which are #include to this one
+                // and any and all files #included from the dependencies
+                shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
+                if !shouldSkip {
+                    //print("DATE CHECK FAILED: \(fileURL.path)")
+                }
+                // also check against the modification date of pamphlet itself
+                if shouldSkip {
+                    shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
+                }
+            }
+            
+            if shouldSkip == false {
+                if let fileContent = processTextFile(filePath, fileURL.path, true, options) {
+                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                    textPages.append(filePath)
+                } else if let fileContent = processDataFile(filePath, fileURL.path, true, options) {
+                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                    dataPages.append(filePath)
+                } else {
+                    fatalError("Processing failed for file: \(fileURL.path)")
+                }
+            } else {
+                // Even if we skip, we still need to add to the textPages and dataPages...
+                if let _ = try? String(contentsOfFile: fileURL.path) {
+                    textPages.append(filePath)
+                } else {
+                    dataPages.append(filePath)
+                }
+            }
+            
+        }
+    }
+    
+    private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
+        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey]
+        let fileURL = URL(fileURLWithPath: filePath)
+        if let values = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
+            if values.contentModificationDate! > date {
+                return false
+            }
+        }
+        // Load the file and find all dependencies
+        if let fileContents = try? String(contentsOfFile: filePath) {
+            var includedFiles:[String] = []
+            fileContents.matches(#"#include\s*<([^>]*)>"#) { (result, groups) in
+                includedFiles.append(groups[1])
+            }
+            
+            for otherFilePath in includedFiles {
+                if !self.shouldSkipFile(date, fileURL.deletingLastPathComponent().appendingPathComponent(otherFilePath).path) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    
+    // MARK: - PUBLIC API
+    
     @discardableResult
     public func preprocess(file inFile: String) -> String {
         var result: String = ""
@@ -633,18 +863,26 @@ public class PamphletFramework {
             }
         }
         
+        
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
+        
         for directoryURL in filesByDirectory.keys {
             guard let files = filesByDirectory[directoryURL] else { continue }
-            process(directory: directoryURL,
-                    files: files,
-                    pamphletName: pamphletName,
-                    pamphletExecPathValues: pamphletExecPathValues,
-                    inDirectoryFullPath: inDirectoryFullPath,
-                    generateFilesDirectory: generateFilesDirectory,
-                    options: options,
-                    textPages: textPages,
-                    dataPages: dataPages)
+            queue.addOperation {
+                self.process(directory: directoryURL,
+                             files: files,
+                             pamphletName: pamphletName,
+                             pamphletExecPathValues: pamphletExecPathValues,
+                             inDirectoryFullPath: inDirectoryFullPath,
+                             generateFilesDirectory: generateFilesDirectory,
+                             options: options,
+                             textPages: textPages,
+                             dataPages: dataPages)
+            }
         }
+        
+        queue.waitUntilAllOperationsAreFinished()
         
         for directory in allDirectories {
             let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
@@ -658,227 +896,4 @@ public class PamphletFramework {
                            directoryPages.array,
                            pamphletFilePath)
     }
-    
-    private func process(directory: URL,
-                         files: BoxedArray<URL>,
-                         pamphletName: String,
-                         pamphletExecPathValues: URLResourceValues,
-                         inDirectoryFullPath: String,
-                         generateFilesDirectory: String,
-                         options: PamphletOptions,
-                         textPages: BoxedArray<FilePath>,
-                         dataPages: BoxedArray<FilePath>) {
-        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
-        
-        let directoryPartialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
-        var directoryFilePath = FilePath(pamphletName, directoryPartialPath, options)
-        
-        var fileDirectoryPartialPath = directoryPartialPath.replacingOccurrences(of: "/", with: ".")
-        if fileDirectoryPartialPath.hasPrefix(".") {
-            fileDirectoryPartialPath = String(fileDirectoryPartialPath.dropFirst())
-        }
-        if fileDirectoryPartialPath == "" {
-            fileDirectoryPartialPath = "Pamphlet"
-        }
-        
-        if directory.pathExtension == "json" {
-            // Pamphlet has a rule that if a directory ends in ".json", the files in said directory should be
-            // preprocessed but then stored in a pamphlet file named the same as the directory itself.
-            // For example:
-            // en.json -|
-            //          - main.md
-            //          - supplemental.md
-            //
-            // Will generate one pamphlet entry called EnJson.  That entry itself will have json content like this:
-            //
-            // { "main.md": "<content of main.md>", "supplemental.md": "<content of supplemental.md>" }
-            let jsonDirectory = JsonDirectory()
-            for fileURL in files {
-                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                let filePath = FilePath(pamphletName, partialPath, options)
-                
-                if let fileContent = fileContentsForTextFile(fileURL.path) {
-                    jsonDirectory.files[filePath.fileName] = fileContent
-                } else if let fileContent = fileContentsForDataFile(fileURL.path) {
-                    jsonDirectory.files[filePath.fileName] = fileContent
-                } else {
-                    fatalError("Processing failed for file: \(fileURL.path)")
-                }
-            }
-            if let jsonDirectoryEncoded = try? jsonDirectory.json() {
-                let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + directoryPartialPath).deletingLastPathComponent().path
-                try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-
-                let jsonDirectoryOutputPath = "\(outputDirectory)/\(directoryFilePath.fileName)\(options.fileExt())"
-                if let fileContent = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, true, options) {
-                    
-                    if options.contains(.collapseAll) {
-                        if let stringData = fileContent.data(using: .utf8),
-                           let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
-                            handle.seekToEndOfFile()
-                            handle.write(stringData)
-                            handle.closeFile()
-                        }
-                    } else {
-                        try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
-                    }
-                    
-                    directoryFilePath.isStaticString = true
-                    
-                    textPages.append(directoryFilePath)
-                }
-            }
-            return
-        }
-        
-        if options.contains(.collapse) || options.contains(.collapseAll) {
-            // When we collapse a directory, all swift files in the directory go into a single files
-            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
-            let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
-            
-            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-            
-            // 0. check for skipping
-            var shouldSkipAll = true
-            for fileURL in files {
-                var shouldSkip = false
-                if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                    // We need to check the main source output file, but also any files which are #include to this one
-                    // and any and all files #included from the dependencies
-                    shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                    if !shouldSkip {
-                        //print("DATE CHECK FAILED: \(fileURL.path)")
-                    }
-                    // also check against the modification date of pamphlet itself
-                    if shouldSkip {
-                        shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                    }
-                }
-                if shouldSkip == false {
-                    shouldSkipAll = false
-                    break
-                }
-            }
-            
-            if shouldSkipAll {
-                // Even if we skip generating files, we need to note them so that they are added to the
-                // Pamphlet.swift file
-                for fileURL in files {
-                    let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                    let filePath = FilePath(pamphletName, partialPath, options)
-                    if let _ = try? String(contentsOfFile: fileURL.path) {
-                        textPages.append(filePath)
-                    } else {
-                        dataPages.append(filePath)
-                    }
-                }
-                return
-            }
-            
-            // 1. at least one file was updated, regenerate all of the files
-            var collapsedContent = ""
-            var includeHeader = true
-            for fileURL in files {
-                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                let filePath = FilePath(pamphletName, partialPath, options)
-                
-                if let fileContent = processTextFile(filePath, fileURL.path, includeHeader, options) {
-                    collapsedContent += fileContent + "\n"
-                    textPages.append(filePath)
-                    includeHeader = false
-                } else if let fileContent = processDataFile(filePath, fileURL.path, includeHeader, options) {
-                    collapsedContent += fileContent + "\n"
-                    dataPages.append(filePath)
-                    includeHeader = false
-                } else {
-                    fatalError("Processing failed for file: \(fileURL.path)")
-                }
-            }
-            
-            
-            if options.contains(.collapseAll) {
-                if let stringData = collapsedContent.data(using: .utf8),
-                   let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
-                    handle.seekToEndOfFile()
-                    handle.write(stringData)
-                    handle.closeFile()
-                }
-            } else {
-                try! collapsedContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-            }
-            
-            return
-        }
-        
-        
-        
-        // normal processing: each file is matched to its own generated .swift file
-        for fileURL in files {
-            let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-            let filePath = FilePath(pamphletName, partialPath, options)
-            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
-            let outputFile = "\(outputDirectory)/\(filePath.fileName)\(options.fileExt())"
-
-            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-            
-            var shouldSkip = false
-            if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                // We need to check the main source output file, but also any files which are #include to this one
-                // and any and all files #included from the dependencies
-                shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                if !shouldSkip {
-                    //print("DATE CHECK FAILED: \(fileURL.path)")
-                }
-                // also check against the modification date of pamphlet itself
-                if shouldSkip {
-                    shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                }
-            }
-            
-            if shouldSkip == false {
-                if let fileContent = processTextFile(filePath, fileURL.path, true, options) {
-                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                    textPages.append(filePath)
-                } else if let fileContent = processDataFile(filePath, fileURL.path, true, options) {
-                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                    dataPages.append(filePath)
-                } else {
-                    fatalError("Processing failed for file: \(fileURL.path)")
-                }
-            } else {
-                // Even if we skip, we still need to add to the textPages and dataPages...
-                if let _ = try? String(contentsOfFile: fileURL.path) {
-                    textPages.append(filePath)
-                } else {
-                    dataPages.append(filePath)
-                }
-            }
-            
-        }
-    }
-    
-    private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
-        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey]
-        let fileURL = URL(fileURLWithPath: filePath)
-        if let values = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
-            if values.contentModificationDate! > date {
-                return false
-            }
-        }
-        // Load the file and find all dependencies
-        if let fileContents = try? String(contentsOfFile: filePath) {
-            var includedFiles:[String] = []
-            fileContents.matches(#"#include\s*<([^>]*)>"#) { (result, groups) in
-                includedFiles.append(groups[1])
-            }
-            
-            for otherFilePath in includedFiles {
-                if !self.shouldSkipFile(date, fileURL.deletingLastPathComponent().appendingPathComponent(otherFilePath).path) {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-    
 }
