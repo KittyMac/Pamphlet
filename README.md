@@ -8,19 +8,22 @@ Add to your Package:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/KittyMac/Pamphlet.git", from: "0.2.0"),
+    .package(url: "https://github.com/KittyMac/Pamphlet.git", from: "0.3.0"),
 ]
 ```
 
 Add to the desired Target:
 
 ```swift
-dependencies: [
-	.product(name: "PamphletFramework", package: "Pamphlet")
-]
-plugins: [
-	.plugin(name: "PamphletPlugin", package: "Pamphlet")
-]
+.target(
+	...
+	dependencies: [
+		.product(name: "PamphletFramework", package: "Pamphlet")
+	],
+	plugins: [
+		.plugin(name: "PamphletPlugin", package: "Pamphlet")
+	]
+)
 ```
 
 Now when you build your Swift package the PamphletPlugin will **convert all files in the Pamphlet directory** of the target you assigned the plugin to.
