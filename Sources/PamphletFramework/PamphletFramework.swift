@@ -747,6 +747,26 @@ public class PamphletFramework {
     
     // MARK: - PUBLIC API
     
+    private func measure(message: String, _ block: ()->()) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        block()
+        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        
+        let log = "[\(timeElapsed)s] \(message)\n"
+        let logPath = "/tmp/Pamphlet.log"
+        
+        if FileManager.default.fileExists(atPath: logPath) == false {
+            try? "".write(toFile: logPath, atomically: false, encoding: .utf8)
+        }
+        
+        if let stringData = log.data(using: .utf8),
+           let handle = FileHandle(forWritingAtPath: logPath) {
+            handle.seekToEndOfFile()
+            handle.write(stringData)
+            handle.closeFile()
+        }
+    }
+    
     @discardableResult
     public func preprocess(file inFile: String) -> String {
         var result: String = ""
@@ -788,112 +808,116 @@ public class PamphletFramework {
                         outDirectory: String,
                         options: PamphletOptions) {
         
-        self.options = options
-        
-        let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
-        
-        let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
-        var generateFilesDirectory = outDirectory
-        
-        let pamphletExecPath = ProcessInfo.processInfo.arguments[0]
-        guard let pamphletExecPathValues = try? URL(fileURLWithPath: pamphletExecPath).resourceValues(forKeys: Set(resourceKeys)) else { fatalError() }
-        
-        try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
-        
-        if options.contains(.swiftpm) && options.contains(.kotlin) == false {
-            // We assume that the output directory is where we want the Package.swft,
-            // so we need to create the Sources/ and Sources/Pamphlet directories
-            // and store the generated files in there
-            generateFilesDirectory = outDirectory + "/Sources/" + pamphletName
+        measure(message: inDirectory) {
+            self.options = options
+            
+            let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
+            
+            let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
+            var generateFilesDirectory = outDirectory
+            
+            let pamphletExecPath = ProcessInfo.processInfo.arguments[0]
+            guard let pamphletExecPathValues = try? URL(fileURLWithPath: pamphletExecPath).resourceValues(forKeys: Set(resourceKeys)) else { fatalError() }
+            
             try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
             
-            // Generate a Package.swift
-            let packageSwiftPath = outDirectory + "/Package.swift"
-            if !processPackageSwift(pamphletName, packageSwiftPath) {
-                fatalError("Unable to create Package.swift at \(packageSwiftPath)")
-            }
-        }
-        
-        removeOldFiles(inDirectory, generateFilesDirectory, options.contains(.clean))
-        
-        pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
-        
-        try? FileManager.default.removeItem(atPath: pamphletFilePath)
-        try? "".write(toFile: pamphletFilePath, atomically: false, encoding: .utf8)
-        
-        let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
-                                                        includingPropertiesForKeys: resourceKeys,
-                                                        options: [.skipsHiddenFiles],
-                                                        errorHandler: { (url, error) -> Bool in
-                                                            print("directoryEnumerator error at \(url): ", error)
-                                                            return true
-        })!
-        
-        let textPages = BoxedArray<FilePath>()
-        let dataPages = BoxedArray<FilePath>()
-        let directoryPages = BoxedArray<FilePath>()
-        
-        //print("in: " + inDirectory)
-        //print("out: " + generateFilesDirectory)
-        
-        let inDirectoryFullPath = URL(fileURLWithPath: inDirectory).path
+            if options.contains(.swiftpm) && options.contains(.kotlin) == false {
+                // We assume that the output directory is where we want the Package.swft,
+                // so we need to create the Sources/ and Sources/Pamphlet directories
+                // and store the generated files in there
+                generateFilesDirectory = outDirectory + "/Sources/" + pamphletName
+                try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
                 
-        // we want to process all files in a directory at the same time, so we need to pre-walk
-        // the enumeration
-        
-        var allDirectories: [URL] = []
-        var filesByDirectory: [URL: BoxedArray<URL>] = [:]
-        
-        for case let fileURL as URL in enumerator {
-            if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
-                if let isDirectory = resourceValues.isDirectory {
-                    if isDirectory {
-                        allDirectories.append(fileURL)
-                    } else {
-                        let pathExtension = (fileURL.path as NSString).pathExtension
-                        if (extensions.count == 0 || extensions.contains(pathExtension)) {
-                            let directoryURL = fileURL.deletingLastPathComponent()
-                            if filesByDirectory[directoryURL] == nil {
-                                filesByDirectory[directoryURL] = BoxedArray<URL>()
+                // Generate a Package.swift
+                let packageSwiftPath = outDirectory + "/Package.swift"
+                if !processPackageSwift(pamphletName, packageSwiftPath) {
+                    fatalError("Unable to create Package.swift at \(packageSwiftPath)")
+                }
+            }
+            
+            removeOldFiles(inDirectory, generateFilesDirectory, options.contains(.clean))
+            
+            pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
+            
+            try? FileManager.default.removeItem(atPath: pamphletFilePath)
+            try? "".write(toFile: pamphletFilePath, atomically: false, encoding: .utf8)
+            
+            let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
+                                                            includingPropertiesForKeys: resourceKeys,
+                                                            options: [.skipsHiddenFiles],
+                                                            errorHandler: { (url, error) -> Bool in
+                                                                print("directoryEnumerator error at \(url): ", error)
+                                                                return true
+            })!
+            
+            let textPages = BoxedArray<FilePath>()
+            let dataPages = BoxedArray<FilePath>()
+            let directoryPages = BoxedArray<FilePath>()
+            
+            //print("in: " + inDirectory)
+            //print("out: " + generateFilesDirectory)
+            
+            let inDirectoryFullPath = URL(fileURLWithPath: inDirectory).path
+                    
+            // we want to process all files in a directory at the same time, so we need to pre-walk
+            // the enumeration
+            
+            var allDirectories: [URL] = []
+            var filesByDirectory: [URL: BoxedArray<URL>] = [:]
+            
+            for case let fileURL as URL in enumerator {
+                if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
+                    if let isDirectory = resourceValues.isDirectory {
+                        if isDirectory {
+                            allDirectories.append(fileURL)
+                        } else {
+                            let pathExtension = (fileURL.path as NSString).pathExtension
+                            if (extensions.count == 0 || extensions.contains(pathExtension)) {
+                                let directoryURL = fileURL.deletingLastPathComponent()
+                                if filesByDirectory[directoryURL] == nil {
+                                    filesByDirectory[directoryURL] = BoxedArray<URL>()
+                                }
+                                filesByDirectory[directoryURL]?.append(fileURL)
                             }
-                            filesByDirectory[directoryURL]?.append(fileURL)
                         }
                     }
                 }
             }
-        }
-        
-        
-        let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
-        
-        for directoryURL in filesByDirectory.keys {
-            guard let files = filesByDirectory[directoryURL] else { continue }
-            queue.addOperation {
-                self.process(directory: directoryURL,
-                             files: files,
-                             pamphletName: pamphletName,
-                             pamphletExecPathValues: pamphletExecPathValues,
-                             inDirectoryFullPath: inDirectoryFullPath,
-                             generateFilesDirectory: generateFilesDirectory,
-                             options: options,
-                             textPages: textPages,
-                             dataPages: dataPages)
+            
+            
+            let queue = OperationQueue()
+            queue.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
+            
+            for directoryURL in filesByDirectory.keys {
+                guard let files = filesByDirectory[directoryURL] else { continue }
+                queue.addOperation {
+                    self.process(directory: directoryURL,
+                                 files: files,
+                                 pamphletName: pamphletName,
+                                 pamphletExecPathValues: pamphletExecPathValues,
+                                 inDirectoryFullPath: inDirectoryFullPath,
+                                 generateFilesDirectory: generateFilesDirectory,
+                                 options: options,
+                                 textPages: textPages,
+                                 dataPages: dataPages)
+                }
             }
+            
+            queue.waitUntilAllOperationsAreFinished()
+            
+            for directory in allDirectories {
+                let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
+                let filePath = FilePath(pamphletName, partialPath, options)
+                directoryPages.append(filePath)
+            }
+            
+            createPamphletFile(pamphletName,
+                               textPages.array,
+                               dataPages.array,
+                               directoryPages.array,
+                               pamphletFilePath)
         }
         
-        queue.waitUntilAllOperationsAreFinished()
         
-        for directory in allDirectories {
-            let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
-            let filePath = FilePath(pamphletName, partialPath, options)
-            directoryPages.append(filePath)
-        }
-        
-        createPamphletFile(pamphletName,
-                           textPages.array,
-                           dataPages.array,
-                           directoryPages.array,
-                           pamphletFilePath)
     }
 }
