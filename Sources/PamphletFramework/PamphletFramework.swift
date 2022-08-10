@@ -704,9 +704,9 @@ public class PamphletFramework {
     // MARK: - PUBLIC API
     
     private func measure(message: String, _ block: ()->()) {
-        let startTime = CFAbsoluteTimeGetCurrent()
+        let startTime = Date()
         block()
-        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        let timeElapsed = abs(startTime.timeIntervalSinceNow)
         
         let log = "[\(timeElapsed)s] \(message)\n"
         let logPath = "/tmp/Pamphlet.log"

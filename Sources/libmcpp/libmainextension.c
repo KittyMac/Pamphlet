@@ -29,10 +29,12 @@
 
 #include    "system.H"
 #include    "internal.H"
+
 #include <libgen.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/resource.h>
 
 extern char    *strdup(const char *__s1);
 
