@@ -41,8 +41,13 @@ install: clean build
 	-cp .build/${PROJECTNAME} /usr/local/bin/pamphlet
 	
 
-.PHONY: install
+.PHONY: tools
 tools: install
+	make -C Tools
+	./bin/pamphlet --prefix=Tools --release ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+
+.PHONY: tools-simple
+tools-simple: install
 	make -C Tools
 	./bin/pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
