@@ -37,18 +37,8 @@ import PackagePlugin
                                     
                                     try? FileManager.default.createSymbolicLink(atPath: destinationPath,
                                                                                 withDestinationPath: sourcePath)
-                                    
-                                    /*
-                                    if isDependency {
-                                        try? FileManager.default.copyItem(atPath: sourcePath,
-                                                                          toPath: destinationPath)
-                                    } else {
-                                        try? FileManager.default.createSymbolicLink(atPath: destinationPath,
-                                                                                    withDestinationPath: sourcePath)
-                                    }
-                                     */
                                 }
-                                
+
                                 inputFiles.append(PackagePlugin.Path(fileURL.path))
                             }
                         }
@@ -86,15 +76,15 @@ import PackagePlugin
                          inputFiles: &inputFiles)
                         
         let outputFiles: [String] = [
-            context.pluginWorkDirectory.string + "/Pamphlet.swift"
+            context.pluginWorkDirectory.string + "/Pamphlet.debug.swift",
+            context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
         ]
-        
+                
         return [
             .buildCommand(
                 displayName: "Pamphlet - generating resources...",
                 executable: tool.path,
                 arguments: [
-                    "--collapse-all",
                     copiesDirectory,
                     context.pluginWorkDirectory.string
                 ],

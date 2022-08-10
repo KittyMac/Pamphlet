@@ -19,30 +19,12 @@ struct Pamphlet: ParsableCommand {
         
         @Argument(help: "Path to sources directory to output Swift files to")
         var outDirectory: String
-        
-        @Argument(help: "List of valid file extensions (empty means all)")
-        var extensions: [String] = []
-        
-        @Flag(help: "Collapse files in directory into a single .swift file")
-        var collapse: Bool = false
-        
-        @Flag(help: "Collapse all files into a single Pamphlet.swift file")
-        var collapseAll: Bool = false
-        
+                                
         @Flag(help: "Generate Kotlin code instead of Swift code")
         var kotlin: Bool = false
         
         @Option(help: "Package path for Kotlin code generation (ie com.app.main)")
         var kotlinPackage: String?
-        
-        @Flag(help: "Delete existing Pamphlet files in the output directories before processing")
-        var clean: Bool = false
-        
-        @Flag(help: "Generate a full swiftpm package directory")
-        var swiftpm: Bool = false
-        
-        @Flag(help: "Only generate release code (no dynamic loading when in Debug)")
-        var release: Bool = false
         
         @Flag(inversion: .prefixedEnableDisable, help: "Include the original file content")
         var original: Bool = true
@@ -62,21 +44,16 @@ struct Pamphlet: ParsableCommand {
         mutating func run() throws {
             var options = PamphletOptions()
             
-            if release { options.insert(.releaseOnly) }
-            if clean { options.insert(.clean) }
-            if swiftpm { options.insert(.swiftpm) }
             if original { options.insert(.includeOriginal) }
             if gzip { options.insert(.includeGzip) }
             if html { options.insert(.minifyHtml) }
             if js { options.insert(.minifyJs) }
             if json { options.insert(.minifyJson) }
-            if collapse { options.insert(.collapse) }
-            if collapseAll { options.insert(.collapseAll) }
             if kotlin { options.insert(.kotlin) }
             if let kotlinPackage = kotlinPackage { options.kotlinPackage = kotlinPackage }
             
             PamphletFramework().process(prefix: prefix,
-                                        extensions: extensions,
+                                        extensions: [],
                                         inDirectory: inDirectory,
                                         outDirectory: outDirectory,
                                         options: options)

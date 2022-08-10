@@ -10,17 +10,7 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
-    
-    func testProcessSOPedia() {
-        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(prefix: "SOPedia",
-                                    extensions: extensions,
-                                    inDirectory: "/Users/rjbowli/Development/chimerasw/SOPedia/Resources",
-                                    outDirectory: "/Users/rjbowli/Development/chimerasw/SOPedia/Sources/SOPediaPamphlet",
-                               
-                                    options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
-    }
-            
+                
     func testProcessCollapseAll() {
         let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
         PamphletFramework().process(prefix: nil,
@@ -28,7 +18,7 @@ final class PamphletTests: XCTestCase {
                                     inDirectory: path(to: "Pamphlet"),
                                     outDirectory: "/tmp/Pamphlet",
                                
-                                    options:[.collapseAll, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+                                    options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
     func testDebugHotLoading() {

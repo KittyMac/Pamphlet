@@ -3,15 +3,40 @@ import libmcpp
 import Hitch
 import JXKit
 
+enum OutputType: String {
+    case debug = "debug"
+    case release = "release"
+}
+
 public class PamphletFramework {
     
-    var fileHeader = """
-    import Foundation
-    #if DEBUG && canImport(PamphletFramework)
-    import PamphletFramework
-    #endif
+    var fileHeaderDebug = """
     // swiftlint:disable all
     
+    #if DEBUG && canImport(PamphletFramework)
+    import Foundation
+    import PamphletFramework
+    
+    
+    """
+    
+    var fileHeaderRelease = """
+    // swiftlint:disable all
+    
+    #if !DEBUG || !canImport(PamphletFramework)
+    import Foundation
+    
+    
+    """
+    
+    var fileFooterDebug = """
+    
+    #endif
+    """
+    
+    var fileFooterRelease = """
+    
+    #endif
     """
     
     private var writeLock = NSLock()
@@ -22,6 +47,49 @@ public class PamphletFramework {
     
     public init() {
         
+    }
+    
+    private func createOutput(path: String,
+                              type: OutputType) {
+        // path like: /path/to/Pamphlet.swift
+        // for debug adjust it to: /path/to/Pamphlet.debug.swift
+        // for release adjust it to: /path/to/Pamphlet.release.swift
+        writeLock.lock(); defer { writeLock.unlock() }
+        
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension
+        
+        let fileUrl = url.deletingPathExtension().appendingPathExtension(type.rawValue).appendingPathExtension(ext)
+        try? "".write(toFile: fileUrl.path, atomically: false, encoding: .utf8)
+    }
+    
+    private func appendOutput(data: Data,
+                              path: String,
+                              type: OutputType) {
+        // path like: /path/to/Pamphlet.swift
+        // for debug adjust it to: /path/to/Pamphlet.debug.swift
+        // for release adjust it to: /path/to/Pamphlet.release.swift
+        writeLock.lock(); defer { writeLock.unlock() }
+        
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension
+        
+        let fileUrl = url.deletingPathExtension().appendingPathExtension(type.rawValue).appendingPathExtension(ext)
+        if let handle = FileHandle(forWritingAtPath: fileUrl.path) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            handle.closeFile()
+        }
+    }
+    
+    private func appendOutput(string: String,
+                              path: String,
+                              type: OutputType) {
+        if let data = string.data(using: .utf8) {
+            appendOutput(data: data,
+                         path: path,
+                         type: type)
+        }
     }
     
     private func createPamphletFile(_ pamphletName: String,
@@ -68,13 +136,12 @@ public class PamphletFramework {
         // ------------- Swift -------------
         let version = git() ?? "v0.0.0"
         
-        let templateSwift = """
+        let templateDebugOnlySwift = """
         {0}
         
         public enum \(pamphletName) {
             public static let version = "\(version)"
             
-            #if DEBUG && canImport(PamphletFramework)
             public static func get(string member: String) -> String? {
                 switch member {
         {1}
@@ -82,25 +149,8 @@ public class PamphletFramework {
                 }
                 return nil
             }
-            #else
-            public static func get(string member: String) -> StaticString? {
-                switch member {
-        {2}
-                default: break
-                }
-                return nil
-            }
-            #endif
             public static func get(gzip member: String) -> Data? {
-                #if DEBUG && canImport(PamphletFramework)
-                    return nil
-                #else
-                    switch member {
-        {3}
-                    default: break
-                    }
-                    return nil
-                #endif
+                return nil
             }
             public static func get(data member: String) -> Data? {
                 switch member {
@@ -146,7 +196,7 @@ public class PamphletFramework {
         
         // ------------- KOTLIN -------------
         
-        let templateKotlin = """
+        let templateDebugOnlyKotlin = """
         {0}
         
         object \(pamphletName) {
@@ -206,18 +256,18 @@ public class PamphletFramework {
         {5}
         """
         
-        var template = templateSwift
+        var templateDebugOnly = templateDebugOnlySwift
         var templateReleaseOnly = templateReleaseOnlySwift
         if options.contains(.kotlin) {
-            template = templateKotlin
+            templateDebugOnly = templateDebugOnlyKotlin
             templateReleaseOnly = templateReleaseOnlyKotlin
             
-            fileHeader = ""
             if let packagePath = options.kotlinPackage {
-                fileHeader += "package \(packagePath)\n\n"
-                if options.contains(.releaseOnly) == false {
-                    //kotlinHeader += "import \(packagePath).BuildConfig\n"
-                }
+                fileHeaderDebug = "package \(packagePath)\n\n"
+                fileHeaderRelease = "package \(packagePath)\n\n"
+            } else {
+                fileHeaderDebug = ""
+                fileHeaderRelease = ""
             }
         }
         
@@ -255,10 +305,18 @@ public class PamphletFramework {
                 return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
             }
         }.joined(separator: "\n")
+        
+        let debugSwift = templateDebugOnly << [
+            "",
+            textPagesCodeDebug,
+            textPagesCodeRelease,
+            compressedPagesCode,
+            dataPagesCode,
+            allDirectoryExtensions
+        ]
 
-        let pamphletTemplate = options.contains(.releaseOnly) ? templateReleaseOnly : template
-        let swift = pamphletTemplate << [
-            fileHeader,
+        let releaseSwift = templateReleaseOnly << [
+            "",
             textPagesCodeDebug,
             textPagesCodeRelease,
             compressedPagesCode,
@@ -266,14 +324,13 @@ public class PamphletFramework {
             allDirectoryExtensions
         ]
         
-        if let stringData = swift.description.data(using: .utf8),
-           let handle = FileHandle(forWritingAtPath: outFile) {
-            if options.contains(.collapseAll) {
-                handle.seekToEndOfFile()
-            }
-            handle.write(stringData)
-            handle.closeFile()
-        }
+        appendOutput(string: debugSwift.description,
+                     path: outFile,
+                     type: .debug)
+        
+        appendOutput(string: releaseSwift.description,
+                     path: outFile,
+                     type: .release)
     }
     
     private func fileContentsForTextFile(_ inFile: String) -> String? {
@@ -303,25 +360,19 @@ public class PamphletFramework {
                               _ uncompressed: String?,
                               _ compressed: String?,
                               _ dataType: String,
-                              _ includeHeader: Bool,
-                              _ options: PamphletOptions) -> String? {
-        var scratch = ""
+                              _ options: PamphletOptions) -> (String, String) {
+        var scratchDebug = ""
+        var scratchRelease = ""
         
-        if includeHeader {
-            if options.contains(.kotlin) {
-                if let packagePath = options.kotlinPackage {
-                    scratch.append("package \(packagePath)\n\n")
-                    scratch.append("import android.util.Base64\n\n")
-                }
-            } else {
-                scratch.append(fileHeader)
-            }
+        let appendBoth: (String) -> () = { string in
+            scratchDebug.append(string)
+            scratchRelease.append(string)
         }
         
         if options.contains(.kotlin) {
             
         } else {
-            scratch.append("public extension \(path.extensionName) {\n")
+            appendBoth("public extension \(path.extensionName) {\n")
         }
         
         if uncompressed != nil && options.contains(.includeOriginal) {
@@ -330,97 +381,103 @@ public class PamphletFramework {
                 reifiedDataType = "StaticString"
             }
             
-            if let fileOnDisk = fileOnDisk, options.contains(.releaseOnly) == false {
-                scratch.append("    #if DEBUG && canImport(PamphletFramework)\n")
-                scratch.append("    static func \(path.variableName)() -> \(dataType) {\n")
-                scratch.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
-                scratch.append("        print(fileOnDiskPath)\n")
-                scratch.append("        return PamphletFramework().process(file: fileOnDiskPath)\n")
-                scratch.append("    }\n")
+            if let fileOnDisk = fileOnDisk {
+                scratchDebug.append("    static func \(path.variableName)() -> \(dataType) {\n")
+                scratchDebug.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
+                scratchDebug.append("        return PamphletFramework().process(file: fileOnDiskPath)\n")
+                scratchDebug.append("    }\n")
                 
-                scratch.append("    #else\n")
-                scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
-                scratch.append("        return uncompressed\(path.fullVariableName)\n")
-                scratch.append("    }\n")
-                scratch.append("    #endif\n")
+                scratchRelease.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
+                scratchRelease.append("        return uncompressed\(path.fullVariableName)\n")
+                scratchRelease.append("    }\n")
                 
             } else {
-                
-                scratch.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
-                scratch.append("        return uncompressed\(path.fullVariableName)\n")
-                scratch.append("    }\n")
+                appendBoth("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
+                appendBoth("        return uncompressed\(path.fullVariableName)\n")
+                appendBoth("    }\n")
             }
-            
         }
         
         if compressed != nil && options.contains(.includeGzip) {
             if options.contains(.kotlin) {
-                scratch.append("fun Pamphlet.\(path.variableName)Gzip(): ByteArray {\n")
-                scratch.append("    return compressed\(path.fullVariableName)\n")
-                scratch.append("}\n")
+                appendBoth("fun Pamphlet.\(path.variableName)Gzip(): ByteArray {\n")
+                appendBoth("    return compressed\(path.fullVariableName)\n")
+                appendBoth("}\n")
             } else {
-                scratch.append("    static func \(path.variableName)Gzip() -> Data {\n")
-                scratch.append("        return compressed\(path.fullVariableName)\n")
-                scratch.append("    }\n")
+                scratchRelease.append("    static func \(path.variableName)Gzip() -> Data {\n")
+                scratchRelease.append("        return compressed\(path.fullVariableName)\n")
+                scratchRelease.append("    }\n")
+                
+                if dataType.contains("String") {
+                    scratchDebug.append("    static func \(path.variableName)Gzip() -> Data {\n")
+                    scratchDebug.append("        return \(path.variableName)().description.data(using: .utf8) ?? Data()\n")
+                    scratchDebug.append("    }\n")
+                } else {
+                    scratchDebug.append("    static func \(path.variableName)Gzip() -> Data {\n")
+                    scratchDebug.append("        return \(path.variableName)()\n")
+                    scratchDebug.append("    }\n")
+                }
             }
         }
         
         if options.contains(.kotlin) {
             
         } else {
-            scratch.append("}\n")
-            scratch.append("\n")
+            appendBoth("}\n")
+            appendBoth("\n")
         }
         
         if let uncompressed = uncompressed, options.contains(.includeOriginal) {
+            var conditionalAppend = appendBoth
+            if fileOnDisk != nil {
+                conditionalAppend = { string in
+                    scratchRelease.append(string)
+                }
+            }
             if dataType == "String" {
                 if options.contains(.kotlin) {
-                    scratch.append("private val uncompressed\(path.fullVariableName) = \"\n\(uncompressed)\n\"\n")
+                    conditionalAppend("private val uncompressed\(path.fullVariableName) = \"\n\(uncompressed)\n\"\n\n")
                 } else {
-                    scratch.append("private let uncompressed\(path.fullVariableName): StaticString = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n")
+                    conditionalAppend("private let uncompressed\(path.fullVariableName): StaticString = ###\"\"\"\n\(uncompressed)\n\"\"\"###\n\n")
                 }
             } else {
                 if options.contains(.kotlin) {
-                    scratch.append("private val uncompressed\(path.fullVariableName) = Base64.decode(\"\(uncompressed)\", Base64.DEFAULT)\n")
+                    conditionalAppend("private val uncompressed\(path.fullVariableName) = Base64.decode(\"\(uncompressed)\", Base64.DEFAULT)\n\n")
                 } else {
-                    scratch.append("private let uncompressed\(path.fullVariableName) = Data(base64Encoded:\"\(uncompressed)\")!\n")
+                    conditionalAppend("private let uncompressed\(path.fullVariableName) = Data(base64Encoded:\"\(uncompressed)\")!\n\n")
                 }
             }
         }
         if let compressed = compressed, options.contains(.includeGzip) {
             if options.contains(.kotlin) {
-                scratch.append("private val compressed\(path.fullVariableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n")
+                scratchRelease.append("private val compressed\(path.fullVariableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n\n")
             } else {
-                scratch.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n")
+                scratchRelease.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n\n")
             }
         }
         
-        return scratch
+        return (scratchDebug, scratchRelease)
     }
     
     private func processStringAsFile(_ path: FilePath,
                                      _ inFile: String?,
                                      _ fileContents: String,
-                                     _ includeHeader: Bool,
-                                     _ options: PamphletOptions) -> String? {
+                                     _ options: PamphletOptions) -> (String, String)? {
         return generateFile(path,
                             inFile,
                             fileContents,
                             gzip(fileContents: fileContents),
                             "String",
-                            includeHeader,
                             options)
     }
     
     private func processTextFile(_ path: FilePath,
                                  _ inFile: String,
-                                 _ includeHeader: Bool,
-                                 _ options: PamphletOptions) -> String? {
+                                 _ options: PamphletOptions) -> (String, String)? {
         if let fileContents = fileContentsForTextFile(inFile) {
             return processStringAsFile(path,
                                        inFile,
                                        fileContents,
-                                       includeHeader,
                                        options)
         }
         return nil
@@ -433,14 +490,12 @@ public class PamphletFramework {
     
     private func processDataFile(_ path: FilePath,
                                  _ inFile: String,
-                                 _ includeHeader: Bool,
-                                 _ options: PamphletOptions) -> String? {
+                                 _ options: PamphletOptions) -> (String, String)? {
         return generateFile(path,
                             inFile,
                             fileContentsForDataFile(inFile),
                             nil,
                             "Data",
-                            includeHeader,
                             options)
     }
     
@@ -467,52 +522,6 @@ public class PamphletFramework {
             return false
         }
         return true
-    }
-    
-    private func removeOldFiles(_ inDirectory: String,
-                                _ outDirectory: String,
-                                _ removeAll: Bool) {
-                
-        let resourceKeys: [URLResourceKey] = [.isDirectoryKey]
-        if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: outDirectory),
-                                                        includingPropertiesForKeys: resourceKeys,
-                                                        options: [.skipsHiddenFiles],
-                                                        errorHandler: { (url, error) -> Bool in
-                                                            print("directoryEnumerator error at \(url): ", error)
-                                                            return true
-        }) {
-        
-            for case let fileURL as URL in enumerator {
-                do {
-                    let resourceValues = try fileURL.resourceValues(forKeys: Set(resourceKeys))
-                    let fileName = fileURL.lastPathComponent
-                    if fileName.hasSuffix(options.fileExt()) && resourceValues.isDirectory == false {
-                        let outPath = fileURL.path
-                        let fullOutDirectory = URL(fileURLWithPath: outDirectory).path
-                        
-                        if removeAll {
-                            try? FileManager.default.removeItem(at: fileURL)
-                        }else{
-                            if outPath.contains(".collapsed" + options.fileExt()) {
-                                continue
-                            }
-                            
-                            if let outRange = outPath.range(of: fullOutDirectory) {
-                                let inPath = inDirectory + outPath.suffix(from: outRange.upperBound).dropLast(6)
-                                
-                                if FileManager.default.fileExists(atPath: String(inPath)) == false {
-                                    try? FileManager.default.removeItem(at: fileURL)
-                                }
-                            } else {
-                                try? FileManager.default.removeItem(at: fileURL)
-                            }
-                        }
-                    }
-                } catch {
-                        
-                }
-            }
-        }
     }
     
     private func process(directory: URL,
@@ -563,123 +572,30 @@ public class PamphletFramework {
                 }
             }
             if let jsonDirectoryEncoded = try? jsonDirectory.json() {
-                let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + directoryPartialPath).deletingLastPathComponent().path
-                try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-
-                let jsonDirectoryOutputPath = "\(outputDirectory)/\(directoryFilePath.fileName)\(options.fileExt())"
-                if let fileContent = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, true, options) {
+                if let (contentDebug, contentRelease) = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, options) {
                     
-                    if options.contains(.collapseAll) {
-                        if let stringData = fileContent.data(using: .utf8),
-                           let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
-                            handle.seekToEndOfFile()
-                            handle.write(stringData)
-                            handle.closeFile()
-                        }
-                    } else {
-                        try! fileContent.write(toFile: jsonDirectoryOutputPath, atomically: true, encoding: .utf8)
-                    }
+                    appendOutput(string: contentDebug,
+                                 path: pamphletFilePath,
+                                 type: .debug)
+                    
+                    appendOutput(string: contentRelease,
+                                 path: pamphletFilePath,
+                                 type: .release)
                     
                     directoryFilePath.isStaticString = true
-                    
                     textPages.append(directoryFilePath)
                 }
             }
             return
         }
         
-        if options.contains(.collapse) || options.contains(.collapseAll) {
-            // When we collapse a directory, all swift files in the directory go into a single files
-            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
-            let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
-            
-            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-                        
-            // 0. check for skipping
-            var shouldSkipAll = true
-            for fileURL in files {
-                var shouldSkip = false
-                if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                    // We need to check the main source output file, but also any files which are #include to this one
-                    // and any and all files #included from the dependencies
-                    shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                    if !shouldSkip {
-                        //print("DATE CHECK FAILED: \(fileURL.path)")
-                    }
-                    // also check against the modification date of pamphlet itself
-                    if shouldSkip {
-                        shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                    }
-                }
-                if shouldSkip == false {
-                    shouldSkipAll = false
-                    break
-                }
-            }
-            
-            if shouldSkipAll {
-                // Even if we skip generating files, we need to note them so that they are added to the
-                // Pamphlet.swift file
-                for fileURL in files {
-                    let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                    let filePath = FilePath(pamphletName, partialPath, options)
-                    if let _ = try? String(contentsOfFile: fileURL.path) {
-                        textPages.append(filePath)
-                    } else {
-                        dataPages.append(filePath)
-                    }
-                }
-                return
-            }
-                        
-            // 1. at least one file was updated, regenerate all of the files
-            var collapsedContent = ""
-            var includeHeader = true
-            for fileURL in files {
-                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                let filePath = FilePath(pamphletName, partialPath, options)
-                
-                if let fileContent = processTextFile(filePath, fileURL.path, includeHeader, options) {
-                    collapsedContent += fileContent + "\n"
-                    textPages.append(filePath)
-                    includeHeader = false
-                } else if let fileContent = processDataFile(filePath, fileURL.path, includeHeader, options) {
-                    collapsedContent += fileContent + "\n"
-                    dataPages.append(filePath)
-                    includeHeader = false
-                } else {
-                    fatalError("Processing failed for file: \(fileURL.path)")
-                }
-            }
-            
-            
-            if options.contains(.collapseAll) {
-                writeLock.lock()
-                if let stringData = collapsedContent.data(using: .utf8),
-                   let handle = FileHandle(forWritingAtPath: pamphletFilePath) {
-                    handle.seekToEndOfFile()
-                    handle.write(stringData)
-                    handle.closeFile()
-                }
-                writeLock.unlock()
-            } else {
-                try! collapsedContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-            }
-            
-            return
-        }
-        
-        
-        
-        // normal processing: each file is matched to its own generated .swift file
+        // When we collapse a directory, all swift files in the directory go into a single files
+        let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
+        let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
+                    
+        // 0. check for skipping
+        var shouldSkipAll = true
         for fileURL in files {
-            let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-            let filePath = FilePath(pamphletName, partialPath, options)
-            let outputDirectory = URL(fileURLWithPath: generateFilesDirectory + "/" + partialPath).deletingLastPathComponent().path
-            let outputFile = "\(outputDirectory)/\(filePath.fileName)\(options.fileExt())"
-
-            try? FileManager.default.createDirectory(atPath: outputDirectory, withIntermediateDirectories: true, attributes: nil)
-            
             var shouldSkip = false
             if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
                 // We need to check the main source output file, but also any files which are #include to this one
@@ -693,27 +609,57 @@ public class PamphletFramework {
                     shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
                 }
             }
-            
             if shouldSkip == false {
-                if let fileContent = processTextFile(filePath, fileURL.path, true, options) {
-                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                    textPages.append(filePath)
-                } else if let fileContent = processDataFile(filePath, fileURL.path, true, options) {
-                    try! fileContent.write(toFile: outputFile, atomically: true, encoding: .utf8)
-                    dataPages.append(filePath)
-                } else {
-                    fatalError("Processing failed for file: \(fileURL.path)")
-                }
-            } else {
-                // Even if we skip, we still need to add to the textPages and dataPages...
+                shouldSkipAll = false
+                break
+            }
+        }
+        
+        if shouldSkipAll {
+            // Even if we skip generating files, we need to note them so that they are added to the
+            // Pamphlet.swift file
+            for fileURL in files {
+                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+                let filePath = FilePath(pamphletName, partialPath, options)
                 if let _ = try? String(contentsOfFile: fileURL.path) {
                     textPages.append(filePath)
                 } else {
                     dataPages.append(filePath)
                 }
             }
-            
+            return
         }
+                    
+        // 1. at least one file was updated, regenerate all of the files
+        var collapsedDebugContent = ""
+        var collapsedReleaseContent = ""
+        for fileURL in files {
+            let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+            let filePath = FilePath(pamphletName, partialPath, options)
+            
+            if let (contentDebug, contentRelease) = processTextFile(filePath, fileURL.path, options) {
+                collapsedDebugContent += contentDebug + "\n"
+                collapsedReleaseContent += contentRelease + "\n"
+                textPages.append(filePath)
+            } else if let (contentDebug, contentRelease) = processDataFile(filePath, fileURL.path, options) {
+                collapsedDebugContent += contentDebug + "\n"
+                collapsedReleaseContent += contentRelease + "\n"
+                dataPages.append(filePath)
+            } else {
+                fatalError("Processing failed for file: \(fileURL.path)")
+            }
+        }
+        
+        appendOutput(string: collapsedDebugContent,
+                     path: pamphletFilePath,
+                     type: .debug)
+        
+        appendOutput(string: collapsedReleaseContent,
+                     path: pamphletFilePath,
+                     type: .release)
+        
+        return
+    
     }
     
     private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
@@ -810,34 +756,45 @@ public class PamphletFramework {
             let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
             
             let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
-            var generateFilesDirectory = outDirectory
+            let generateFilesDirectory = outDirectory
             
             let pamphletExecPath = ProcessInfo.processInfo.arguments[0]
             guard let pamphletExecPathValues = try? URL(fileURLWithPath: pamphletExecPath).resourceValues(forKeys: Set(resourceKeys)) else { fatalError() }
-            
-            try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
-            
-            if options.contains(.swiftpm) && options.contains(.kotlin) == false {
-                // We assume that the output directory is where we want the Package.swft,
-                // so we need to create the Sources/ and Sources/Pamphlet directories
-                // and store the generated files in there
-                generateFilesDirectory = outDirectory + "/Sources/" + pamphletName
-                try? FileManager.default.createDirectory(atPath: generateFilesDirectory, withIntermediateDirectories: true, attributes: nil)
-                
-                // Generate a Package.swift
-                let packageSwiftPath = outDirectory + "/Package.swift"
-                if !processPackageSwift(pamphletName, packageSwiftPath) {
-                    fatalError("Unable to create Package.swift at \(packageSwiftPath)")
-                }
-            }
-            
-            removeOldFiles(inDirectory, generateFilesDirectory, options.contains(.clean))
-            
+                                    
             pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
             
             try? FileManager.default.removeItem(atPath: pamphletFilePath)
-            try? "".write(toFile: pamphletFilePath, atomically: false, encoding: .utf8)
+            createOutput(path: pamphletFilePath,
+                         type: .debug)
             
+            createOutput(path: pamphletFilePath,
+                         type: .release)
+            
+            
+            if options.contains(.kotlin) {
+                if let packagePath = options.kotlinPackage {
+                    let header = """
+                    package \(packagePath)
+                    import android.util.Base64
+                    
+                    """
+                    appendOutput(string: header,
+                                 path: pamphletFilePath,
+                                 type: .debug)
+                    appendOutput(string: header,
+                                 path: pamphletFilePath,
+                                 type: .release)
+                }
+            } else {
+                appendOutput(string: fileHeaderDebug,
+                             path: pamphletFilePath,
+                             type: .debug)
+                appendOutput(string: fileHeaderRelease,
+                             path: pamphletFilePath,
+                             type: .release)
+            }
+            
+                        
             let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                             includingPropertiesForKeys: resourceKeys,
                                                             options: [.skipsHiddenFiles],
@@ -912,6 +869,14 @@ public class PamphletFramework {
                                dataPages.array,
                                directoryPages.array,
                                pamphletFilePath)
+            
+            appendOutput(string: fileFooterDebug,
+                         path: pamphletFilePath,
+                         type: .debug)
+            
+            appendOutput(string: fileFooterRelease,
+                         path: pamphletFilePath,
+                         type: .release)
         }
         
         

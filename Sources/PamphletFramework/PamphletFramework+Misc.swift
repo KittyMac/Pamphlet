@@ -174,17 +174,12 @@ public struct PamphletOptions: OptionSet {
         return ".swift"
     }
     
-    public static let clean = PamphletOptions(rawValue:  1 << 0)
-    public static let swiftpm = PamphletOptions(rawValue:  1 << 1)
-    public static let releaseOnly = PamphletOptions(rawValue:  1 << 2)
     public static let includeOriginal = PamphletOptions(rawValue:  1 << 3)
     public static let includeGzip = PamphletOptions(rawValue:  1 << 4)
     public static let minifyHtml = PamphletOptions(rawValue:  1 << 5)
     public static let minifyJs = PamphletOptions(rawValue:  1 << 6)
     public static let minifyJson = PamphletOptions(rawValue:  1 << 7)
-    public static let collapse = PamphletOptions(rawValue:  1 << 8)
     public static let kotlin = PamphletOptions(rawValue:  1 << 9)
-    public static let collapseAll = PamphletOptions(rawValue:  1 << 10)
     
-    public static let `default`: PamphletOptions = [.swiftpm, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson]
+    public static let `default`: PamphletOptions = [.includeGzip, .minifyHtml, .minifyJs, .minifyJson]
 }
