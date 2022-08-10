@@ -53,6 +53,11 @@ let package = Package(
             capability: .buildTool(),
             dependencies: ["Pamphlet"]
         ),
+        .plugin(
+            name: "PamphletReleaseOnlyPlugin",
+            capability: .buildTool(),
+            dependencies: ["Pamphlet"]
+        ),
         .target(
             name: "PamphletFramework",
             dependencies: [
