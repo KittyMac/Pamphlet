@@ -121,7 +121,7 @@ public class PamphletFramework {
 
             public static func get(string member: String) -> StaticString? {
                 switch member {
-        {1}
+        {2}
                 default: break
                 }
                 return nil
@@ -186,7 +186,7 @@ public class PamphletFramework {
         object \(pamphletName) {
             fun getAsString(member: String): String? {
                 return when (member) {
-        {1}
+        {2}
                     else -> null
                 }
             }
@@ -237,11 +237,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
             } else {
-                if $0.isStaticString {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
-                } else {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
-                }
+                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
             }
         }.joined(separator: "\n")
         

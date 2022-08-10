@@ -32,14 +32,14 @@ test:
 .PHONY: install
 install: build
 	-rm ./bin/pamphlet
+	cp .build/${PROJECTNAME} ./bin/pamphlet
+	
 	-rm /opt/homebrew/bin/pamphlet
-    
 	-cp .build/${PROJECTNAME} /opt/homebrew/bin/pamphlet
 	
 	-rm /usr/local/bin/pamphlet
 	-cp .build/${PROJECTNAME} /usr/local/bin/pamphlet
 	
-	cp .build/${PROJECTNAME} ./bin/pamphlet
 
 .PHONY: install
 tools: install
