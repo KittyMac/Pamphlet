@@ -9,7 +9,8 @@ enum OutputType: String {
 }
 
 public class PamphletFramework {
-    
+    public static let shared = PamphletFramework()
+
     var fileHeaderDebug = """
     // swiftlint:disable all
     
@@ -29,6 +30,14 @@ public class PamphletFramework {
     
     """
     
+    var fileHeaderReleaseOnly = """
+    // swiftlint:disable all
+    
+    import Foundation
+    
+    
+    """
+    
     var fileFooterDebug = """
     
     #endif
@@ -39,6 +48,9 @@ public class PamphletFramework {
     #endif
     """
     
+    var fileFooterReleaseOnly = """
+    """
+    
     private var writeLock = NSLock()
     private let queue1 = OperationQueue()
     private let queue2 = OperationQueue()
@@ -47,9 +59,16 @@ public class PamphletFramework {
     
     var pamphletFilePath: String = ""
     
-    public init() {
+    private init() {
         queue1.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
         queue2.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
+    }
+    
+    private func pathOutput(path: String,
+                            type: OutputType) -> String {
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension
+        return url.deletingPathExtension().appendingPathExtension(type.rawValue).appendingPathExtension(ext).path
     }
     
     private func createOutput(path: String,
@@ -59,11 +78,9 @@ public class PamphletFramework {
         // for release adjust it to: /path/to/Pamphlet.release.swift
         writeLock.lock(); defer { writeLock.unlock() }
         
-        let url = URL(fileURLWithPath: path)
-        let ext = url.pathExtension
-        
-        let fileUrl = url.deletingPathExtension().appendingPathExtension(type.rawValue).appendingPathExtension(ext)
-        try? "".write(toFile: fileUrl.path, atomically: false, encoding: .utf8)
+        let outputPath = pathOutput(path: path,
+                                    type: type)
+        try? "".write(toFile: outputPath, atomically: false, encoding: .utf8)
     }
     
     private func appendOutput(data: Data,
@@ -74,11 +91,9 @@ public class PamphletFramework {
         // for release adjust it to: /path/to/Pamphlet.release.swift
         writeLock.lock(); defer { writeLock.unlock() }
         
-        let url = URL(fileURLWithPath: path)
-        let ext = url.pathExtension
-        
-        let fileUrl = url.deletingPathExtension().appendingPathExtension(type.rawValue).appendingPathExtension(ext)
-        if let handle = FileHandle(forWritingAtPath: fileUrl.path) {
+        let outputPath = pathOutput(path: path,
+                                    type: type)
+        if let handle = FileHandle(forWritingAtPath: outputPath) {
             handle.seekToEndOfFile()
             handle.write(data)
             handle.closeFile()
@@ -387,7 +402,7 @@ public class PamphletFramework {
             if let fileOnDisk = fileOnDisk {
                 scratchDebug.append("    static func \(path.variableName)() -> \(dataType) {\n")
                 scratchDebug.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
-                scratchDebug.append("        return PamphletFramework().process(file: fileOnDiskPath)\n")
+                scratchDebug.append("        return PamphletFramework.shared.process(file: fileOnDiskPath)\n")
                 scratchDebug.append("    }\n")
                 
                 scratchRelease.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
@@ -777,13 +792,26 @@ public class PamphletFramework {
                                     
             pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
             
-            try? FileManager.default.removeItem(atPath: pamphletFilePath)
-            createOutput(path: pamphletFilePath,
-                         type: .debug)
+            let debugPath = pathOutput(path: pamphletFilePath,
+                                       type: .debug)
+            let releasePath = pathOutput(path: pamphletFilePath,
+                                         type: .release)
+            
+            try? FileManager.default.removeItem(atPath: debugPath)
+            try? FileManager.default.removeItem(atPath: releasePath)
+            
+            if options.contains(.releaseOnly) == false {
+                createOutput(path: pamphletFilePath,
+                             type: .debug)
+            }
             
             createOutput(path: pamphletFilePath,
                          type: .release)
             
+            if options.contains(.releaseOnly) {
+                fileHeaderRelease = fileHeaderReleaseOnly
+                fileFooterRelease = fileFooterReleaseOnly
+            }
             
             if options.contains(.kotlin) {
                 if let packagePath = options.kotlinPackage {

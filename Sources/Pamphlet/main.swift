@@ -26,6 +26,9 @@ struct Pamphlet: ParsableCommand {
         @Option(help: "Package path for Kotlin code generation (ie com.app.main)")
         var kotlinPackage: String?
         
+        @Flag(help: "Only generate release code (no dynamic loading when in Debug)")
+        var release: Bool = false
+
         @Flag(inversion: .prefixedEnableDisable, help: "Include the original file content")
         var original: Bool = true
         
@@ -44,6 +47,7 @@ struct Pamphlet: ParsableCommand {
         mutating func run() throws {
             var options = PamphletOptions()
             
+            if release { options.insert(.releaseOnly) }
             if original { options.insert(.includeOriginal) }
             if gzip { options.insert(.includeGzip) }
             if html { options.insert(.minifyHtml) }
@@ -52,11 +56,11 @@ struct Pamphlet: ParsableCommand {
             if kotlin { options.insert(.kotlin) }
             if let kotlinPackage = kotlinPackage { options.kotlinPackage = kotlinPackage }
             
-            PamphletFramework().process(prefix: prefix,
-                                        extensions: [],
-                                        inDirectory: inDirectory,
-                                        outDirectory: outDirectory,
-                                        options: options)
+            PamphletFramework.shared.process(prefix: prefix,
+                                             extensions: [],
+                                             inDirectory: inDirectory,
+                                             outDirectory: outDirectory,
+                                             options: options)
         }
     }
 
@@ -67,7 +71,7 @@ struct Pamphlet: ParsableCommand {
         var inFile: String
         
         mutating func run() {
-            PamphletFramework().preprocess(file: inFile)
+            PamphletFramework.shared.preprocess(file: inFile)
         }
     }
     

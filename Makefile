@@ -30,7 +30,7 @@ test:
 	swift test --configuration debug
 
 .PHONY: install
-install: build
+install: clean build
 	-rm ./bin/pamphlet
 	cp .build/${PROJECTNAME} ./bin/pamphlet
 	
@@ -44,7 +44,7 @@ install: build
 .PHONY: install
 tools: install
 	make -C Tools
-	./bin/pamphlet --prefix=Tools --release --collapse-all --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+	./bin/pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 docker:
 	-docker buildx create --name local_builder
