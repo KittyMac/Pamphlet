@@ -40,13 +40,16 @@ public class PamphletFramework {
     """
     
     private var writeLock = NSLock()
+    private let queue1 = OperationQueue()
+    private let queue2 = OperationQueue()
     
     var options = PamphletOptions.default
     
     var pamphletFilePath: String = ""
     
     public init() {
-        
+        queue1.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
+        queue2.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
     }
     
     private func createOutput(path: String,
@@ -466,7 +469,8 @@ public class PamphletFramework {
         return generateFile(path,
                             inFile,
                             fileContents,
-                            gzip(fileContents: fileContents),
+                            gzip(path: path,
+                                 contents: fileContents),
                             "String",
                             options)
     }
@@ -633,22 +637,32 @@ public class PamphletFramework {
         // 1. at least one file was updated, regenerate all of the files
         var collapsedDebugContent = ""
         var collapsedReleaseContent = ""
+        let appendLock = NSLock()
         for fileURL in files {
-            let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-            let filePath = FilePath(pamphletName, partialPath, options)
             
-            if let (contentDebug, contentRelease) = processTextFile(filePath, fileURL.path, options) {
-                collapsedDebugContent += contentDebug + "\n"
-                collapsedReleaseContent += contentRelease + "\n"
-                textPages.append(filePath)
-            } else if let (contentDebug, contentRelease) = processDataFile(filePath, fileURL.path, options) {
-                collapsedDebugContent += contentDebug + "\n"
-                collapsedReleaseContent += contentRelease + "\n"
-                dataPages.append(filePath)
-            } else {
-                fatalError("Processing failed for file: \(fileURL.path)")
+            queue1.addOperation {
+                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
+                let filePath = FilePath(pamphletName, partialPath, options)
+                
+                if let (contentDebug, contentRelease) = self.processTextFile(filePath, fileURL.path, options) {
+                    appendLock.lock()
+                    collapsedDebugContent += contentDebug + "\n"
+                    collapsedReleaseContent += contentRelease + "\n"
+                    textPages.append(filePath)
+                    appendLock.unlock()
+                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options) {
+                    appendLock.lock()
+                    collapsedDebugContent += contentDebug + "\n"
+                    collapsedReleaseContent += contentRelease + "\n"
+                    dataPages.append(filePath)
+                    appendLock.unlock()
+                } else {
+                    fatalError("Processing failed for file: \(fileURL.path)")
+                }
             }
         }
+        
+        queue1.waitUntilAllOperationsAreFinished()
         
         appendOutput(string: collapsedDebugContent,
                      path: pamphletFilePath,
@@ -837,13 +851,9 @@ public class PamphletFramework {
                 }
             }
             
-            
-            let queue = OperationQueue()
-            queue.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
-            
             for directoryURL in filesByDirectory.keys {
                 guard let files = filesByDirectory[directoryURL] else { continue }
-                queue.addOperation {
+                queue2.addOperation {
                     self.process(directory: directoryURL,
                                  files: files,
                                  pamphletName: pamphletName,
@@ -855,9 +865,8 @@ public class PamphletFramework {
                                  dataPages: dataPages)
                 }
             }
-            
-            queue.waitUntilAllOperationsAreFinished()
-            
+            queue2.waitUntilAllOperationsAreFinished()
+                        
             for directory in allDirectories {
                 let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
                 let filePath = FilePath(pamphletName, partialPath, options)

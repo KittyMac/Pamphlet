@@ -10,14 +10,25 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
+    
+    func testProcessOptimize() {
+        let extensions: [String] = []
+        
+        measure {
+            PamphletFramework().process(prefix: nil,
+                                        extensions: extensions,
+                                        inDirectory: "/Users/rjbowli/Development/smallplanet/npd_ReceiptPal_iOS/receiptpal_amazon/swift/ErrorLogServer/.build/plugins/outputs/errorlogserver/ErrorLogServerFramework/PamphletPlugin/Pamphlet",
+                                        outDirectory: "/tmp/Pamphlet",
+                                        options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+        }
+    }
                 
     func testProcessCollapseAll() {
-        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
+        let extensions: [String] = []
         PamphletFramework().process(prefix: nil,
                                     extensions: extensions,
                                     inDirectory: path(to: "Pamphlet"),
                                     outDirectory: "/tmp/Pamphlet",
-                               
                                     options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
@@ -26,16 +37,7 @@ final class PamphletTests: XCTestCase {
         XCTAssertEqual(PamphletFrameworkTests.Pamphlet.Test1Css(), "#title { border-image-slice: 22 fill; }")
     }
     
-    
-    func testProcessReleaseOnly() {
-        let extensions = ["json", "ts", "txt", "md", "html", "htm", "js", "css", "png", "jpg"]
-        PamphletFramework().process(prefix: "Release",
-                                    extensions: extensions,
-                                    inDirectory: path(to: "Pamphlet"),
-                                    outDirectory: "/tmp/Pamphlet",
-                                    options:PamphletOptions.default)
-    }
-    
+        
     func testPreprocessFollow1() {
         let result = PamphletFramework().preprocess(file: path(to: "Pamphlet/includeFollow1.css"))
         XCTAssertEqual(result, "#Follow3 { }\n#Follow2 { }\n#Follow1 { }\n")
