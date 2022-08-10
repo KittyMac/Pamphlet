@@ -32,7 +32,8 @@ let package = Package(
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
 		.library(name: "libmcpp", targets: ["libmcpp"]),
-        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"])
+        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
+        .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletPlugin"])
     ],
     dependencies: [
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
