@@ -38,14 +38,14 @@ public class BoxedArray<T>: MutableCollection {
     }
 }
 
-public extension Array where Element: Hashable {
+internal extension Array where Element: Hashable {
     func uniqued() -> [Element] {
         var seen = Set<Element>()
         return filter { seen.insert($0).inserted }
     }
 }
 
-public extension Array where Element: Equatable {
+internal extension Array where Element: Equatable {
     mutating func removeOne (_ element: Element) {
         if let idx = firstIndex(of: element) {
             remove(at: idx)
@@ -57,7 +57,7 @@ public extension Array where Element: Equatable {
     }
 }
 
-public extension BoxedArray where Element: Equatable {
+internal extension BoxedArray where Element: Equatable {
     func removeOne (_ element: Element) {
         if let idx = firstIndex(of: element) {
             array.remove(at: idx)

@@ -14,7 +14,7 @@ struct RuntimeError: Error {
 
 private let suppressDefaultValuesKey = CodingUserInfoKey(rawValue: "SuppressDefaultValues")!
 
-public extension Encodable {
+internal extension Encodable {
 
     func cloned<T: Decodable>() throws -> T {
         return try self.encoded().decoded()
@@ -35,7 +35,7 @@ public extension Encodable {
     }
 }
 
-public extension Data {
+internal extension Data {
     func decoded<T: Decodable>() throws -> T {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -43,7 +43,7 @@ public extension Data {
     }
 }
 
-public extension String {
+internal extension String {
     func decoded<T: Decodable>() throws -> T {
         guard let jsonData = self.data(using: .utf8) else {
             throw RuntimeError("Unable to convert json String to Data")
