@@ -11,6 +11,7 @@ RUN ls /usr/include/
 
 WORKDIR /root/Pamphlet
 COPY ./Makefile ./Makefile
+COPY ./Package.resolved ./Package.resolved
 COPY ./Package.swift ./Package.swift
 COPY ./Plugins ./Plugins
 COPY ./Sources ./Sources

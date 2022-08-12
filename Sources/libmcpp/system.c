@@ -36,6 +36,7 @@
  *      1. specify the constants in "configed.H" or "noconfig.H",
  *      2. append the system-dependent routines in this file.
  */
+
 #if PREPROCESSED
 #include    "mcpp.H"
 #else
@@ -371,6 +372,27 @@ static int      in_import;          /* #import rather than #include */
 /* Unofficial feature to strip directory part of include file   */
 static int      no_dir;
 #endif
+
+static struct timespec mtime(const char *file)
+{
+    struct stat s;
+    struct timespec t = { 0, 0 };
+
+    if (stat(file, &s) == 0)
+#if     defined(MTIME) && MTIME == 1    // Linux
+    { t.tv_sec = s.st_mtime; }
+//     ^^^^^^^
+#elif   defined(MTIME) && MTIME == 2    // Mac OS X
+    { t.tv_sec = s.st_mtimespec; }
+//     ^^^^^^^
+#elif   defined(MTIME) && MTIME == 3    // Mac OS X, with some additional settings
+    { t.tv_sec = s.st_mtime; t.tv_nsec = s.st_mtimensec; }
+#else                                   // Solaris
+    { t.tv_sec = s.st_mtime; }
+#endif
+
+    return t;
+}
 
 #if MCPP_LIB
 void    init_system( void)
@@ -3491,11 +3513,10 @@ search:
         
         // Note: we should do modification date check first before generating new file
         int shouldGenerateFile = 0;
-        struct stat statOld = {0};
-        struct stat statNew = {0};
-        if (lstat(file->full_fname, &statOld) >= 0 &&
-            lstat(newfilename, &statNew) >= 0 &&
-            statOld.st_mtimespec.tv_sec >= statNew.st_mtimespec.tv_sec) {
+        
+        struct timespec oldTime = mtime(file->full_fname);
+        struct timespec newTime = mtime(newfilename);
+        if (oldTime.tv_sec >= newTime.tv_sec) {
             shouldGenerateFile = 1;
         }
         
