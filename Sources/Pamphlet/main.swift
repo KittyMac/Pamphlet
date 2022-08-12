@@ -5,7 +5,7 @@ struct Pamphlet: ParsableCommand {
     
     static var configuration = CommandConfiguration(
         abstract: "Store files resources in Swift code",
-        subcommands: [Generate.self, Preprocess.self],
+        subcommands: [Generate.self, Preprocess.self, Skip.self],
         defaultSubcommand: Generate.self)
     
     struct Generate: ParsableCommand {
@@ -72,6 +72,14 @@ struct Pamphlet: ParsableCommand {
         
         mutating func run() {
             PamphletFramework.shared.preprocess(file: inFile)
+        }
+    }
+    
+    struct Skip: ParsableCommand {
+        static var configuration = CommandConfiguration(abstract: "Don't do anything")
+                
+        mutating func run() {
+            
         }
     }
     

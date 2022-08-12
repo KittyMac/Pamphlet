@@ -3485,6 +3485,20 @@ search:
     int extensionIdx = strlen(filename) - 4;
     if (strncmp(filename + extensionIdx, ".png", 4) == 0 ||
         strncmp(filename + extensionIdx, ".jpg", 4) == 0) {
+        char newfilename[ PATHMAX + 1 ] = {0};
+        
+        snprintf(newfilename, PATHMAX, "%s.base64", filename);
+        
+        // Note: we should do modification date check first before generating new file
+        int shouldGenerateFile = 0;
+        struct stat statOld = {0};
+        struct stat statNew = {0};
+        if (lstat(file->full_fname, &statOld) >= 0 &&
+            lstat(newfilename, &statNew) >= 0 &&
+            statOld.st_mtimespec.tv_sec >= statNew.st_mtimespec.tv_sec) {
+            shouldGenerateFile = 1;
+        }
+        
         fseek(fp, 0, SEEK_END);
         long size = ftell(fp);
         fseek(fp, 0, SEEK_SET);
@@ -3494,28 +3508,25 @@ search:
         
         fseek(fp, 0, SEEK_SET);
         
-        char * encoded = b64_encode ((const unsigned char *)raw, size);
-        
         fclose(fp);
         
-        char newfilename[ PATHMAX + 1 ] = {0};
-        
-        snprintf(newfilename, PATHMAX, "%s.base64", filename);
-        
-        fp = fopen(newfilename, "wb");
-        if (fp != NULL) {
-            char variable_name[ PATHMAX + 1 ] = {0};
-            strncpy(variable_name, basename((char *)filename), PATHMAX);
-            for (int i = 0; i < PATHMAX; i++) {
-                if (variable_name[i] == 0) {
-                    break;
+        if (shouldGenerateFile == 1) {
+            char * encoded = b64_encode ((const unsigned char *)raw, size);
+            fp = fopen(newfilename, "wb");
+            if (fp != NULL) {
+                char variable_name[ PATHMAX + 1 ] = {0};
+                strncpy(variable_name, basename((char *)filename), PATHMAX);
+                for (int i = 0; i < PATHMAX; i++) {
+                    if (variable_name[i] == 0) {
+                        break;
+                    }
+                    if (isalnum(variable_name[i]) == 0) {
+                        variable_name[i] = '_';
+                    }
                 }
-                if (isalnum(variable_name[i]) == 0) {
-                    variable_name[i] = '_';
-                }
+                fprintf(fp, "let %s = \"%s\"", variable_name, encoded);
+                fclose(fp);
             }
-            fprintf(fp, "let %s = \"%s\"", variable_name, encoded);
-            fclose(fp);
         }
         
         return open_file(dirp, src_dir, newfilename, local, include_opt, sys_frame);

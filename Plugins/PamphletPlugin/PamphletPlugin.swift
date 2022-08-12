@@ -2,11 +2,43 @@ import Foundation
 import PackagePlugin
 
 @main struct PamphletPlugin: BuildToolPlugin {
+    
+    private func shouldProcess(inputs: [String],
+                               outputs: [String]) -> Bool {
+        var maxInputDate = Date.distantPast
+        var minOutputDate = Date.distantFuture
         
-    func gatherInputFiles(targets: [Target],
-                          destinationDir: String?,
-                          isDependency: Bool,
-                          inputFiles: inout [PackagePlugin.Path]) {
+        for input in inputs {
+            if let attr = try? FileManager.default.attributesOfItem(atPath: input),
+               let date = attr[FileAttributeKey.modificationDate] as? Date {
+                if date > maxInputDate {
+                    print("input: \(input) is \(date)")
+                    maxInputDate = date
+                }
+            }
+        }
+        
+        for output in outputs {
+            if let attr = try? FileManager.default.attributesOfItem(atPath: output),
+               let date = attr[FileAttributeKey.modificationDate] as? Date {
+                if date < minOutputDate {
+                    print("output: \(output) is \(date)")
+                    minOutputDate = date
+                }
+            }
+        }
+        
+        if maxInputDate == Date.distantPast || minOutputDate == Date.distantFuture {
+            return true
+        }
+                
+        return minOutputDate < maxInputDate
+    }
+        
+    private func gatherInputFiles(targets: [Target],
+                                  destinationDir: String?,
+                                  isDependency: Bool,
+                                  inputFiles: inout [PackagePlugin.Path]) {
         
         for target in targets {
             let base = target.directory.string + "/Pamphlet/"
@@ -79,15 +111,28 @@ import PackagePlugin
             context.pluginWorkDirectory.string + "/Pamphlet.debug.swift",
             context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
         ]
-                
+        
+        if shouldProcess(inputs: inputFiles.map { $0.string },
+                         outputs: outputFiles) {
+            return [
+                .buildCommand(
+                    displayName: "Pamphlet - generating resources...",
+                    executable: tool.path,
+                    arguments: [
+                        copiesDirectory,
+                        context.pluginWorkDirectory.string
+                    ],
+                    inputFiles: inputFiles,
+                    outputFiles: outputFiles.map { PackagePlugin.Path($0) }
+                )
+            ]
+        }
+        
         return [
             .buildCommand(
-                displayName: "Pamphlet - generating resources...",
+                displayName: "Pamphlet - skipping...",
                 executable: tool.path,
-                arguments: [
-                    copiesDirectory,
-                    context.pluginWorkDirectory.string
-                ],
+                arguments: [ "skip" ],
                 inputFiles: inputFiles,
                 outputFiles: outputFiles.map { PackagePlugin.Path($0) }
             )

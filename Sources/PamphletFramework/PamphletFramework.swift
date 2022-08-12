@@ -915,7 +915,5 @@ public class PamphletFramework {
                          path: pamphletFilePath,
                          type: .release)
         }
-        
-        
     }
 }
