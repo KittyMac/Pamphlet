@@ -43,7 +43,13 @@ final class PamphletTests: XCTestCase {
     
     func testDebugHotLoading() {
         // should print the path to the file if it hotloads
-        XCTAssertEqual(PamphletFrameworkTests.Pamphlet.Test1Css().description, "#title { border-image-slice: 22 fill; }")
+        XCTAssertEqual(PamphletFrameworkTests.Pamphlet.Test1Css().description, """
+        
+        #title {
+            border-image-slice: 22 fill;
+        }
+        
+        """)
     }
     
         

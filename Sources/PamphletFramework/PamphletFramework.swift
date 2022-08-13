@@ -401,7 +401,7 @@ public class PamphletFramework {
             if let fileOnDisk = fileOnDisk {
                 scratchDebug.append("    static func \(path.variableName)() -> \(dataType) {\n")
                 scratchDebug.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
-                scratchDebug.append("        return PamphletFramework.shared.process(file: fileOnDiskPath)\n")
+                scratchDebug.append("        return PamphletFramework.shared.process(file: fileOnDiskPath, options: [])\n")
                 scratchDebug.append("    }\n")
                 
                 scratchRelease.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
@@ -759,7 +759,14 @@ public class PamphletFramework {
     }
     
     @discardableResult
-    public func process(file: String) -> String {
+    public func process(file: String, options: PamphletOptions) -> String {
+        
+        let savedOptions = self.options
+        self.options = options
+        defer {
+            self.options = savedOptions
+        }
+        
         if let stringContents = fileContentsForTextFile(file) {
             return stringContents
         }
@@ -767,7 +774,13 @@ public class PamphletFramework {
     }
     
     @discardableResult
-    public func process(file: String) -> Data {
+    public func process(file: String, options: PamphletOptions) -> Data {
+        let savedOptions = self.options
+        self.options = options
+        defer {
+            self.options = savedOptions
+        }
+        
         guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: file)) else { return Data() }
         return fileData
     }
