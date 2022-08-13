@@ -2,27 +2,6 @@
 
 import PackageDescription
 
-#if canImport(JavaScriptCore)
-let jxKitTargets: [Target] = [
-    .target(name: "JXKit")
-]
-#else
-let jxKitTargets: [Target] = [
-    .target(
-        name: "CJSCore",
-        linkerSettings: [
-            .linkedLibrary("javascriptcoregtk-4.0", .when(platforms: [.linux])),
-        ]
-    ),
-    .target(
-        name: "JXKit",
-        dependencies: [
-            "CJSCore"
-        ]
-    ),
-]
-#endif
-
 let package = Package(
     name: "Pamphlet",
     platforms: [
@@ -36,11 +15,12 @@ let package = Package(
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletPlugin"])
     ],
     dependencies: [
+        .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
         .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0")
     ],
-    targets: jxKitTargets + [
+    targets: [
         .executableTarget(
             name: "Pamphlet",
             dependencies: [
@@ -64,7 +44,7 @@ let package = Package(
             dependencies: [
                 "Hitch",
                 "libmcpp",
-                "JXKit",
+                "Jib",
                 .product(name: "Gzip", package: "GzipSwift"),
             ]
         ),

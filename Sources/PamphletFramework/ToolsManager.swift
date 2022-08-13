@@ -1,77 +1,98 @@
 import Foundation
 import libmcpp
 import Hitch
-import JXKit
+import Jib
 
-private class JXRunner {
-    let context = JXContext()
+private enum Tool {
+    case json
+    case js
+    case html
+}
+
+private class JibRunner {
+    let jib = Jib()
     let lock = NSLock()
+        
+    let jsToolJS: JibFunction
+    let jsToolJSON: JibFunction
+    let jsToolHTML: JibFunction
+    
+    var jsCallback: JibFunction? = nil
+    
+    var lastJsResult: String = "undefined"
     
     init() {
         lock.lock()
-        let _ = try! context.eval(script: "let global = {};")
-        let _ = try! context.eval(script: ToolsPamphlet.ToolsJs().description)
+        
+        _ = jib[eval: "let global = {};"]
+        _ = jib[eval: HalfHitch(stringLiteral: ToolsPamphlet.ToolsJs())]
+        
+        jsToolJS = jib[function: "global.toolJS"]!
+        jsToolJSON = jib[function: "global.toolJSON"]!
+        jsToolHTML = jib[function: "global.toolHTML"]!
+        
+        jsCallback = jib.new(function: "toolCallback", body: { arguments in
+            self.lastJsResult = "undefined"
+            
+            if arguments.count > 0 {
+                self.lastJsResult = arguments[0].description
+            }
+            return nil
+        })!
+        
         lock.unlock()
     }
     
-    func perform<T>(_ block: (JXContext) -> T) -> T {
+    func run(tool: Tool,
+             input: String) -> String? {
         lock.lock(); defer { lock.unlock() }
-        return block(context)
+        
+        var jsFunction = jsToolJS
+        if tool == .html {
+            jsFunction = jsToolHTML
+        } else if tool == .json {
+            jsFunction = jsToolJSON
+        }
+        
+        jib.call(jsFunction, [input, jsCallback])
+        
+        return lastJsResult
     }
 }
 
 public class ToolsManager {
     static let shared = ToolsManager()
     
-    private let cores = ProcessInfo.processInfo.activeProcessorCount
-    
-    private var jxRoundRobin = 0
-    private var jxRunners: [JXRunner] = []
+    private var jibRoundRobin = 0
+    private var jibRunners: [JibRunner] = []
     private let lock = NSLock()
     
     private init() {
         DispatchQueue.global(qos: .utility).sync {
-            for _ in 0..<cores {
-                jxRunners.append(JXRunner())
+            for _ in 0..<ProcessInfo.processInfo.activeProcessorCount {
+                jibRunners.append(JibRunner())
             }
         }
     }
     
-    private func nextRunner() -> JXRunner {
-        jxRoundRobin = (jxRoundRobin + 1) % cores
-        return jxRunners[jxRoundRobin]
+    private func nextRunner() -> JibRunner {
+        jibRoundRobin = (jibRoundRobin + 1) % jibRunners.count
+        return jibRunners[jibRoundRobin]
     }
-    
-    private func run(tool: String,
-                     input: String) -> String? {
-        return self.nextRunner().perform { context in
-            var callbackResults: String? = nil
-            let jsCallback = JXValue(newFunctionIn: context) { context, this, arguments in
-                callbackResults = String(arguments[0].stringValue ?? "undefined")
-                return JXValue(undefinedIn: context)
-            }
-            let terserFunc = try! context.eval(script: tool)
-            try! terserFunc.call(withArguments: [
-                context.encode(input),
-                jsCallback
-            ])
-            return callbackResults
-        }
-    }
-        
+            
     func toolHTML(input: String) -> String? {
         lock.lock(); defer { lock.unlock() }
-        return run(tool: "global.toolHTML", input: input)
+        return nextRunner().run(tool: .html, input: input)
     }
     
     func toolJS(input: String) -> String? {
         lock.lock(); defer { lock.unlock() }
-        return run(tool: "global.toolJS", input: input)
+        return nextRunner().run(tool: .js, input: input)
     }
         
     func toolJSON(input: String) -> String? {
         lock.lock(); defer { lock.unlock() }
-        return run(tool: "global.toolJSON", input: input)
+        return nextRunner().run(tool: .json, input: input)
     }
     
 }

@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "chronometer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KittyMac/Chronometer.git",
+      "state" : {
+        "revision" : "1360b46bfa6eecbdedd24590b95f97d3e59dc027",
+        "version" : "0.1.6"
+      }
+    },
+    {
       "identity" : "gzipswift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1024jp/GzipSwift.git",
@@ -14,8 +23,26 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "eec08edd53a0d433f707d241483e03e59becafe9",
-        "version" : "0.4.36"
+        "revision" : "36b13f2ee492b08caf9fa4c573d6424bf4533429",
+        "version" : "0.4.41"
+      }
+    },
+    {
+      "identity" : "jib",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KittyMac/Jib.git",
+      "state" : {
+        "revision" : "be87a6d463febe970419da3db0a63ac0ef9dd659",
+        "version" : "0.0.6"
+      }
+    },
+    {
+      "identity" : "spanker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KittyMac/Spanker.git",
+      "state" : {
+        "revision" : "9dd7bdaabcf679c3e086091c60fa3687717efa17",
+        "version" : "0.2.26"
       }
     },
     {
