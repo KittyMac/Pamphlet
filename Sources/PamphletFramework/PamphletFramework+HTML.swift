@@ -1,6 +1,5 @@
 import Foundation
 import libmcpp
-import JXKit
 
 var warnHtmlCompressor = true
 

@@ -17,7 +17,7 @@ final class PamphletTests: XCTestCase {
         measure {
             PamphletFramework.shared.process(prefix: nil,
                                              extensions: extensions,
-                                             inDirectory: "/Users/rjbowli/Development/smallplanet/npd_ReceiptPal_iOS/receiptpal_amazon/swift/ErrorLogServer/.build/plugins/outputs/errorlogserver/ErrorLogServerFramework/PamphletPlugin/Pamphlet",
+                                             inDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Sources/SOServerFramework/Pamphlet",
                                              outDirectory: "/tmp/Pamphlet",
                                              options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
         }

@@ -1,8 +1,5 @@
 import Foundation
 import libmcpp
-import JXKit
-
-var warnJJ = true
 
 extension PamphletFramework {
     func minifyJson(inFile: String, fileContents: inout String) {

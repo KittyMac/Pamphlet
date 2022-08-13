@@ -1,7 +1,6 @@
 import Foundation
 import libmcpp
 import Hitch
-import JXKit
 
 enum OutputType: String {
     case debug = "debug"

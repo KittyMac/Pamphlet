@@ -1,7 +1,5 @@
 import Foundation
 import libmcpp
-import JXKit
-
 
 extension PamphletFramework {
     func minifyJs(inFile: String, fileContents: inout String) {
