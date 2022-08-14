@@ -350,9 +350,8 @@ public class PamphletFramework {
                      type: .release)
     }
     
-    private func fileContentsForTextFile(_ inFile: String) -> String? {
-        guard var fileContents = try? String(contentsOfFile: inFile) else { return nil }
-        
+    private func contentsFor(name inFile: String, fileContents string: String) -> String? {
+        var fileContents = string
         if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
             // This file wants to use the mcpp preprocessor
             if let cPtr = mcpp_preprocessFile(inFile) {
@@ -370,6 +369,11 @@ public class PamphletFramework {
         minifyJson(inFile: inFile, fileContents: &fileContents)
         
         return fileContents
+    }
+    
+    private func fileContentsForTextFile(_ inFile: String) -> String? {
+        guard let fileContents = try? String(contentsOfFile: inFile) else { return nil }
+        return contentsFor(name: inFile, fileContents: fileContents)
     }
     
     private func generateFile(_ path: FilePath,
@@ -401,7 +405,7 @@ public class PamphletFramework {
             if let fileOnDisk = fileOnDisk {
                 scratchDebug.append("    static func \(path.variableName)() -> \(dataType) {\n")
                 scratchDebug.append("        let fileOnDiskPath = \"\(fileOnDisk)\"\n")
-                scratchDebug.append("        return PamphletFramework.shared.process(file: fileOnDiskPath, options: [])\n")
+                scratchDebug.append("        return PamphletFramework.shared.process(file: fileOnDiskPath)\n")
                 scratchDebug.append("    }\n")
                 
                 scratchRelease.append("    static func \(path.variableName)() -> \(reifiedDataType) {\n")
@@ -759,14 +763,15 @@ public class PamphletFramework {
     }
     
     @discardableResult
-    public func process(file: String, options: PamphletOptions) -> String {
-        
-        let savedOptions = self.options
-        self.options = options
-        defer {
-            self.options = savedOptions
+    public func process(name: String, string: String) -> String {
+        if let stringContents = contentsFor(name: name, fileContents: string) {
+            return stringContents
         }
-        
+        return String()
+    }
+    
+    @discardableResult
+    public func process(file: String) -> String {
         if let stringContents = fileContentsForTextFile(file) {
             return stringContents
         }
@@ -774,13 +779,7 @@ public class PamphletFramework {
     }
     
     @discardableResult
-    public func process(file: String, options: PamphletOptions) -> Data {
-        let savedOptions = self.options
-        self.options = options
-        defer {
-            self.options = savedOptions
-        }
-        
+    public func process(file: String) -> Data {
         guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: file)) else { return Data() }
         return fileData
     }

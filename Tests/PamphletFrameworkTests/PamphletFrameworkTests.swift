@@ -43,13 +43,20 @@ final class PamphletTests: XCTestCase {
     
     func testDebugHotLoading() {
         // should print the path to the file if it hotloads
-        XCTAssertEqual(PamphletFrameworkTests.Pamphlet.Test1Css().description, """
-        
-        #title {
-            border-image-slice: 22 fill;
-        }
-        
-        """)
+        XCTAssertEqual(PamphletFrameworkTests.Pamphlet.Test1Css().description, "#title { border-image-slice: 22 fill; }")
+    }
+    
+    func testProcessString() {
+        let json = """
+        [
+        0,
+        1,
+        2,
+        3
+        ]
+        """
+        let result = PamphletFramework.shared.process(name: "sample.json", string:json)
+        XCTAssertEqual(result, "[0,1,2,3]")
     }
     
         
