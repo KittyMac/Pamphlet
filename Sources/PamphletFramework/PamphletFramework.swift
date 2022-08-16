@@ -423,7 +423,7 @@ public class PamphletFramework {
         
         if compressed != nil && options.contains(.includeGzip) {
             if options.contains(.kotlin) {
-                appendBoth("fun Pamphlet.\(path.variableName)Gzip(): ByteArray {\n")
+                appendBoth("fun \(path.extensionName).\(path.variableName)Gzip(): ByteArray {\n")
                 appendBoth("    return compressed\(path.fullVariableName)\n")
                 appendBoth("}\n")
             } else {
@@ -521,31 +521,6 @@ public class PamphletFramework {
                             nil,
                             "Data",
                             options)
-    }
-    
-    private func processPackageSwift(_ pamphletName: String, _ outFile: String) -> Bool {
-        let template = """
-        // swift-tools-version:5.2
-        import PackageDescription
-        let package = Package(
-            name: "\(pamphletName)",
-            products: [
-                .library(name: "\(pamphletName)", targets: ["\(pamphletName)"])
-            ],
-            targets: [
-                .target(
-                    name: "\(pamphletName)"
-                )
-            ]
-        )
-        """
-        
-        do {
-            try template.write(toFile: outFile, atomically: true, encoding: .utf8)
-        } catch {
-            return false
-        }
-        return true
     }
     
     private func process(directory: URL,
