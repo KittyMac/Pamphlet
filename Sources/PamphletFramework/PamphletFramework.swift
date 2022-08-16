@@ -251,6 +251,8 @@ public class PamphletFramework {
         {0}
         
         object \(pamphletName) {
+            val version = "\(version)"
+
             fun getAsString(member: String): String? {
                 return when (member) {
         {2}
