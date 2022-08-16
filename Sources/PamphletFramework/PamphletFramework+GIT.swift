@@ -2,6 +2,8 @@ import Foundation
 import libmcpp
 
 extension PamphletFramework {
+    
+    #if os(macOS) || os(Linux)
     func git() -> String? {
         do {
             let path = pathFor(executable: "git")
@@ -42,4 +44,9 @@ extension PamphletFramework {
             return nil
         }
     }
+    #else
+    func git() -> String? {
+        return nil
+    }
+    #endif
 }

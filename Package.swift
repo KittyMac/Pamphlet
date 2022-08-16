@@ -1,17 +1,25 @@
 // swift-tools-version:5.6
-
 import PackageDescription
+
+
+// Non-desktop targets should only allow release-only plg
+#if os(macOS) || os(Linux)
+let devPlugin: [Product] = [
+    .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
+]
+#else
+let devPlugin: [PackageDescription.Product.Plugin] = []
+#endif
 
 let package = Package(
     name: "Pamphlet",
     platforms: [
         .macOS(.v10_13), .iOS(.v11)
     ],
-    products: [
+    products: devPlugin + [
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
 		.library(name: "libmcpp", targets: ["libmcpp"]),
-        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletPlugin"])
     ],
     dependencies: [
