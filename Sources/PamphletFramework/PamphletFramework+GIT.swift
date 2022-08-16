@@ -6,9 +6,8 @@ extension PamphletFramework {
         do {
             let path = pathFor(executable: "git")
             
-            let repoPath = URL(fileURLWithPath: #file)
-                .deletingLastPathComponent().path
-            
+            let repoPath = FileManager.default.currentDirectoryPath
+
             let task = Process()
             task.executableURL = URL(fileURLWithPath: path)
             task.arguments = [

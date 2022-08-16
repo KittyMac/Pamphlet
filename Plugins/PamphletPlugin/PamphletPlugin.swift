@@ -112,8 +112,21 @@ import PackagePlugin
             context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
         ]
         
+        // detect when the git version changes and reprocess
+        let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
+        var gitVersionDidChange = true
+        if let version = git() {
+            // save the version number as an input in our tool working directory
+            if let lastVersion = try? String(contentsOfFile: gitVersionPath),
+               lastVersion == version {
+                gitVersionDidChange = false
+            } else {
+                try? version.write(toFile: gitVersionPath, atomically: false, encoding: .utf8)
+            }
+        }
+                
         if shouldProcess(inputs: inputFiles.map { $0.string },
-                         outputs: outputFiles) {
+                         outputs: outputFiles) || gitVersionDidChange {
             return [
                 .buildCommand(
                     displayName: "Pamphlet - generating resources...",
@@ -137,5 +150,60 @@ import PackagePlugin
                 outputFiles: outputFiles.map { PackagePlugin.Path($0) }
             )
         ]
+    }
+}
+
+
+fileprivate func pathFor(executable name: String) -> String {
+    if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/\(name)") {
+        return "/opt/homebrew/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/usr/bin/\(name)") {
+        return "/usr/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/usr/local/bin/\(name)") {
+        return "/usr/local/bin/\(name)"
+    } else if FileManager.default.fileExists(atPath: "/bin/\(name)") {
+        return "/bin/\(name)"
+    }
+    return "./\(name)"
+}
+
+fileprivate func git() -> String? {
+    do {
+        let path = pathFor(executable: "git")
+                    
+        let repoPath = FileManager.default.currentDirectoryPath
+        
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: path)
+        task.arguments = [
+            "-C",
+            repoPath,
+            "describe"
+        ]
+        let inputPipe = Pipe()
+        let outputPipe = Pipe()
+        task.standardInput = inputPipe
+        task.standardOutput = outputPipe
+        task.standardError = nil
+        try task.run()
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            inputPipe.fileHandleForWriting.write(Data())
+            inputPipe.fileHandleForWriting.closeFile()
+        }
+        let tagData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                        
+        if let tagString = String(data: tagData, encoding: .utf8) {
+            if tagString.hasPrefix("v") && tagString.components(separatedBy: ".").count == 3 {
+                return tagString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            } else {
+                print("warning: git describe did not return a valid semver, got \(tagString) instead")
+            }
+        }
+        
+        return nil
+    } catch {
+        print("warning: failed to retrieve semver from git")
+        return nil
     }
 }
