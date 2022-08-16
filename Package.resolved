@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "36b13f2ee492b08caf9fa4c573d6424bf4533429",
-        "version" : "0.4.41"
+        "revision" : "1c83a6587507f7c2cad4a6d8d1a015faf2f966a3",
+        "version" : "0.4.44"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "be87a6d463febe970419da3db0a63ac0ef9dd659",
-        "version" : "0.0.6"
+        "revision" : "8aef5847c08012174e958c2308049e38455d8894",
+        "version" : "0.0.7"
       }
     },
     {

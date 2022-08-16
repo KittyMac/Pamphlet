@@ -23,7 +23,7 @@ private class JibRunner {
     
     init() {
         _ = jib[eval: "let global = {};"]
-        _ = jib[eval: HalfHitch(stringLiteral: ToolsPamphlet.ToolsJs())]
+        _ = jib[eval: ToolsPamphlet.ToolsJs()]
         
         jsToolJS = jib[function: "global.toolJS"]!
         jsToolJSON = jib[function: "global.toolJSON"]!
