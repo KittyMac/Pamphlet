@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Pamphlet",
     platforms: [
-        .macOS(.v10_13)
+        .macOS(.v10_13), .iOS(.v11)
     ],
     products: [
         .executable(name: "Pamphlet", targets: ["Pamphlet"]),
