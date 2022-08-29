@@ -2,39 +2,7 @@ import Foundation
 import PackagePlugin
 
 @main struct PamphletPlugin: BuildToolPlugin {
-    
-    private func shouldProcess(inputs: [String],
-                               outputs: [String]) -> Bool {
-        var maxInputDate = Date.distantPast
-        var minOutputDate = Date.distantFuture
-        
-        for input in inputs {
-            if let attr = try? FileManager.default.attributesOfItem(atPath: input),
-               let date = attr[FileAttributeKey.modificationDate] as? Date {
-                if date > maxInputDate {
-                    print("input: \(input) is \(date)")
-                    maxInputDate = date
-                }
-            }
-        }
-        
-        for output in outputs {
-            if let attr = try? FileManager.default.attributesOfItem(atPath: output),
-               let date = attr[FileAttributeKey.modificationDate] as? Date {
-                if date < minOutputDate {
-                    print("output: \(output) is \(date)")
-                    minOutputDate = date
-                }
-            }
-        }
-        
-        if maxInputDate == Date.distantPast || minOutputDate == Date.distantFuture {
-            return true
-        }
-                
-        return minOutputDate < maxInputDate
-    }
-        
+            
     private func gatherInputFiles(targets: [Target],
                                   destinationDir: String?,
                                   isDependency: Bool,
@@ -106,47 +74,33 @@ import PackagePlugin
                          destinationDir: copiesDirectory,
                          isDependency: true,
                          inputFiles: &inputFiles)
-                        
-        let outputFiles: [String] = [
-            context.pluginWorkDirectory.string + "/Pamphlet.debug.swift",
-            context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
-        ]
         
         // detect when the git version changes and reprocess
         let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
-        var gitVersionDidChange = true
         if let version = git() {
             // save the version number as an input in our tool working directory
             if let lastVersion = try? String(contentsOfFile: gitVersionPath),
                lastVersion == version {
-                gitVersionDidChange = false
             } else {
                 try? version.write(toFile: gitVersionPath, atomically: false, encoding: .utf8)
             }
         }
-                
-        if shouldProcess(inputs: inputFiles.map { $0.string },
-                         outputs: outputFiles) || gitVersionDidChange {
-            return [
-                .buildCommand(
-                    displayName: "Pamphlet - generating resources...",
-                    executable: tool.path,
-                    arguments: [
-                        "--release",
-                        copiesDirectory,
-                        context.pluginWorkDirectory.string
-                    ],
-                    inputFiles: inputFiles,
-                    outputFiles: outputFiles.map { PackagePlugin.Path($0) }
-                )
-            ]
-        }
         
+        let outputFiles: [String] = [
+            gitVersionPath,
+            context.pluginWorkDirectory.string + "/Pamphlet.debug.swift",
+            context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
+        ]
+                
         return [
             .buildCommand(
-                displayName: "Pamphlet - skipping...",
+                displayName: "Pamphlet - generating resources...",
                 executable: tool.path,
-                arguments: [ "skip" ],
+                arguments: [
+                    "--release",
+                    copiesDirectory,
+                    context.pluginWorkDirectory.string
+                ],
                 inputFiles: inputFiles,
                 outputFiles: outputFiles.map { PackagePlugin.Path($0) }
             )
