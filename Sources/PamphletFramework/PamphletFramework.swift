@@ -129,7 +129,7 @@ public class PamphletFramework {
         for page in inDirectoryPages {
             if page.parts.count > 1 {
                 let code = ####"""
-                    public extension {?} { enum {?} { } }
+                    extension {?} { enum {?} { } }
                     
                     """#### << [page.parentExtensionName, page.myStructName]
                 if allDirectoryExtensions.contains(code.description) == false {
@@ -141,7 +141,7 @@ public class PamphletFramework {
         for page in (textPages + dataPages) {
             if page.parts.count > 1 {
                 let code = ####"""
-                    public extension {?} { enum {?} { } }
+                    extension {?} { enum {?} { } }
                     
                     """#### << [page.parentExtensionName, page.myStructName]
                 if allDirectoryExtensions.contains(code.description) == false {
@@ -156,20 +156,20 @@ public class PamphletFramework {
         let templateDebugOnlySwift = """
         {0}
         
-        public enum \(pamphletName) {
-            public static let version = "\(version)"
+        enum \(pamphletName) {
+            static let version = "\(version)"
             
-            public static func get(string member: String) -> String? {
+            static func get(string member: String) -> String? {
                 switch member {
         {1}
                 default: break
                 }
                 return nil
             }
-            public static func get(gzip member: String) -> Data? {
+            static func get(gzip member: String) -> Data? {
                 return nil
             }
-            public static func get(data member: String) -> Data? {
+            static func get(data member: String) -> Data? {
                 switch member {
         {4}
                 default: break
@@ -183,24 +183,24 @@ public class PamphletFramework {
         let templateReleaseOnlySwift = """
         {0}
         
-        public enum \(pamphletName) {
-            public static let version = "\(version)"
+        enum \(pamphletName) {
+            static let version = "\(version)"
 
-            public static func get(string member: String) -> StaticString? {
+            static func get(string member: String) -> StaticString? {
                 switch member {
         {2}
                 default: break
                 }
                 return nil
             }
-            public static func get(gzip member: String) -> Data? {
+            static func get(gzip member: String) -> Data? {
                 switch member {
         {3}
                 default: break
                 }
                 return nil
             }
-            public static func get(data member: String) -> Data? {
+            static func get(data member: String) -> Data? {
                 switch member {
         {4}
                 default: break
@@ -395,7 +395,7 @@ public class PamphletFramework {
         if options.contains(.kotlin) {
             
         } else {
-            appendBoth("public extension \(path.extensionName) {\n")
+            appendBoth("extension \(path.extensionName) {\n")
         }
         
         if uncompressed != nil && options.contains(.includeOriginal) {

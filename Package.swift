@@ -5,7 +5,10 @@ import PackageDescription
 // When ready to release, run "make release" to build the latest
 // Pamphlet tool and embed it in a artifactbundle, and change this
 // back to just os(Linux)
-#if os(macOS) || os(Linux)
+#if os(Linux)
+let productsTarget: [PackageDescription.Product] = [
+    .executable(name: "PamphletTool", targets: ["PamphletTool"]),
+]
 let pluginTarget: [PackageDescription.Target] = [
     .executableTarget(
         name: "PamphletTool",
@@ -17,6 +20,9 @@ let pluginTarget: [PackageDescription.Target] = [
     )
 ]
 #else
+let productsTarget: [PackageDescription.Product] = [
+    .library(name: "PamphletTool", targets: ["PamphletTool"]),
+]
 let pluginTarget: [PackageDescription.Target] = [
     .binaryTarget(name: "PamphletTool",
                   path: "dist/PamphletTool.zip"),
@@ -28,7 +34,7 @@ let package = Package(
     platforms: [
         .macOS(.v10_13), .iOS(.v11)
     ],
-    products: [
+    products: productsTarget + [
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"])
