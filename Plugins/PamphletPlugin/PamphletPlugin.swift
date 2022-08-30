@@ -54,7 +54,7 @@ import PackagePlugin
             return []
         }
 
-        let tool = try context.tool(named: "Pamphlet")
+        let tool = try context.tool(named: "PamphletTool")
         
         let copiesDirectory = context.pluginWorkDirectory.string + "/Pamphlet/"
         

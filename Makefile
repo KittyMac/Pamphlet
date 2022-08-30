@@ -11,9 +11,9 @@ all: build
 build:
 	swift build --triple arm64-apple-macosx $(SWIFT_BUILD_FLAGS) 
 	swift build --triple x86_64-apple-macosx $(SWIFT_BUILD_FLAGS)
-	-rm .build/${PROJECTNAME}
-	lipo -create -output .build/${PROJECTNAME} .build/arm64-apple-macosx/release/${PROJECTNAME} .build/x86_64-apple-macosx/release/${PROJECTNAME}
-	cp .build/${PROJECTNAME} ./dist/Pamphlet
+	-rm .build/PamphletTool
+	lipo -create -output .build/PamphletTool .build/arm64-apple-macosx/release/PamphletTool .build/x86_64-apple-macosx/release/PamphletTool
+	cp .build/PamphletTool ./dist/Pamphlet
 
 .PHONY: clean
 clean:
@@ -34,13 +34,13 @@ test:
 .PHONY: install
 install: clean build
 	-rm ./dist/Pamphlet
-	cp .build/${PROJECTNAME} ./dist/Pamphlet
+	cp .build/PamphletTool ./dist/Pamphlet
 	
 	-rm /opt/homebrew/dist/Pamphlet
-	-cp .build/${PROJECTNAME} /opt/homebrew/dist/Pamphlet
+	-cp .build/PamphletTool /opt/homebrew/dist/Pamphlet
 	
 	-rm /usr/local/dist/Pamphlet
-	-cp .build/${PROJECTNAME} /usr/local/dist/Pamphlet
+	-cp .build/PamphletTool /usr/local/dist/Pamphlet
 	
 
 .PHONY: tools
@@ -55,9 +55,9 @@ tools-simple: install
 
 .PHONY: release
 release: install
-	cp ./dist/Pamphlet ./dist/Pamphlet.artifactbundle/Pamphlet-macos/bin/Pamphlet
-	rm -f ./dist/Pamphlet.zip
-	cd ./dist && zip -r ./Pamphlet.zip ./Pamphlet.artifactbundle
+	cp ./dist/Pamphlet ./dist/PamphletTool.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	rm -f ./dist/PamphletTool.zip
+	cd ./dist && zip -r ./PamphletTool.zip ./PamphletTool.artifactbundle
 
 docker:
 	-docker buildx create --name local_builder

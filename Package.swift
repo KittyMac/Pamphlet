@@ -8,7 +8,7 @@ import PackageDescription
 #if os(Linux)
 let pluginTarget: [PackageDescription.Target] = [
     .executableTarget(
-        name: "Pamphlet",
+        name: "PamphletTool",
         dependencies: [
             "Hitch",
             "PamphletFramework",
@@ -18,9 +18,8 @@ let pluginTarget: [PackageDescription.Target] = [
 ]
 #else
 let pluginTarget: [PackageDescription.Target] = [
-    .binaryTarget(name: "Pamphlet",
-                  url: "https://github.com/KittyMac/Pamphlet/raw/master/dist/Pamphlet.zip",
-                  checksum: "9f204079a3daff4251c86ec53ea55bf43d780add29d4b976e9019d43130d0825")
+    .binaryTarget(name: "PamphletTool",
+                  path: "dist/PamphletTool.zip"),
 ]
 #endif
 
@@ -44,12 +43,12 @@ let package = Package(
         .plugin(
             name: "PamphletPlugin",
             capability: .buildTool(),
-            dependencies: ["Pamphlet"]
+            dependencies: ["PamphletTool"]
         ),
         .plugin(
             name: "PamphletReleaseOnlyPlugin",
             capability: .buildTool(),
-            dependencies: ["Pamphlet"]
+            dependencies: ["PamphletTool"]
         ),
         .target(
             name: "PamphletFramework",
