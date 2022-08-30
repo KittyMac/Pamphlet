@@ -29,7 +29,9 @@ let package = Package(
         .macOS(.v10_13), .iOS(.v11)
     ],
     products: [
-        .library(name: "PamphletFramework", targets: ["PamphletFramework"])
+        .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
+        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
+        .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"])
     ],
     dependencies: [
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
