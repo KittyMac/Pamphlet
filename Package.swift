@@ -19,7 +19,7 @@ let pluginTarget: [PackageDescription.Target] = [
 #else
 let pluginTarget: [PackageDescription.Target] = [
     .binaryTarget(name: "Pamphlet",
-                  path: "./dist/Pamphlet.zip"),
+                  path: "Pamphlet.zip"),
 ]
 #endif
 
