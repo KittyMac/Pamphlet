@@ -87,7 +87,6 @@ import PackagePlugin
         }
         
         let outputFiles: [String] = [
-            gitVersionPath,
             context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
         ]
                 
