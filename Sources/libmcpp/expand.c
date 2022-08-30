@@ -2160,7 +2160,7 @@ static char *   expand_prestd(
     char *  mac_end = &macrobuf[ NMACWORK]; /* End of macrobuf[]    */
     char *  out_p;                          /* Pointer into out[]   */
     char *  mp = macrobuf;                  /* Pointer into macrobuf*/
-    int     len;                            /* Length of a token    */
+    size_t  len;                            /* Length of a token    */
     int     token_type;                     /* Type of token        */
     int     c;
 

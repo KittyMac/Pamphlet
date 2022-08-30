@@ -1,5 +1,7 @@
 SWIFT_BUILD_FLAGS=--configuration release
 PROJECTNAME := $(shell basename `pwd`)
+RELEASEVERSION := $(shell git describe)
+RELEASENAME := Pamphlet-${RELEASEVERSION}.zip
 
 .PHONY: all build clean xcode
 
@@ -11,7 +13,7 @@ build:
 	swift build --triple x86_64-apple-macosx $(SWIFT_BUILD_FLAGS)
 	-rm .build/${PROJECTNAME}
 	lipo -create -output .build/${PROJECTNAME} .build/arm64-apple-macosx/release/${PROJECTNAME} .build/x86_64-apple-macosx/release/${PROJECTNAME}
-	cp .build/${PROJECTNAME} ./bin/pamphlet
+	cp .build/${PROJECTNAME} ./dist/pamphlet
 
 .PHONY: clean
 clean:
@@ -31,25 +33,30 @@ test:
 
 .PHONY: install
 install: clean build
-	-rm ./bin/pamphlet
-	cp .build/${PROJECTNAME} ./bin/pamphlet
+	-rm ./dist/pamphlet
+	cp .build/${PROJECTNAME} ./dist/pamphlet
 	
-	-rm /opt/homebrew/bin/pamphlet
-	-cp .build/${PROJECTNAME} /opt/homebrew/bin/pamphlet
+	-rm /opt/homebrew/dist/pamphlet
+	-cp .build/${PROJECTNAME} /opt/homebrew/dist/pamphlet
 	
-	-rm /usr/local/bin/pamphlet
-	-cp .build/${PROJECTNAME} /usr/local/bin/pamphlet
+	-rm /usr/local/dist/pamphlet
+	-cp .build/${PROJECTNAME} /usr/local/dist/pamphlet
 	
 
 .PHONY: tools
 tools: install
 	make -C Tools
-	./bin/pamphlet --prefix=Tools --release ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+	./dist/pamphlet --prefix=Tools --release ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 .PHONY: tools-simple
 tools-simple: install
 	make -C Tools
-	./bin/pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+	./dist/pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
+
+.PHONY: release
+release: install
+	swift package create-artifact-bundle --package-version ${RELEASEVERSION} --product Pamphlet
+	cp .build/plugins/CreateArtifactBundle/outputs/${RELEASENAME} ./dist/
 
 docker:
 	-docker buildx create --name local_builder

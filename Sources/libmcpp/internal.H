@@ -391,7 +391,7 @@ extern char     identifier[];       /* Lastly scanned name          */
 extern IFINFO   ifstack[];          /* Information of #if nesting   */
 extern char     work_buf[];
 extern FILEINFO * sh_file;
-extern int      sh_line;
+extern size_t     sh_line;
         /* Temporary buffer for directive line and macro expansion  */
 
 /* main.c   */

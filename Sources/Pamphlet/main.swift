@@ -1,3 +1,5 @@
+#if canImport(PamphletFramework)
+
 import PamphletFramework
 import ArgumentParser
 
@@ -87,3 +89,4 @@ struct Pamphlet: ParsableCommand {
 
 Pamphlet.main()
 
+#endif

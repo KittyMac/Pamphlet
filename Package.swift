@@ -2,7 +2,7 @@
 import PackageDescription
 
 
-// Non-desktop targets should only allow release-only plg
+// Non-desktop targets should allow release-only plugin
 #if os(macOS) || os(Linux)
 let devPlugin: [Product] = [
     .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
@@ -26,7 +26,8 @@ let package = Package(
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0")
+        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0"),
+        .package(url: "https://github.com/KittyMac/swift-package-utils", branch: "main")
     ],
     targets: [
         .executableTarget(

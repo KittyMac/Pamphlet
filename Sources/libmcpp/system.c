@@ -2465,7 +2465,7 @@ static char *   norm_path(
     char *  cp1;
     char *  cp2;
     char *  abs_path;
-    int     len;                            /* Should not be size_t */
+    size_t  len;                            /* Should not be size_t */
     size_t  start_pos = 0;
     char    slbuf1[ PATHMAX+1];             /* Working buffer       */
 #if SYS_FAMILY == SYS_UNIX
@@ -3174,7 +3174,7 @@ found_name:
         char * parentFileName = dirname(parentDirectory);
         //set_a_dir(parentFileName);
         
-        int combinedLen = strlen(parentFileName) + strlen(filename) + 10;
+        size_t combinedLen = strlen(parentFileName) + strlen(filename) + 10;
         char * combined = malloc(combinedLen);
         strncpy(combined, parentFileName, combinedLen);
         strncat(combined, "/", combinedLen);
@@ -3504,7 +3504,7 @@ search:
     // Is this an alternative file (ie is it a image file we're going to base64 encode)?
     // If so, create the alt file next to it and include that instead
     
-    int extensionIdx = strlen(filename) - 4;
+    size_t extensionIdx = strlen(filename) - 4;
     if (strncmp(filename + extensionIdx, ".png", 4) == 0 ||
         strncmp(filename + extensionIdx, ".jpg", 4) == 0) {
         char newfilename[ PATHMAX + 1 ] = {0};
@@ -3966,7 +3966,7 @@ static int  chk_dirp(
 #endif
 
 FILEINFO*       sh_file;
-int             sh_line;
+size_t          sh_line;
 
 void    sharp(
     FILEINFO *  sharp_file,
@@ -3979,7 +3979,7 @@ void    sharp(
  */
 {
     FILEINFO *  file;
-    int         line;
+    size_t      line;
 
     file = sharp_file ? sharp_file : infile;
     if (! file)

@@ -112,7 +112,7 @@ void    directive( void)
     FILEINFO *  file;
     int     token_type;
     int     hash;
-    int     c;
+    long     c;
     char *  tp;
 
     in_directive = TRUE;
