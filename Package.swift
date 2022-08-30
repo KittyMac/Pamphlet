@@ -19,7 +19,8 @@ let pluginTarget: [PackageDescription.Target] = [
 #else
 let pluginTarget: [PackageDescription.Target] = [
     .binaryTarget(name: "Pamphlet",
-                  path: "Pamphlet.zip"),
+                  url: "https://github.com/KittyMac/Pamphlet/raw/master/dist/Pamphlet.zip",
+                  checksum: "9f204079a3daff4251c86ec53ea55bf43d780add29d4b976e9019d43130d0825")
 ]
 #endif
 
