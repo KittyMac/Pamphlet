@@ -1,14 +1,26 @@
 // swift-tools-version:5.6
 import PackageDescription
 
-
-// Non-desktop targets should allow release-only plugin
-#if os(macOS) || os(Linux)
-let devPlugin: [Product] = [
-    .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
+// When developing Pamphlet, change this to include os(macOS).
+// When ready to release, run "make release" to build the latest
+// Pamphlet tool and embed it in a artifactbundle, and change this
+// back to just os(Linux)
+#if os(Linux)
+let pluginTarget: [PackageDescription.Target] = [
+    .executableTarget(
+        name: "Pamphlet",
+        dependencies: [
+            "Hitch",
+            "PamphletFramework",
+            .product(name: "ArgumentParser", package: "swift-argument-parser")
+        ]
+    )
 ]
 #else
-let devPlugin: [PackageDescription.Product.Plugin] = []
+let pluginTarget: [PackageDescription.Target] = [
+    .binaryTarget(name: "Pamphlet",
+                  path: "./dist/Pamphlet.zip"),
+]
 #endif
 
 let package = Package(
@@ -16,28 +28,19 @@ let package = Package(
     platforms: [
         .macOS(.v10_13), .iOS(.v11)
     ],
-    products: devPlugin + [
-        .executable(name: "Pamphlet", targets: ["Pamphlet"]),
+    products: [
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
 		.library(name: "libmcpp", targets: ["libmcpp"]),
+        .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletPlugin"])
     ],
     dependencies: [
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0"),
-        .package(url: "https://github.com/KittyMac/swift-package-utils", branch: "main")
+        .package(url: "https://github.com/1024jp/GzipSwift.git", from: "5.2.0")
     ],
-    targets: [
-        .executableTarget(
-            name: "Pamphlet",
-            dependencies: [
-                "Hitch",
-                "PamphletFramework",
-                .product(name: "ArgumentParser", package: "swift-argument-parser")
-            ]
-        ),
+    targets: pluginTarget + [
         .plugin(
             name: "PamphletPlugin",
             capability: .buildTool(),

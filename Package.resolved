@@ -53,15 +53,6 @@
         "revision" : "9f39744e025c7d377987f30b03770805dcb0bcd1",
         "version" : "1.1.4"
       }
-    },
-    {
-      "identity" : "swift-package-utils",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/KittyMac/swift-package-utils",
-      "state" : {
-        "branch" : "main",
-        "revision" : "39ff22f300658cf52dc1bd83179fb2673aa749be"
-      }
     }
   ],
   "version" : 2
