@@ -5,7 +5,7 @@ import PackageDescription
 // When ready to release, run "make release" to build the latest
 // Pamphlet tool and embed it in a artifactbundle, and change this
 // back to just os(Linux)
-#if os(Linux)
+#if os(macOS) || os(Linux)
 let pluginTarget: [PackageDescription.Target] = [
     .executableTarget(
         name: "PamphletTool",
