@@ -54,7 +54,13 @@ tools-simple: install
 	./dist/Pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 .PHONY: release
-release: install
+release: install docker
+	docker pull kittymac/pamphlet:latest
+	docker run --platform linux/arm64 --rm -v /tmp/:/outTemp kittymac/pamphlet /bin/bash -lc 'cp /root/Pamphlet/.build/aarch64-unknown-linux-gnu/release/PamphletTool /outTemp/PamphletTool'
+	cp /tmp/PamphletTool ./dist/PamphletTool.artifactbundle/PamphletTool-arm64/bin/PamphletTool
+	docker run --platform linux/amd64 --rm -v /tmp/:/outTemp kittymac/pamphlet /bin/bash -lc 'cp /root/Pamphlet/.build/x86_64-unknown-linux-gnu/release/PamphletTool /outTemp/PamphletTool'
+	cp /tmp/PamphletTool ./dist/PamphletTool.artifactbundle/PamphletTool-amd64/bin/PamphletTool
+	
 	cp ./dist/Pamphlet ./dist/PamphletTool.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	rm -f ./dist/PamphletTool.zip
 	cd ./dist && zip -r ./PamphletTool.zip ./PamphletTool.artifactbundle
@@ -69,4 +75,4 @@ docker:
 
 docker-shell:
 	docker pull kittymac/pamphlet
-	docker run --rm -it --entrypoint bash kittymac/pamphlet
+	docker run --platform linux/arm64 --rm -it --entrypoint bash kittymac/pamphlet

@@ -1,11 +1,9 @@
 // swift-tools-version:5.6
 import PackageDescription
 
-// When developing Pamphlet, change this to include os(macOS).
-// When ready to release, run "make release" to build the latest
-// Pamphlet tool and embed it in a artifactbundle, and change this
-// back to just os(Linux)
-#if os(Linux)
+// When runnning "make release" to build the binary tools change this to true
+// Otherwise always set it to false
+#if false
 let productsTarget: [PackageDescription.Product] = [
     .executable(name: "PamphletTool", targets: ["PamphletTool"]),
 ]
