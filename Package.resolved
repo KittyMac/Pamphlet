@@ -12,10 +12,10 @@
     {
       "identity" : "gzipswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/1024jp/GzipSwift.git",
+      "location" : "https://github.com/KittyMac/GzipSwift.git",
       "state" : {
-        "revision" : "7a7f17761c76a932662ab77028a4329f67d645a4",
-        "version" : "5.2.0"
+        "revision" : "ca15e2487b21e6f9d8829997184f14de32654b5b",
+        "version" : "5.3.0"
       }
     },
     {
