@@ -96,6 +96,8 @@ import PackagePlugin
                 displayName: "Pamphlet - generating resources...",
                 executable: tool.path,
                 arguments: [
+                    "--prefix",
+                    target.name,
                     copiesDirectory,
                     context.pluginWorkDirectory.string
                 ],
