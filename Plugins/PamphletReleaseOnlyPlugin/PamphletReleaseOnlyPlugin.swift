@@ -87,7 +87,7 @@ import PackagePlugin
         }
         
         let outputFiles: [String] = [
-            context.pluginWorkDirectory.string + "/Pamphlet.release.swift"
+            context.pluginWorkDirectory.string + "/\(target.name)Pamphlet.release.swift"
         ]
                 
         return [
