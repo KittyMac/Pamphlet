@@ -56,7 +56,8 @@ public class PamphletFramework {
     
     var options = PamphletOptions.default
     
-    var pamphletFilePath: String = ""
+    var debugPath: String = ""
+    var releasePath: String = ""
     
     private init() {
         queue1.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
@@ -77,9 +78,7 @@ public class PamphletFramework {
         // for release adjust it to: /path/to/Pamphlet.release.swift
         writeLock.lock(); defer { writeLock.unlock() }
         
-        let outputPath = pathOutput(path: path,
-                                    type: type)
-        try? "".write(toFile: outputPath, atomically: false, encoding: .utf8)
+        try? "".write(toFile: path, atomically: false, encoding: .utf8)
     }
     
     private func appendOutput(data: Data,
@@ -90,9 +89,7 @@ public class PamphletFramework {
         // for release adjust it to: /path/to/Pamphlet.release.swift
         writeLock.lock(); defer { writeLock.unlock() }
         
-        let outputPath = pathOutput(path: path,
-                                    type: type)
-        if let handle = FileHandle(forWritingAtPath: outputPath) {
+        if let handle = FileHandle(forWritingAtPath: path) {
             handle.seekToEndOfFile()
             handle.write(data)
             handle.closeFile()
@@ -112,8 +109,7 @@ public class PamphletFramework {
     private func createPamphletFile(_ pamphletName: String,
                                     _ inTextPages: [FilePath],
                                     _ inDataPages: [FilePath],
-                                    _ inDirectoryPages: [FilePath],
-                                    _ outFile: String) {
+                                    _ inDirectoryPages: [FilePath]) {
         
         
         var allDirectoryExtensions = ""
@@ -344,11 +340,11 @@ public class PamphletFramework {
         ]
         
         appendOutput(string: debugSwift.description,
-                     path: outFile,
+                     path: debugPath,
                      type: .debug)
         
         appendOutput(string: releaseSwift.description,
-                     path: outFile,
+                     path: releasePath,
                      type: .release)
     }
     
@@ -574,11 +570,11 @@ public class PamphletFramework {
                 if let (contentDebug, contentRelease) = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, options) {
                     
                     appendOutput(string: contentDebug,
-                                 path: pamphletFilePath,
+                                 path: debugPath,
                                  type: .debug)
                     
                     appendOutput(string: contentRelease,
-                                 path: pamphletFilePath,
+                                 path: releasePath,
                                  type: .release)
                     
                     directoryFilePath.isStaticString = true
@@ -660,11 +656,11 @@ public class PamphletFramework {
         queue1.waitUntilAllOperationsAreFinished()
         
         appendOutput(string: collapsedDebugContent,
-                     path: pamphletFilePath,
+                     path: debugPath,
                      type: .debug)
         
         appendOutput(string: collapsedReleaseContent,
-                     path: pamphletFilePath,
+                     path: releasePath,
                      type: .release)
         
         return
@@ -778,22 +774,17 @@ public class PamphletFramework {
             let pamphletExecPath = ProcessInfo.processInfo.arguments[0]
             guard let pamphletExecPathValues = try? URL(fileURLWithPath: pamphletExecPath).resourceValues(forKeys: Set(resourceKeys)) else { fatalError() }
                                     
-            pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
+            let pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
             
-            let debugPath = pathOutput(path: pamphletFilePath,
-                                       type: .debug)
-            let releasePath = pathOutput(path: pamphletFilePath,
-                                         type: .release)
-            
-            try? FileManager.default.removeItem(atPath: debugPath)
-            try? FileManager.default.removeItem(atPath: releasePath)
+            debugPath = "/tmp/\(UUID().uuidString).pamphlet.debug.swift"
+            releasePath = "/tmp/\(UUID().uuidString).pamphlet.release.swift"
             
             if options.contains(.releaseOnly) == false {
-                createOutput(path: pamphletFilePath,
+                createOutput(path: debugPath,
                              type: .debug)
             }
             
-            createOutput(path: pamphletFilePath,
+            createOutput(path: releasePath,
                          type: .release)
             
             if options.contains(.releaseOnly) {
@@ -809,18 +800,18 @@ public class PamphletFramework {
                     
                     """
                     appendOutput(string: header,
-                                 path: pamphletFilePath,
+                                 path: debugPath,
                                  type: .debug)
                     appendOutput(string: header,
-                                 path: pamphletFilePath,
+                                 path: releasePath,
                                  type: .release)
                 }
             } else {
                 appendOutput(string: fileHeaderDebug,
-                             path: pamphletFilePath,
+                             path: debugPath,
                              type: .debug)
                 appendOutput(string: fileHeaderRelease,
-                             path: pamphletFilePath,
+                             path: releasePath,
                              type: .release)
             }
             
@@ -892,16 +883,32 @@ public class PamphletFramework {
             createPamphletFile(pamphletName,
                                textPages.array,
                                dataPages.array,
-                               directoryPages.array,
-                               pamphletFilePath)
+                               directoryPages.array)
             
             appendOutput(string: fileFooterDebug,
-                         path: pamphletFilePath,
+                         path: debugPath,
                          type: .debug)
             
             appendOutput(string: fileFooterRelease,
-                         path: pamphletFilePath,
+                         path: releasePath,
                          type: .release)
+            
+            
+            // Copy the temp files out their final outputs
+            let finalDebugPath = pathOutput(path: pamphletFilePath,
+                                            type: .debug)
+            let finalReleasePath = pathOutput(path: pamphletFilePath,
+                                              type: .release)
+            
+            if let contents = try? String(contentsOfFile: debugPath) {
+                try? contents.write(toFile: finalDebugPath, atomically: false, encoding: .utf8)
+            }
+            try? FileManager.default.removeItem(atPath: debugPath)
+            
+            if let contents = try? String(contentsOfFile: releasePath) {
+                try? contents.write(toFile: finalReleasePath, atomically: false, encoding: .utf8)
+            }
+            try? FileManager.default.removeItem(atPath: releasePath)
         }
     }
 }

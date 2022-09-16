@@ -8,8 +8,6 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true && ap
     libjavascriptcoregtk-4.0-dev \
     unzip
 
-RUN ls /usr/include/
-
 WORKDIR /root/Pamphlet
 COPY ./dist ./dist
 COPY ./Package.resolved ./Package.resolved
