@@ -22,7 +22,6 @@ private class JibRunner {
     var lastJsResult: String = "undefined"
     
     init() {
-        _ = jib.eval("let global = {};")
         _ = jib.eval(ToolsPamphlet.ToolsJs())
         
         jsToolJS = jib[function: "global.toolJS"]!
