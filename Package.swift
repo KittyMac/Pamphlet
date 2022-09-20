@@ -3,7 +3,7 @@ import PackageDescription
 
 // When runnning "make release" to build the binary tools change this to true
 // Otherwise always set it to false
-#if false
+#if true
 let productsTarget: [PackageDescription.Product] = [
     .executable(name: "PamphletTool", targets: ["PamphletTool"]),
 ]
@@ -35,7 +35,8 @@ let package = Package(
     products: productsTarget + [
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
-        .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"])
+        .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"]),
+        .plugin(name: "PamphletGzipOnlyPlugin", targets: ["PamphletGzipOnlyPlugin"])
     ],
     dependencies: [
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
@@ -51,6 +52,11 @@ let package = Package(
         ),
         .plugin(
             name: "PamphletReleaseOnlyPlugin",
+            capability: .buildTool(),
+            dependencies: ["PamphletTool"]
+        ),
+        .plugin(
+            name: "PamphletGzipOnlyPlugin",
             capability: .buildTool(),
             dependencies: ["PamphletTool"]
         ),
@@ -72,7 +78,7 @@ let package = Package(
                 "PamphletFramework"
             ],
             plugins: [
-                .plugin(name: "PamphletPlugin")
+                .plugin(name: "PamphletGzipOnlyPlugin")
             ]
         )
     ]

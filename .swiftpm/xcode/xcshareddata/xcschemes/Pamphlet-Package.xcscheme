@@ -160,6 +160,34 @@
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PamphletGzipOnlyPlugin"
+               BuildableName = "PamphletGzipOnlyPlugin"
+               BlueprintName = "PamphletGzipOnlyPlugin"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PluginShared"
+               BuildableName = "PluginShared"
+               BlueprintName = "PluginShared"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -194,9 +222,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "PamphletTool"
-            BuildableName = "PamphletTool"
-            BlueprintName = "PamphletTool"
+            BlueprintIdentifier = "PluginShared"
+            BuildableName = "PluginShared"
+            BlueprintName = "PluginShared"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -220,9 +248,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "PamphletTool"
-            BuildableName = "PamphletTool"
-            BlueprintName = "PamphletTool"
+            BlueprintIdentifier = "PluginShared"
+            BuildableName = "PluginShared"
+            BlueprintName = "PluginShared"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>

@@ -16,6 +16,8 @@ import PackagePlugin
                 arguments: [
                     "--prefix",
                     target.name,
+                    "--release",
+                    "--disable-original",
                     copiesDirectory,
                     context.pluginWorkDirectory.string
                 ],
