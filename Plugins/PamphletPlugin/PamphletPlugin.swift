@@ -7,7 +7,9 @@ import PackagePlugin
             return []
         }
         
-        let (toolPath, copiesDirectory, inputFiles, outputFiles) = try pluginShared(context: context, target: target)
+        let (toolPath, copiesDirectory, inputFiles, outputFiles) = try pluginShared(context: context,
+                                                                                    target: target,
+                                                                                    includeDebug: true)
         
         return [
             .buildCommand(

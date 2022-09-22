@@ -1,7 +1,7 @@
 import Foundation
 import PackagePlugin
 
-func pluginShared(context: PluginContext, target: Target) throws -> (PackagePlugin.Path, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
+func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
     let tool = try context.tool(named: "PamphletTool")
     
     let copiesDirectory = context.pluginWorkDirectory.string + "/Pamphlet/"
@@ -34,9 +34,15 @@ func pluginShared(context: PluginContext, target: Target) throws -> (PackagePlug
         }
     }
     
-    let outputFiles: [String] = [
+    var outputFiles: [String] = [
         context.pluginWorkDirectory.string + "/\(target.name)Pamphlet.release.swift"
     ]
+    
+    if includeDebug {
+        outputFiles.append(
+            context.pluginWorkDirectory.string + "/\(target.name)Pamphlet.debug.swift"
+        )
+    }
     
     return (tool.path,
             copiesDirectory,
