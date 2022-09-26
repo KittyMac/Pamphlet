@@ -2,6 +2,7 @@
 
 import PamphletFramework
 import ArgumentParser
+import Foundation
 
 struct Pamphlet: ParsableCommand {
     
@@ -47,6 +48,11 @@ struct Pamphlet: ParsableCommand {
         var json: Bool = true
                 
         mutating func run() throws {
+            if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
+               buildAction == "indexbuild" {
+                return
+            }
+            
             var options = PamphletOptions()
             
             if release { options.insert(.releaseOnly) }
@@ -73,6 +79,11 @@ struct Pamphlet: ParsableCommand {
         var inFile: String
         
         mutating func run() {
+            if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
+               buildAction == "indexbuild" {
+                return
+            }
+            
             PamphletFramework.shared.preprocess(file: inFile)
         }
     }
