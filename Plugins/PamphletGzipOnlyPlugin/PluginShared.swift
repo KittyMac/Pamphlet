@@ -2,8 +2,32 @@ import Foundation
 import PackagePlugin
 
 func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
-    let tool = try context.tool(named: "PamphletTool")
     
+    // Note: We want to load the right pre-compiled tool for the right OS
+    // There are currently two tools:
+    // PamphletPluginTool-focal: supports macos and ubuntu-focal
+    // PamphletPluginTool-focal: supports macos and amazonlinux2
+    //
+    // When we are compiling to build the precompiled tools, only the
+    // default ( PamphletPluginTool-focal ) is available.
+    //
+    // When we are running and want to use the pre-compiled tools, we look in
+    // /etc/os-release (available on linux) to see what distro we are running
+    // and to load the correct tool there.
+    var tool = try? context.tool(named: "PamphletTool-focal")
+    
+    if let osFile = try? String(contentsOfFile: "/etc/os-release") {
+        if osFile.contains("Amazon Linux"),
+           let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
+            tool = osTool
+        }
+    }
+    
+    guard let tool = tool else {
+        fatalError("PamphletPlugin unable to load PamphletToolTool")
+    }
+
+        
     let copiesDirectory = context.pluginWorkDirectory.string + "/Pamphlet/"
     
     try? FileManager.default.removeItem(atPath: copiesDirectory)

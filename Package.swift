@@ -5,25 +5,75 @@ import PackageDescription
 // Otherwise always set it to false
 #if false
 let productsTarget: [PackageDescription.Product] = [
-    .executable(name: "PamphletTool", targets: ["PamphletTool"]),
+    
 ]
 let pluginTarget: [PackageDescription.Target] = [
     .executableTarget(
-        name: "PamphletTool",
+        name: "PamphletTool-focal",
         dependencies: [
             "Hitch",
             "PamphletFramework",
             .product(name: "ArgumentParser", package: "swift-argument-parser")
         ]
-    )
+    ),
+    .plugin(
+        name: "PamphletPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+        ]
+    ),
+    .plugin(
+        name: "PamphletReleaseOnlyPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+        ]
+    ),
+    .plugin(
+        name: "PamphletGzipOnlyPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+        ]
+    ),
 ]
 #else
 let productsTarget: [PackageDescription.Product] = [
-    .library(name: "PamphletTool", targets: ["PamphletTool"]),
+    .library(name: "PamphletTool", targets: [
+        "PamphletTool-focal",
+        "PamphletTool-amazonlinux2"
+    ]),
 ]
 let pluginTarget: [PackageDescription.Target] = [
-    .binaryTarget(name: "PamphletTool",
-                  path: "dist/PamphletTool.zip"),
+    .binaryTarget(name: "PamphletTool-focal",
+                  path: "dist/PamphletTool-focal.zip"),
+    .binaryTarget(name: "PamphletTool-amazonlinux2",
+                  path: "dist/PamphletTool-amazonlinux2.zip"),
+    .plugin(
+        name: "PamphletPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+            "PamphletTool-amazonlinux2"
+        ]
+    ),
+    .plugin(
+        name: "PamphletReleaseOnlyPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+            "PamphletTool-amazonlinux2"
+        ]
+    ),
+    .plugin(
+        name: "PamphletGzipOnlyPlugin",
+        capability: .buildTool(),
+        dependencies: [
+            "PamphletTool-focal",
+            "PamphletTool-amazonlinux2"
+        ]
+    ),
 ]
 #endif
 
@@ -45,21 +95,6 @@ let package = Package(
         .package(url: "https://github.com/KittyMac/GzipSwift.git", from: "5.3.0")
     ],
     targets: pluginTarget + [
-        .plugin(
-            name: "PamphletPlugin",
-            capability: .buildTool(),
-            dependencies: ["PamphletTool"]
-        ),
-        .plugin(
-            name: "PamphletReleaseOnlyPlugin",
-            capability: .buildTool(),
-            dependencies: ["PamphletTool"]
-        ),
-        .plugin(
-            name: "PamphletGzipOnlyPlugin",
-            capability: .buildTool(),
-            dependencies: ["PamphletTool"]
-        ),
         .target(
             name: "PamphletFramework",
             dependencies: [

@@ -188,6 +188,20 @@
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PamphletTool-focal"
+               BuildableName = "PamphletTool-focal"
+               BlueprintName = "PamphletTool-focal"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -222,9 +236,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "PluginShared"
-            BuildableName = "PluginShared"
-            BlueprintName = "PluginShared"
+            BlueprintIdentifier = "PamphletTool-focal"
+            BuildableName = "PamphletTool-focal"
+            BlueprintName = "PamphletTool-focal"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -248,9 +262,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "PluginShared"
-            BuildableName = "PluginShared"
-            BlueprintName = "PluginShared"
+            BlueprintIdentifier = "PamphletTool-focal"
+            BuildableName = "PamphletTool-focal"
+            BlueprintName = "PamphletTool-focal"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>

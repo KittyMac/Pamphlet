@@ -1,0 +1,17 @@
+FROM swift:5.6.2-amazonlinux2
+
+RUN yum install -y \
+    libatomic1 \
+    webkitgtk4-jsc-devel \
+    unzip
+
+WORKDIR /root/Pamphlet
+COPY ./dist ./dist
+COPY ./Package.resolved ./Package.resolved
+COPY ./Package.swift ./Package.swift
+COPY ./Plugins ./Plugins
+COPY ./Sources ./Sources
+COPY ./Tests ./Tests
+
+RUN swift test
+RUN swift build --configuration release
