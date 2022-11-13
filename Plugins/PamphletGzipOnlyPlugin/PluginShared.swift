@@ -21,10 +21,14 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
            let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
             tool = osTool
         }
+        if osFile.contains("fedora"),
+           let osTool = try? context.tool(named: "PamphletTool-fedora") {
+            tool = osTool
+        }
     }
     
     guard let tool = tool else {
-        fatalError("PamphletPlugin unable to load PamphletToolTool")
+        fatalError("PamphletPlugin unable to load PamphletTool")
     }
 
         

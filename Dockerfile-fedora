@@ -1,9 +1,11 @@
-FROM swift:5.6.2-amazonlinux2 as builder
+FROM fedora:37 as builder
 
-RUN yum install -y \
-    libatomic \
-    webkitgtk4-jsc-devel \
-    unzip
+RUN dnf install -y \
+    git \
+    unzip \
+    swift-lang-5.7-1.fc37 \
+    javascriptcoregtk4.0-devel \
+    libatomic_ops
 
 WORKDIR /root/Pamphlet
 COPY ./dist ./dist

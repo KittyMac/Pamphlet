@@ -42,7 +42,8 @@ let pluginTarget: [PackageDescription.Target] = [
 let productsTarget: [PackageDescription.Product] = [
     .library(name: "PamphletTool", targets: [
         "PamphletTool-focal",
-        "PamphletTool-amazonlinux2"
+        "PamphletTool-amazonlinux2",
+        "PamphletTool-fedora"
     ]),
 ]
 let pluginTarget: [PackageDescription.Target] = [
@@ -50,12 +51,15 @@ let pluginTarget: [PackageDescription.Target] = [
                   path: "dist/PamphletTool-focal.zip"),
     .binaryTarget(name: "PamphletTool-amazonlinux2",
                   path: "dist/PamphletTool-amazonlinux2.zip"),
+    .binaryTarget(name: "PamphletTool-fedora",
+                  path: "dist/PamphletTool-fedora.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),
         dependencies: [
             "PamphletTool-focal",
-            "PamphletTool-amazonlinux2"
+            "PamphletTool-amazonlinux2",
+            "PamphletTool-fedora"
         ]
     ),
     .plugin(
@@ -63,7 +67,8 @@ let pluginTarget: [PackageDescription.Target] = [
         capability: .buildTool(),
         dependencies: [
             "PamphletTool-focal",
-            "PamphletTool-amazonlinux2"
+            "PamphletTool-amazonlinux2",
+            "PamphletTool-fedora"
         ]
     ),
     .plugin(
@@ -71,7 +76,8 @@ let pluginTarget: [PackageDescription.Target] = [
         capability: .buildTool(),
         dependencies: [
             "PamphletTool-focal",
-            "PamphletTool-amazonlinux2"
+            "PamphletTool-amazonlinux2",
+            "PamphletTool-fedora"
         ]
     ),
 ]
