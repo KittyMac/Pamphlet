@@ -7,6 +7,8 @@ RUN dnf install -y \
     javascriptcoregtk4.0-devel \
     libatomic_ops
 
+RUN ln -s /usr/libexec/swift/*/lib/libsourcekitdInProc.so /usr/lib/libsourcekitdInProc.so
+
 WORKDIR /root/Pamphlet
 COPY ./dist ./dist
 COPY ./Package.resolved ./Package.resolved
