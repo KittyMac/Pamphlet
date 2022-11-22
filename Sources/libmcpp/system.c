@@ -46,13 +46,18 @@
 
 #include <sys/types.h>
 
-extern char    *strdup(const char *__s1);
+#ifndef _WIN32
+#include <unistd.h>
+#include    <strings.h>
+
+extern char *strdup(const char *__s1);
+#endif
+
 extern char    *realpath(const char * __restrict, char * __restrict);
 
 #include "b64.h"
 
 #if     HOST_SYS_FAMILY == SYS_UNIX
-#include    "unistd.h"              /* For getcwd(), readlink() */
 #elif   HOST_COMPILER == MSC || HOST_COMPILER == LCC
 #include    "direct.h"
 #define getcwd( buf, size)  _getcwd( buf, size)
@@ -73,19 +78,20 @@ extern char    *realpath(const char * __restrict, char * __restrict);
 #endif
 
 /* Function to compare path-list    */
-#if     FNAME_FOLD
-#if     HOST_COMPILER == GNUC   /* CYGWIN, MINGW, MAC   */
-#include    <strings.h>         /* POSIX 1, 2001        */
-#define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
-#else   /* MSC, BORLANDC, LCC   */
-#if     HOST_COMPILER == MSC
-#define stricmp( str1, str2)        _stricmp( str1, str2)
-#endif
-#define str_case_eq( str1, str2)    (stricmp( str1, str2) == 0)
-#endif
-#else   /* ! FNAME_FOLD */
-#define str_case_eq( str1, str2)    (strcmp( str1, str2) == 0)
-#endif
+
+//#if     FNAME_FOLD
+//#if     HOST_COMPILER == GNUC   /* CYGWIN, MINGW, MAC   */
+//#include    <strings.h>         /* POSIX 1, 2001        */
+//#define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
+//#else   /* MSC, BORLANDC, LCC   */
+//#if     HOST_COMPILER == MSC
+//#define stricmp( str1, str2)        _stricmp( str1, str2)
+//#endif
+//#define str_case_eq( str1, str2)    (stricmp( str1, str2) == 0)
+//#endif
+//#else   /* ! FNAME_FOLD */
+//#define str_case_eq( str1, str2)    (strcmp( str1, str2) == 0)
+//#endif
 
 /*
  * PATH_DELIM is defined for the O.S. which has single byte path-delimiter.
@@ -112,7 +118,7 @@ extern char    *realpath(const char * __restrict, char * __restrict);
 #endif
 #endif
 
-#include <libgen.h>
+//#include <libgen.h>
 
 static void     version( void);
                 /* Print version message            */

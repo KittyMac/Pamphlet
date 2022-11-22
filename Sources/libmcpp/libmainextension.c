@@ -33,10 +33,12 @@
 #include <libgen.h>
 #include <string.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <sys/resource.h>
 
-extern char    *strdup(const char *__s1);
+#ifndef _WIN32
+#include <unistd.h>
+extern char *strdup(const char *__s1);
+#endif
 
 void mcpp_help() {
     char * argv[] = {
