@@ -14,13 +14,13 @@ final class PamphletTests: XCTestCase {
     func testProcessOptimize() {
         let extensions: [String] = []
         
-        measure {
-            PamphletFramework.shared.process(prefix: nil,
-                                             extensions: extensions,
-                                             inDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Sources/SOServerFramework/Pamphlet",
-                                             outDirectory: "/tmp/Pamphlet",
-                                             options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
-        }
+        //measure {
+        //    PamphletFramework.shared.process(prefix: nil,
+        //                                     extensions: extensions,
+        //                                     inDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Sources/SOServerFramework/Pamphlet",
+        //                                     outDirectory: "/tmp/Pamphlet",
+        //                                     options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
+        //}
     }
                 
     func testPamphlet() {

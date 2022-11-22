@@ -2571,12 +2571,12 @@ static char *   norm_path(
     }
     if (fname)
         strcat( slbuf1, fname);
-    if (stat( slbuf1, & st_buf) != 0        /* Non-existent         */
-            || (! fname && ! S_ISDIR( st_buf.st_mode))
-                /* Not a directory though 'fname' is not specified  */
-            || (fname && ! S_ISREG( st_buf.st_mode)))
-                /* Not a regular file though 'fname' is specified   */
-        return  NULL;
+    //if (stat( slbuf1, & st_buf) != 0        /* Non-existent         */
+    //        || (! fname && ! S_ISDIR( st_buf.st_mode))
+    //            /* Not a directory though 'fname' is not specified  */
+    //        || (fname && ! S_ISREG( st_buf.st_mode)))
+    //            /* Not a regular file though 'fname' is specified   */
+    //    return  NULL;
 #if SYSTEM == SYS_MAC && COMPILER == GNUC
     if (hmap) {                         /* Dirty "header map" file  */
         struct hmap_header_map  hmap;
