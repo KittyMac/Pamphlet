@@ -131,7 +131,9 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
+#ifndef _WIN32
 #define HAVE_UNISTD_H 1
+#endif
 
 /* Define to 1 if you have the <unistd.h,> header file. */
 /* #undef HAVE_UNISTD_H_ */
@@ -140,10 +142,18 @@
 #define HOST_CMP_NAME "GCC"
 
 /* Define the host compiler. */
+#ifdef _WIN32
+#define HOST_COMPILER MSC
+#else
 #define HOST_COMPILER GNUC
+#endif
 
 /* Define the host system. */
+#ifdef _WIN32
+#define HOST_SYSTEM MSC
+#else
 #define HOST_SYSTEM SYS_MAC
+#endif
 
 /* Define include directory to install mcpp_g*.h header files. */
 /* #undef INC_DIR */
@@ -206,7 +216,11 @@
 /* #undef STD_LINE_PREFIX */
 
 /* Define the target system. */
+#ifdef _WIN32
+#define SYSTEM MSC
+#else
 #define SYSTEM SYS_MAC
+#endif
 
 /* Define the version of FreeBSD. */
 /* #undef SYSTEM_EXT_VAL */

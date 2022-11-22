@@ -40,6 +40,18 @@
 #ifdef _WIN32
 
 
+#include "system.H"
+#include "internal.H"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <direct.h> 
+#include <string.h>
+
+#define PATH_DELIM      '/'
+
+#define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
+#define getcwd(arg1, arg2) _getcwd(arg1, arg2)
 
 #else
 
