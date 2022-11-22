@@ -37,86 +37,111 @@
  *      2. append the system-dependent routines in this file.
  */
 
-#if PREPROCESSED
-#include    "mcpp.H"
+#ifdef _WIN32
+
+
+
 #else
-#include    "system.H"
-#include    "internal.H"
-#endif
+
+#include "system.H"
+#include "internal.H"
 
 #include <sys/types.h>
-
-#ifndef _WIN32
+#include <sys/stat.h>
 #include <unistd.h>
-#include    <strings.h>
+#include <strings.h>
+#include <libgen.h>
 
-extern char *strdup(const char *__s1);
+#define PATH_DELIM      '/'
+
+#define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
+
 #endif
-
-extern char    *realpath(const char * __restrict, char * __restrict);
 
 #include "b64.h"
 
-#if     HOST_SYS_FAMILY == SYS_UNIX
-#elif   HOST_COMPILER == MSC || HOST_COMPILER == LCC
-#include    "direct.h"
-#define getcwd( buf, size)  _getcwd( buf, size)
-#elif   HOST_COMPILER == BORLANDC
-#include    "dir.h"
-#endif
 
-#include    "sys/types.h"
-#include    "sys/stat.h"                        /* For stat()       */
-#if     ! defined( S_ISREG)
-#define S_ISREG( mode)  (mode & S_IFREG)
-#define S_ISDIR( mode)  (mode & S_IFDIR)
-#endif
-#if     HOST_COMPILER == MSC
-#define S_IFREG     _S_IFREG
-#define S_IFDIR     _S_IFDIR
-#define stat( path, stbuf)  _stat( path, stbuf)
-#endif
+
+// #if PREPROCESSED
+// #include    "mcpp.H"
+// #else
+// #include    "system.H"
+// #include    "internal.H"
+// #endif
+//
+// #include <sys/types.h>
+//
+// #ifndef _WIN32
+// #include <unistd.h>
+// #include <strings.h>
+//
+// extern char *strdup(const char *__s1);
+// #endif
+//
+// extern char    *realpath(const char * __restrict, char * __restrict);
+//
+// #include "b64.h"
+//
+// #if     HOST_SYS_FAMILY == SYS_UNIX
+// #elif   HOST_COMPILER == MSC || HOST_COMPILER == LCC
+// #include    "direct.h"
+// #define getcwd( buf, size)  _getcwd( buf, size)
+// #elif   HOST_COMPILER == BORLANDC
+// #include    "dir.h"
+// #endif
+//
+// #include    "sys/types.h"
+// #include    "sys/stat.h"                        /* For stat()       */
+// #if     ! defined( S_ISREG)
+// #define S_ISREG( mode)  (mode & S_IFREG)
+// #define S_ISDIR( mode)  (mode & S_IFDIR)
+// #endif
+// #if     HOST_COMPILER == MSC
+// #define S_IFREG     _S_IFREG
+// #define S_IFDIR     _S_IFDIR
+// #define stat( path, stbuf)  _stat( path, stbuf)
+// #endif
 
 /* Function to compare path-list    */
 
-//#if     FNAME_FOLD
-//#if     HOST_COMPILER == GNUC   /* CYGWIN, MINGW, MAC   */
-//#include    <strings.h>         /* POSIX 1, 2001        */
-//#define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
-//#else   /* MSC, BORLANDC, LCC   */
-//#if     HOST_COMPILER == MSC
-//#define stricmp( str1, str2)        _stricmp( str1, str2)
-//#endif
-//#define str_case_eq( str1, str2)    (stricmp( str1, str2) == 0)
-//#endif
-//#else   /* ! FNAME_FOLD */
-//#define str_case_eq( str1, str2)    (strcmp( str1, str2) == 0)
-//#endif
+// #if     FNAME_FOLD
+// #if     HOST_COMPILER == GNUC   /* CYGWIN, MINGW, MAC   */
+// #include    <strings.h>         /* POSIX 1, 2001        */
+// #define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
+// #else   /* MSC, BORLANDC, LCC   */
+// #if     HOST_COMPILER == MSC
+// #define stricmp( str1, str2)        _stricmp( str1, str2)
+// #endif
+// #define str_case_eq( str1, str2)    (stricmp( str1, str2) == 0)
+// #endif
+// #else   /* ! FNAME_FOLD */
+// #define str_case_eq( str1, str2)    (strcmp( str1, str2) == 0)
+// #endif
 
 /*
  * PATH_DELIM is defined for the O.S. which has single byte path-delimiter.
  * Note: '\\' or any other character identical to second byte of MBCHAR should
  * not be used for PATH_DELIM for convenience of path-list parsing.
  */
-#if SYS_FAMILY == SYS_UNIX || SYS_FAMILY == SYS_WIN || SYSTEM == SYS_UNKNOWN
-#define PATH_DELIM      '/'
-#define SPECIAL_PATH_DELIM  FALSE
-#else   /* Any other path-delimiter, define PATH_DELIM by yourself  */
-#define SPECIAL_PATH_DELIM  TRUE    /* Any path-delimiter other than '/'    */
-#endif
+// #if SYS_FAMILY == SYS_UNIX || SYS_FAMILY == SYS_WIN || SYSTEM == SYS_UNKNOWN
+// #define PATH_DELIM      '/'
+// #define SPECIAL_PATH_DELIM  FALSE
+// #else   /* Any other path-delimiter, define PATH_DELIM by yourself  */
+// #define SPECIAL_PATH_DELIM  TRUE    /* Any path-delimiter other than '/'    */
+// #endif
 
 /*
  * OBJEXT is the suffix to denote "object" file.
  */
-#ifndef OBJEXT
-#if     SYS_FAMILY == SYS_UNIX || HOST_COMPILER == GNUC
-#define OBJEXT     "o"
-#elif   SYS_FAMILY == SYS_WIN
-#define OBJEXT     "obj"
-#elif   1
-/* Add here appropriate definitions for other systems.  */
-#endif
-#endif
+// #ifndef OBJEXT
+// #if     SYS_FAMILY == SYS_UNIX || HOST_COMPILER == GNUC
+// #define OBJEXT     "o"
+// #elif   SYS_FAMILY == SYS_WIN
+// #define OBJEXT     "obj"
+// #elif   1
+// /* Add here appropriate definitions for other systems.  */
+// #endif
+// #endif
 
 //#include <libgen.h>
 
