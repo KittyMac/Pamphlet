@@ -439,6 +439,28 @@ static struct timespec mtime(const char *file)
     return t;
 }
 
+char* mcpp_basename(char * path) {
+#ifdef _WIN32
+    static char filename[ PATHMAX + 1 ] = {0};
+    static char extension[ PATHMAX + 1 ] = {0};
+    _splitpath(path, NULL, NULL, filename, extension);
+    strncpy(filename, extension, PATHMAX);
+    return filename;
+#else
+    return basename((char *)path);
+#endif
+}
+
+char* mcpp_dirname(char * path) {
+#ifdef _WIN32
+    static char dirpath[ PATHMAX + 1 ] = {0};
+    _splitpath(path, NULL, dirpath, NULL, NULL);
+    return dirpath;
+#else
+    return dirname((char *)path);
+#endif
+}
+
 #if MCPP_LIB
 void    init_system( void)
 /* Initialize static variables  */
@@ -3216,7 +3238,7 @@ found_name:
     if (parentFile != NULL) {
         // Add the directory for the parent file to the include list
         char * parentDirectory = strdup(parentFile->filename);
-        char * parentFileName = dirname(parentDirectory);
+        char * parentFileName = mcpp_dirname(parentDirectory);
         //set_a_dir(parentFileName);
         
         size_t combinedLen = strlen(parentFileName) + strlen(filename) + 10;
@@ -3582,16 +3604,7 @@ search:
             if (fp != NULL) {
                 char variable_name[ PATHMAX + 1 ] = {0};
                 
-#ifdef _WIN32
-                char filename[ PATHMAX + 1 ] = {0};
-                char extension[ PATHMAX + 1 ] = {0};
-                _splitpath(filename, NULL, NULL, filename, extension);
-                strncpy(variable_name, filename, PATHMAX);
-                strncat(variable_name, extension, PATHMAX);
-#else
-                strncpy(variable_name, basename((char *)filename), PATHMAX);
-#endif
-                
+                strncpy(variable_name, mcpp_basename((char *)filename), PATHMAX);
                 for (int i = 0; i < PATHMAX; i++) {
                     if (variable_name[i] == 0) {
                         break;

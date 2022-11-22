@@ -40,6 +40,8 @@
 extern char *strdup(const char *__s1);
 #endif
 
+extern char* mcpp_dirname(char * path);
+
 void mcpp_help() {
     char * argv[] = {
         "mcpp",
@@ -58,7 +60,7 @@ void * mcpp_thread(void * mcpp_source_file) {
         "mcpp",
         "-NPCk",
         "-I",
-        (char *)dirname(srcFileCopy),
+        (char *)mcpp_dirname(srcFileCopy),
         (char *)srcFile,
         NULL
     };
