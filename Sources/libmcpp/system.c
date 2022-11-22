@@ -3367,7 +3367,13 @@ search_dirs:
     
     /* convert using real path and try that */
     char real_path[ PATHMAX] = { EOS, };
+    
+#ifdef _WIN32
+    _fullpath(real_path, filename, PATHMAX);
+#else
     realpath(filename, real_path);
+#endif
+    
         
     if (open_file( &null, src_dir, real_path, !full_path, FALSE, FALSE))
         return  TRUE;
