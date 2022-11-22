@@ -50,6 +50,8 @@
 
 #define PATH_DELIM      '/'
 
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 #define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
 #define getcwd(arg1, arg2) _getcwd(arg1, arg2)
 
@@ -3579,7 +3581,17 @@ search:
             fp = fopen(newfilename, "wb");
             if (fp != NULL) {
                 char variable_name[ PATHMAX + 1 ] = {0};
+                
+#ifdef _WIN32
+                char filename[ PATHMAX + 1 ] = {0};
+                char extension[ PATHMAX + 1 ] = {0};
+                _splitpath(filename, NULL, NULL, filename, extension);
+                strncpy(variable_name, filename, PATHMAX);
+                strncat(variable_name, extension, PATHMAX);
+#else
                 strncpy(variable_name, basename((char *)filename), PATHMAX);
+#endif
+                
                 for (int i = 0; i < PATHMAX; i++) {
                     if (variable_name[i] == 0) {
                         break;
