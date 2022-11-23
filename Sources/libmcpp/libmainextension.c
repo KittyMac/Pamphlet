@@ -73,10 +73,10 @@ void * mcpp_thread(void * mcpp_source_file) {
     return result;
 }
 
-pthread_mutex_t mcppLock = PTHREAD_MUTEX_INITIALIZER;
-
 const char * mcpp_preprocessFile(const char * srcFile) {
     
+#ifndef _WIN32
+    static pthread_mutex_t mcppLock = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_lock(&mcppLock);
     
     pthread_t thread_tid = 0;
@@ -107,4 +107,7 @@ const char * mcpp_preprocessFile(const char * srcFile) {
     pthread_mutex_unlock(&mcppLock);
     
     return result;
+#else
+    return mcpp_thread((void *)srcFile);
+#endif
 }
