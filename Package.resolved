@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "800060f1d1e8e2441fc6e9bfd5b423e32565b254",
-        "version" : "0.0.51"
+        "revision" : "ee78c72af38332831c343b9c14ea1225791fa38a",
+        "version" : "0.0.52"
       }
     },
     {
