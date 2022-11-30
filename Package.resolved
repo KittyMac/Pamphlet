@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Chronometer.git",
       "state" : {
-        "revision" : "1360b46bfa6eecbdedd24590b95f97d3e59dc027",
-        "version" : "0.1.6"
+        "revision" : "2bb103acaafa5099950cb6af9ed3b65e1ce14834",
+        "version" : "0.1.7"
       }
     },
     {
@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/GzipSwift.git",
       "state" : {
-        "revision" : "ca15e2487b21e6f9d8829997184f14de32654b5b",
-        "version" : "5.3.0"
+        "revision" : "cc1aeb59069660f6d27980af47ab3ad2fe34b98d",
+        "version" : "5.3.1"
       }
     },
     {
@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "f016a7ea5aef15e706a21aec11e3ea3adb56437f",
-        "version" : "0.4.50"
+        "revision" : "600ff22a394b7d86c00bbcada76a8d8dcf0574c9",
+        "version" : "0.4.93"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "b5fe9fbba59683920de582ee2e4561f32c36c606",
-        "version" : "0.0.20"
+        "revision" : "800060f1d1e8e2441fc6e9bfd5b423e32565b254",
+        "version" : "0.0.51"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Spanker.git",
       "state" : {
-        "revision" : "c383c78d988f925d071b0f204e4591c8a198843e",
-        "version" : "0.2.27"
+        "revision" : "0f89ec839269f09c14e3ae722de23822815577bf",
+        "version" : "0.2.30"
       }
     },
     {
@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "9f39744e025c7d377987f30b03770805dcb0bcd1",
-        "version" : "1.1.4"
+        "revision" : "fddd1c00396eed152c45a46bea9f47b98e59301d",
+        "version" : "1.2.0"
       }
     }
   ],
