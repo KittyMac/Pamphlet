@@ -38,11 +38,11 @@ install: clean build
 	-rm ./dist/Pamphlet
 	cp .build/PamphletTool-focal ./dist/Pamphlet
 	
-	-rm /opt/homebrew/dist/Pamphlet
-	-cp .build/PamphletTool-focal /opt/homebrew/dist/Pamphlet
+	-rm /opt/homebrew/bin/pamphlet
+	-cp .build/PamphletTool-focal /opt/homebrew/bin/pamphlet
 	
-	-rm /usr/local/dist/Pamphlet
-	-cp .build/PamphletTool-focal /usr/local/dist/Pamphlet
+	-rm /usr/local/bin/pamphlet
+	-cp .build/PamphletTool-focal /usr/local/bin/pamphlet
 	
 
 .PHONY: tools
