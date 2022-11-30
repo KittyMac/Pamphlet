@@ -89,7 +89,7 @@ let package = Package(
         .macOS(.v10_13), .iOS(.v11)
     ],
     products: productsTarget + [
-        .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
+        .library(name: "PamphletFramework", type: .dynamic, targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"]),
         .plugin(name: "PamphletGzipOnlyPlugin", targets: ["PamphletGzipOnlyPlugin"])
