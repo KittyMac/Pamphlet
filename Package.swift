@@ -90,7 +90,6 @@ let package = Package(
     ],
     products: productsTarget + [
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
-        .library(name: "PamphletFrameworkLib", type: .dynamic, targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"]),
         .plugin(name: "PamphletGzipOnlyPlugin", targets: ["PamphletGzipOnlyPlugin"])
