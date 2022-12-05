@@ -172,6 +172,13 @@ public class PamphletFramework {
                 }
                 return nil
             }
+            public static func get(md5 member: String) -> StaticString? {
+                switch member {
+        {6}
+                default: break
+                }
+                return nil
+            }
         }
         {5}
         """
@@ -199,6 +206,13 @@ public class PamphletFramework {
             public static func get(data member: String) -> Data? {
                 switch member {
         {4}
+                default: break
+                }
+                return nil
+            }
+            public static func get(md5 member: String) -> StaticString? {
+                switch member {
+        {6}
                 default: break
                 }
                 return nil
@@ -320,6 +334,13 @@ public class PamphletFramework {
                 return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
             }
         }.joined(separator: "\n")
+        let md5PagesCode = (dataPages + textPages).map {
+            if options.contains(.kotlin) {
+                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)MD5()"
+            } else {
+                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)MD5()"
+            }
+        }.joined(separator: "\n")
         
         let debugSwift = templateDebugOnly << [
             "",
@@ -327,7 +348,8 @@ public class PamphletFramework {
             textPagesCodeRelease,
             compressedPagesCode,
             dataPagesCode,
-            allDirectoryExtensions
+            allDirectoryExtensions,
+            md5PagesCode,
         ]
 
         let releaseSwift = templateReleaseOnly << [
@@ -336,7 +358,8 @@ public class PamphletFramework {
             textPagesCodeRelease,
             compressedPagesCode,
             dataPagesCode,
-            allDirectoryExtensions
+            allDirectoryExtensions,
+            md5PagesCode,
         ]
         
         appendOutput(string: debugSwift.description,
@@ -392,6 +415,13 @@ public class PamphletFramework {
             
         } else {
             appendBoth("public extension \(path.extensionName) {\n")
+        }
+        
+        if let uncompressed = uncompressed,
+           let md5 = HalfHitch(string: uncompressed).md5() {
+            appendBoth("    static func \(path.variableName)MD5() -> StaticString {\n")
+            appendBoth("        return \"\(md5)\"\n")
+            appendBoth("    }\n")
         }
         
         if uncompressed != nil && options.contains(.includeOriginal) {
