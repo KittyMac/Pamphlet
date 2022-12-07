@@ -109,6 +109,7 @@ public class PamphletFramework {
     private func createPamphletFile(_ pamphletName: String,
                                     _ inTextPages: [FilePath],
                                     _ inDataPages: [FilePath],
+                                    _ inCompressedDataPages: [FilePath],
                                     _ inDirectoryPages: [FilePath]) {
         
         
@@ -119,6 +120,10 @@ public class PamphletFramework {
         }
         
         let dataPages = inDataPages.sorted { (lhs, rhs) -> Bool in
+            return lhs.fileName < rhs.fileName
+        }
+        
+        let compressedDataPages = inCompressedDataPages.sorted { (lhs, rhs) -> Bool in
             return lhs.fileName < rhs.fileName
         }
         
@@ -320,7 +325,7 @@ public class PamphletFramework {
             }
         }.joined(separator: "\n")
         
-        let compressedPagesCode = (dataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
+        let compressedPagesCode = (compressedDataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
                 return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)Gzip()"
             } else {
@@ -549,11 +554,16 @@ public class PamphletFramework {
     
     private func processDataFile(_ path: FilePath,
                                  _ inFile: String,
-                                 _ options: PamphletOptions) -> (String, String)? {
+                                 _ options: PamphletOptions,
+                                 _ compressedDataPages: BoxedArray<FilePath>) -> (String, String)? {
+        let gzipContent = gzipContentsForDataFile(inFile)
+        if gzipContent != nil {
+            compressedDataPages.append(path)
+        }
         return generateFile(path,
                             inFile,
                             fileContentsForDataFile(inFile),
-                            gzipContentsForDataFile(inFile),
+                            gzipContent,
                             "Data",
                             options)
     }
@@ -566,7 +576,8 @@ public class PamphletFramework {
                          generateFilesDirectory: String,
                          options: PamphletOptions,
                          textPages: BoxedArray<FilePath>,
-                         dataPages: BoxedArray<FilePath>) {
+                         dataPages: BoxedArray<FilePath>,
+                         compressedDataPages: BoxedArray<FilePath>) {
         
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         
@@ -680,7 +691,7 @@ public class PamphletFramework {
                     collapsedReleaseContent += contentRelease + "\n"
                     textPages.append(filePath)
                     appendLock.unlock()
-                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options) {
+                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options, compressedDataPages) {
                     appendLock.lock()
                     collapsedDebugContent += contentDebug + "\n"
                     collapsedReleaseContent += contentRelease + "\n"
@@ -865,6 +876,7 @@ public class PamphletFramework {
             
             let textPages = BoxedArray<FilePath>()
             let dataPages = BoxedArray<FilePath>()
+            let compressedDataPages = BoxedArray<FilePath>()
             let directoryPages = BoxedArray<FilePath>()
             
             //print("in: " + inDirectory)
@@ -908,7 +920,8 @@ public class PamphletFramework {
                                  generateFilesDirectory: generateFilesDirectory,
                                  options: options,
                                  textPages: textPages,
-                                 dataPages: dataPages)
+                                 dataPages: dataPages,
+                                 compressedDataPages: compressedDataPages)
                 }
             }
             queue2.waitUntilAllOperationsAreFinished()
@@ -922,6 +935,7 @@ public class PamphletFramework {
             createPamphletFile(pamphletName,
                                textPages.array,
                                dataPages.array,
+                               compressedDataPages.array,
                                directoryPages.array)
             
             appendOutput(string: fileFooterDebug,
