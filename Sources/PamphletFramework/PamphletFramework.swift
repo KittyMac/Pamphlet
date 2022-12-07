@@ -538,13 +538,22 @@ public class PamphletFramework {
         return fileData.base64EncodedString()
     }
     
+    private func gzipContentsForDataFile(_ inFile: String) -> String? {
+        guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
+        guard let fileDataAsGzip = try? fileData.gzipped(level: .bestCompression) else { return nil }
+        guard fileDataAsGzip.count < fileData.count else {
+            return nil
+        }
+        return fileDataAsGzip.base64EncodedString()
+    }
+    
     private func processDataFile(_ path: FilePath,
                                  _ inFile: String,
                                  _ options: PamphletOptions) -> (String, String)? {
         return generateFile(path,
                             inFile,
                             fileContentsForDataFile(inFile),
-                            nil,
+                            gzipContentsForDataFile(inFile),
                             "Data",
                             options)
     }
