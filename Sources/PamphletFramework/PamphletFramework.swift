@@ -320,7 +320,7 @@ public class PamphletFramework {
             }
         }.joined(separator: "\n")
         
-        let compressedPagesCode = textPages.filter { _ in options.contains(.includeGzip) }.map {
+        let compressedPagesCode = (dataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
                 return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)Gzip()"
             } else {
