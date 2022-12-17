@@ -38,6 +38,9 @@
 
 extern char    *strdup(const char *__s1);
 
+char GITVERSION[1024] = {0};
+char VERSIONED_URL[1024] = {0};
+
 void mcpp_help() {
     char * argv[] = {
         "mcpp",
@@ -57,11 +60,15 @@ void * mcpp_thread(void * mcpp_source_file) {
         "-NPCk",
         "-I",
         (char *)dirname(srcFileCopy),
+        "-D",
+        GITVERSION,
+        "-D",
+        VERSIONED_URL,
         (char *)srcFile,
         NULL
     };
     
-    char * result = mcpp_lib_main(5, argv);
+    char * result = mcpp_lib_main(9, argv);
     
     free(srcFile);
     free(srcFileCopy);
@@ -71,18 +78,21 @@ void * mcpp_thread(void * mcpp_source_file) {
 
 pthread_mutex_t mcppLock = PTHREAD_MUTEX_INITIALIZER;
 
-const char * mcpp_preprocessFile(const char * srcFile) {
+const char * mcpp_preprocessFile(const char * srcFile, const char * gitVersion, const char * gitHash) {
     
     pthread_mutex_lock(&mcppLock);
     
     pthread_t thread_tid = 0;
+    
+    snprintf(GITVERSION, sizeof(GITVERSION), "GITVERSION=%s", gitVersion);
+    snprintf(VERSIONED_URL, sizeof(VERSIONED_URL), "VERSIONED_URL(X)=X##?v=%s", gitHash);
     
     struct rlimit limit;
     pthread_attr_t attr;
     pthread_attr_t* attr_p = &attr;
     pthread_attr_init(attr_p);
     
-    // Some systems, e.g., macOS, hav a different default default
+    // Some systems, e.g., macOS, have a different default default
     // stack size than the typical system's RLIMIT_STACK.
     // Let's use RLIMIT_STACK's current limit if it is sane.
     if(getrlimit(RLIMIT_STACK, &limit) == 0 &&

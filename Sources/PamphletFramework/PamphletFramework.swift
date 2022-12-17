@@ -54,6 +54,9 @@ public class PamphletFramework {
     private let queue1 = OperationQueue()
     private let queue2 = OperationQueue()
     
+    private var gitVersionString: String = ""
+    private var gitHashString: String = ""
+    
     var options = PamphletOptions.default
     
     var debugPath: String = ""
@@ -62,6 +65,8 @@ public class PamphletFramework {
     private init() {
         queue1.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
         queue2.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
+        gitVersionString = git() ?? ""
+        gitHashString = gitHash()
     }
     
     private func pathOutput(path: String,
@@ -380,7 +385,7 @@ public class PamphletFramework {
         var fileContents = string
         if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
             // This file wants to use the mcpp preprocessor
-            if let cPtr = mcpp_preprocessFile(inFile) {
+            if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
                 fileContents = String(cString: cPtr)
                 free(cPtr)
             }
@@ -771,7 +776,7 @@ public class PamphletFramework {
             var fileContents = try String(contentsOfFile: inFile)
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                if let cPtr = mcpp_preprocessFile(inFile) {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
                     fileContents = String(cString: cPtr)
                     free(cPtr)
                 }

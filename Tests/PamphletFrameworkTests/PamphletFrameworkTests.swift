@@ -10,7 +10,7 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
-    
+    /*
     func testProcessOptimize() {
         let extensions: [String] = []
         
@@ -22,7 +22,7 @@ final class PamphletTests: XCTestCase {
                                              options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
         }
     }
-                
+                */
     func testPamphlet() {
         let extensions: [String] = []
         PamphletFramework.shared.process(prefix: nil,

@@ -1,5 +1,6 @@
 import Foundation
 import libmcpp
+import Hitch
 
 extension PamphletFramework {
     
@@ -44,9 +45,19 @@ extension PamphletFramework {
             return nil
         }
     }
+    func gitHash() -> String {
+        if let version = git(),
+           let md5 = Hitch(string: version).md5() {
+            return md5.toString()
+        }
+        return ""
+    }
     #else
     func git() -> String? {
         return nil
+    }
+    func gitHash() -> String {
+        return ""
     }
     #endif
 }
