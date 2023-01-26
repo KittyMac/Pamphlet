@@ -53,7 +53,8 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     
     // detect when the git version changes and reprocess
     let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
-    if let version = git() {
+    if let inputFilePath = inputFiles.first,
+       let version = git(path: inputFilePath) {
         // save the version number as an input in our tool working directory
         if let lastVersion = try? String(contentsOfFile: gitVersionPath),
            lastVersion == version {
@@ -136,17 +137,15 @@ func pathFor(executable name: String) -> String {
     return "./\(name)"
 }
 
-func git() -> String? {
+func git(path: String) -> String? {
     do {
         let path = pathFor(executable: "git")
-        
-        let repoPath = FileManager.default.currentDirectoryPath
-        
+                
         let task = Process()
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = [
             "-C",
-            repoPath,
+            path,
             "describe"
         ]
         let inputPipe = Pipe()
