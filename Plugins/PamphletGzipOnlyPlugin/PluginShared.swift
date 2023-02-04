@@ -54,7 +54,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     // detect when the git version changes and reprocess
     let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
     if let inputFilePath = inputFiles.first,
-       let version = git(path: inputFilePath) {
+       let version = git(repoPath: inputFilePath) {
         // save the version number as an input in our tool working directory
         if let lastVersion = try? String(contentsOfFile: gitVersionPath),
            lastVersion == version {
@@ -137,7 +137,7 @@ func pathFor(executable name: String) -> String {
     return "./\(name)"
 }
 
-func git(path: String) -> String? {
+func git(repoPath: String) -> String? {
     do {
         let path = pathFor(executable: "git")
                 
@@ -145,7 +145,7 @@ func git(path: String) -> String? {
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = [
             "-C",
-            path,
+            repoPath,
             "describe"
         ]
         let inputPipe = Pipe()
@@ -165,7 +165,7 @@ func git(path: String) -> String? {
             if tagString.hasPrefix("v") && tagString.components(separatedBy: ".").count == 3 {
                 return tagString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             } else {
-                print("warning: git describe did not return a valid semver, got \(tagString) instead")
+                print("warning: git describe did not return a valid semver for repo at \(repoPath)")
             }
         }
         
