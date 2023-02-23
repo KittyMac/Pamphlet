@@ -35,9 +35,11 @@ extension PamphletFramework {
                 if tagString.hasPrefix("v") && tagString.components(separatedBy: ".").count == 3 {
                     return tagString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 } else {
-                    print("warning: git describe did not return a valid semver, got \(tagString) instead")
+                    print("warning: git describe did not return a valid semver for repo at \(repoPath)")
                 }
             }
+            
+            task.waitUntilExit()
             
             return nil
         } catch {
