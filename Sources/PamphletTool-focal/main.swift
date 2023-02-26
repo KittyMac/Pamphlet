@@ -22,6 +22,9 @@ struct Pamphlet: ParsableCommand {
         
         @Argument(help: "Path to sources directory to output Swift files to")
         var outDirectory: String
+        
+        @Option(help: "Path to git repository")
+        var gitPath: String = "."
                                 
         @Flag(help: "Generate Kotlin code instead of Swift code")
         var kotlin: Bool = false
@@ -68,6 +71,7 @@ struct Pamphlet: ParsableCommand {
                                              extensions: [],
                                              inDirectory: inDirectory,
                                              outDirectory: outDirectory,
+                                             gitPath: gitPath,
                                              options: options)
         }
     }

@@ -65,8 +65,6 @@ public class PamphletFramework {
     private init() {
         queue1.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
         queue2.maxConcurrentOperationCount = ProcessInfo.processInfo.activeProcessorCount
-        gitVersionString = git() ?? ""
-        gitHashString = gitHash()
     }
     
     private func pathOutput(path: String,
@@ -157,7 +155,7 @@ public class PamphletFramework {
         }
         
         // ------------- Swift -------------
-        let version = git() ?? "v0.0.0"
+        let version = gitVersionString
         
         let templateDebugOnlySwift = """
         {0}
@@ -816,7 +814,11 @@ public class PamphletFramework {
                         extensions: [String],
                         inDirectory: String,
                         outDirectory: String,
+                        gitPath: String,
                         options: PamphletOptions) {
+        
+        gitVersionString = git(repoPath: gitPath) ?? ""
+        gitHashString = gitHash(repoPath: gitPath)
         
         measure(message: inDirectory) {
             self.options = options

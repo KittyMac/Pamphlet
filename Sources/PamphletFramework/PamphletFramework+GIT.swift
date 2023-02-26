@@ -5,12 +5,10 @@ import Hitch
 extension PamphletFramework {
     
     #if os(macOS) || os(Linux)
-    func git() -> String? {
+    func git(repoPath: String) -> String? {
         do {
             let path = pathFor(executable: "git")
             
-            let repoPath = FileManager.default.currentDirectoryPath
-
             let task = Process()
             task.executableURL = URL(fileURLWithPath: path)
             task.arguments = [
@@ -47,18 +45,18 @@ extension PamphletFramework {
             return nil
         }
     }
-    func gitHash() -> String {
-        if let version = git(),
+    func gitHash(repoPath: String) -> String {
+        if let version = git(repoPath: repoPath),
            let md5 = Hitch(string: version).md5() {
             return md5.toString()
         }
         return ""
     }
     #else
-    func git() -> String? {
+    func git(repoPath: String) -> String? {
         return nil
     }
-    func gitHash() -> String {
+    func gitHash(repoPath: String) -> String {
         return ""
     }
     #endif

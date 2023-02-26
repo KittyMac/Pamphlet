@@ -29,6 +29,7 @@ final class PamphletTests: XCTestCase {
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: path(to: "Pamphlet"),
                                          options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
@@ -38,6 +39,7 @@ final class PamphletTests: XCTestCase {
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: path(to: "Pamphlet"),
                                          options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
@@ -121,6 +123,7 @@ final class PamphletTests: XCTestCase {
                                          extensions: extensions,
                                          inDirectory: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
                                          options:PamphletOptions.default)
     }
 }

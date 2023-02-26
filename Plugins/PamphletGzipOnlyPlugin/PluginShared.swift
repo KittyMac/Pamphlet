@@ -1,7 +1,7 @@
 import Foundation
 import PackagePlugin
 
-func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
+func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
     
     // Note: We want to load the right pre-compiled tool for the right OS
     // There are currently two tools:
@@ -73,6 +73,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     }
     
     return (tool.path,
+            target.directory.string,
             copiesDirectory,
             inputFiles.map { PackagePlugin.Path($0) },
             outputFiles.map { PackagePlugin.Path($0) })
