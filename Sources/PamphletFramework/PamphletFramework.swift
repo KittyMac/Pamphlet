@@ -789,6 +789,31 @@ public class PamphletFramework {
     }
     
     @discardableResult
+    public func fullprocess(file inFile: String) -> String {
+        var result: String = ""
+        do {
+            var fileContents = try String(contentsOfFile: inFile)
+            
+            if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
+                    fileContents = String(cString: cPtr)
+                    free(cPtr)
+                }
+            }
+            
+            minifyHtml(inFile: inFile, fileContents: &fileContents)
+            minifyJs(inFile: inFile, fileContents: &fileContents)
+            minifyJson(inFile: inFile, fileContents: &fileContents)
+            
+            result = fileContents
+        } catch {
+            result = "unable to parse file"
+        }
+        print(result)
+        return result
+    }
+    
+    @discardableResult
     public func process(name: String, string: String) -> String {
         if let stringContents = contentsFor(name: name, fileContents: string) {
             return stringContents

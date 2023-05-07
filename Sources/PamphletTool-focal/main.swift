@@ -8,7 +8,7 @@ struct Pamphlet: ParsableCommand {
     
     static var configuration = CommandConfiguration(
         abstract: "Store files resources in Swift code",
-        subcommands: [Generate.self, Preprocess.self, Skip.self],
+        subcommands: [Generate.self, Preprocess.self, Process.self, Skip.self],
         defaultSubcommand: Generate.self)
     
     struct Generate: ParsableCommand {
@@ -91,6 +91,22 @@ struct Pamphlet: ParsableCommand {
             PamphletFramework.shared.preprocess(file: inFile)
         }
     }
+    
+    struct Process: ParsableCommand {
+            static var configuration = CommandConfiguration(abstract: "Output the processed results of a single file (like preprocess but includes post-processing)")
+            
+            @Argument(help: "Path to the file resource to process")
+            var inFile: String
+            
+            mutating func run() {
+                if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
+                   buildAction == "indexbuild" {
+                    return
+                }
+                
+                PamphletFramework.shared.fullprocess(file: inFile)
+            }
+        }
     
     struct Skip: ParsableCommand {
         static var configuration = CommandConfiguration(abstract: "Don't do anything")
