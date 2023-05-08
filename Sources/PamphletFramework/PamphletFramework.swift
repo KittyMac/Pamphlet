@@ -427,14 +427,20 @@ public class PamphletFramework {
         
         if let uncompressed = uncompressed,
            let md5 = HalfHitch(string: uncompressed).md5() {
-            appendBoth("    static func \(path.variableName)MD5() -> StaticString {\n")
-            appendBoth("        return \"\(md5)\"\n")
-            appendBoth("    }\n")
+            if options.contains(.kotlin) {
+                appendBoth("fun \(path.extensionName).\(path.variableName)MD5(): String {\n")
+                appendBoth("    return \"\(md5)\"\n")
+                appendBoth("}\n")
+            } else {
+                appendBoth("    static func \(path.variableName)MD5() -> StaticString {\n")
+                appendBoth("        return \"\(md5)\"\n")
+                appendBoth("    }\n")
+            }
         }
         
         if uncompressed != nil && options.contains(.includeOriginal) {
             var reifiedDataType = dataType
-            if dataType == "String" {
+            if dataType == "String" && options.contains(.kotlin) == false {
                 reifiedDataType = "StaticString"
             }
             
