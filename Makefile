@@ -85,6 +85,15 @@ release: install docker
 	rm -f ./dist/PamphletTool-fedora.zip
 	cd ./dist && zip -r ./PamphletTool-fedora.zip ./PamphletTool-fedora.artifactbundle
 	
+	# Getting plugin for fedora38
+	docker pull kittymac/pamphlet-fedora38:latest
+	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
+	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	cp ./dist/PamphletTool ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	rm -f ./dist/PamphletTool-fedora38.zip
+	cd ./dist && zip -r ./PamphletTool-fedora38.zip ./PamphletTool-fedora38.artifactbundle
+	
 
 docker:
 	-docker buildx create --name cluster_builder203
@@ -95,6 +104,7 @@ docker:
 	docker buildx build --file Dockerfile-focal --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-focal .
 	docker buildx build --file Dockerfile-amazonlinux2 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-amazonlinux2 .
 	docker buildx build --file Dockerfile-fedora --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora .
+	docker buildx build --file Dockerfile-fedora38 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora38 .
 
 
 docker-shell:

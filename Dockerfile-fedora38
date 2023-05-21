@@ -1,9 +1,13 @@
-FROM swift:5.7.1-focal as builder
+FROM fedora:38 as builder
 
-RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true && apt-get -q update && \
-    apt-get install -y \
-    libjavascriptcoregtk-4.0-dev \
-    unzip
+RUN dnf install -y \
+    git \
+    unzip \
+    swift-lang-5.7.3-2.fc38 \
+    javascriptcoregtk4.0-devel \
+    libatomic_ops
+
+RUN ln -s /usr/libexec/swift/*/lib/libsourcekitdInProc.so /usr/lib/libsourcekitdInProc.so
 
 WORKDIR /root/Pamphlet
 COPY ./dist ./dist
@@ -16,7 +20,7 @@ COPY ./Tests ./Tests
 RUN swift test
 RUN swift build --configuration release
 
-FROM swift:5.7.1-focal
+FROM fedora:38
 
 WORKDIR /root/Pamphlet
 COPY --from=builder /root/Pamphlet/.build/release/PamphletTool-focal .
