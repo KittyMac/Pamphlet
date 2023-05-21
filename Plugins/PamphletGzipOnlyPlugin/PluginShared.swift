@@ -21,8 +21,12 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
            let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
             tool = osTool
         }
-        if osFile.contains("Fedora Linux"),
+        if osFile.contains("Fedora Linux 37"),
            let osTool = try? context.tool(named: "PamphletTool-fedora") {
+            tool = osTool
+        }
+        if osFile.contains("Fedora Linux 38"),
+           let osTool = try? context.tool(named: "PamphletTool-fedora38") {
             tool = osTool
         }
     }
