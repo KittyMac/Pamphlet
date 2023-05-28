@@ -847,19 +847,20 @@ chk_limit:
                     && (delim == '"' || delim == '\''))
                 goto  done;
             if (delim == '"') {
-                if (mcpp_mode != POST_STD && option_flags.lang_asm) {
-                    /* STD, KR      */
-                    /* Concatenate the unterminated string to the next line */
-                    if (warn_level & 1)
-                        cwarn( unterm_string
-                                , ", catenated to the next line"    /* _W1_ */
-                                , 0L, NULL);
-                    if (cat_line( FALSE) != NULL)
-                        goto  scan;         /* Splice the lines     */
-                    /* Else end of file     */
-                } else {
-                    cerror( unterm_string, skip, 0L, NULL); /* _E_  */
-                }
+                goto  done;
+                //if (mcpp_mode != POST_STD && option_flags.lang_asm) {
+                //    /* STD, KR      */
+                //    /* Concatenate the unterminated string to the next line */
+                //    if (warn_level & 1)
+                //        cwarn( unterm_string
+                //                , ", catenated to the next line"    /* _W1_ */
+                //                , 0L, NULL);
+                //    if (cat_line( FALSE) != NULL)
+                //        goto  scan;         /* Splice the lines     */
+                //    /* Else end of file     */
+                //} else {
+                //    cerror( unterm_string, skip, 0L, NULL); /* _E_  */
+                //}
             } else if (delim == '\'') {
                 goto  done;
             } else {
