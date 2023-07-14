@@ -393,9 +393,11 @@ public class PamphletFramework {
             }
         }
         
-        minifyHtml(inFile: inFile, fileContents: &fileContents)
-        minifyJs(inFile: inFile, fileContents: &fileContents)
-        minifyJson(inFile: inFile, fileContents: &fileContents)
+        if inFile.contains(".min") == false {
+            minifyHtml(inFile: inFile, fileContents: &fileContents)
+            minifyJs(inFile: inFile, fileContents: &fileContents)
+            minifyJson(inFile: inFile, fileContents: &fileContents)
+        }
         
         return fileContents
     }
@@ -807,9 +809,11 @@ public class PamphletFramework {
                 }
             }
             
-            minifyHtml(inFile: inFile, fileContents: &fileContents)
-            minifyJs(inFile: inFile, fileContents: &fileContents)
-            minifyJson(inFile: inFile, fileContents: &fileContents)
+            if inFile.contains(".min") == false {
+                minifyHtml(inFile: inFile, fileContents: &fileContents)
+                minifyJs(inFile: inFile, fileContents: &fileContents)
+                minifyJson(inFile: inFile, fileContents: &fileContents)
+            }
             
             result = fileContents
         } catch {

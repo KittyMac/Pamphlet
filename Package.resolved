@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "615d03d3496d454775e8f984d01b796043a76c15",
-        "version" : "0.4.96"
+        "revision" : "90065f8f6900b389cbd4d3c73d94d50d172994cd",
+        "version" : "0.4.111"
       }
     },
     {
@@ -32,17 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "997f7152a227ada2e1cb12601bfb373ad0647425",
-        "version" : "0.0.54"
-      }
-    },
-    {
-      "identity" : "spanker",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/KittyMac/Spanker.git",
-      "state" : {
-        "revision" : "1d11bc1a548c623a806af547dd2346c51b48a46c",
-        "version" : "0.2.32"
+        "revision" : "42d885c5e43d3ac1ec715a622923335d13192811",
+        "version" : "0.0.61"
       }
     },
     {
@@ -50,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "fddd1c00396eed152c45a46bea9f47b98e59301d",
-        "version" : "1.2.0"
+        "revision" : "fee6933f37fde9a5e12a1e4aeaa93fe60116ff2a",
+        "version" : "1.2.2"
       }
     }
   ],
