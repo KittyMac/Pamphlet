@@ -20,7 +20,58 @@ build:
 .PHONY: clean
 clean:
 	rm -rf .build
-
+	
+.PHONY: clean-repo
+clean-repo:
+	git filter-repo --invert-paths --path dist/Pamphlet
+	git filter-repo --invert-paths --path dist/PamphletTool
+	
+	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.zip
+	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora.zip
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.zip
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	git filter-repo --invert-paths --path dist/PamphletTool-focal.zip
+	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool
+	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	
+	
+	
+	# git filter-branch --tree-filter 'rm -f dist/Pamphlet' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool' HEAD
+	# 
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.zip' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
+	# 
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.zip' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
+	# 
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.zip' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
+	# 
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.zip' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
+	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
+	
 .PHONY: update
 update:
 	swift package update
