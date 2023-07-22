@@ -23,54 +23,26 @@ clean:
 	
 .PHONY: clean-repo
 clean-repo:
-	git filter-repo --invert-paths --path dist/Pamphlet
-	git filter-repo --invert-paths --path dist/PamphletTool
-	
-	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.zip
-	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora.zip
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.zip
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	git filter-repo --invert-paths --path dist/PamphletTool-focal.zip
-	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool
-	git filter-repo --invert-paths --path dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	
-	
-	
-	# git filter-branch --tree-filter 'rm -f dist/Pamphlet' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool' HEAD
-	# 
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.zip' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
-	# 
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.zip' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
-	# 
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.zip' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
-	# 
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.zip' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool' HEAD
-	# git filter-branch --tree-filter 'rm -f dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool' HEAD
+	git filter-repo --invert-paths \
+		--path dist/pamphlet \
+		--path dist/Pamphlet \
+		--path dist/PamphletTool \
+		--path dist/PamphletTool-amazonlinux2.zip \
+		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
+		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
+		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool \
+		--path dist/PamphletTool-fedora.zip \
+		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
+		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
+		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool \
+		--path dist/PamphletTool-fedora38.zip \
+		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
+		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
+		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool \
+		--path dist/PamphletTool-focal.zip \
+		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
+		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
+		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	
 .PHONY: update
 update:
@@ -113,6 +85,7 @@ release: install docker
 	docker pull kittymac/pamphlet-focal:latest
 	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-focal /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
 	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-focal /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	mkdir -p ./dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/
 	cp ./dist/PamphletTool ./dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	
 	rm -f ./dist/PamphletTool-focal.zip
@@ -122,6 +95,7 @@ release: install docker
 	docker pull kittymac/pamphlet-amazonlinux2:latest
 	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-amazonlinux2 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
 	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-amazonlinux2 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	mkdir -p ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/
 	cp ./dist/PamphletTool ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	
 	rm -f ./dist/PamphletTool-amazonlinux2.zip
@@ -131,6 +105,7 @@ release: install docker
 	docker pull kittymac/pamphlet-fedora:latest
 	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
 	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	mkdir -p ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/
 	cp ./dist/PamphletTool ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	
 	rm -f ./dist/PamphletTool-fedora.zip
@@ -140,6 +115,7 @@ release: install docker
 	docker pull kittymac/pamphlet-fedora38:latest
 	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
 	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	mkdir -p ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/
 	cp ./dist/PamphletTool ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool
 	
 	rm -f ./dist/PamphletTool-fedora38.zip
