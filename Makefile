@@ -23,6 +23,7 @@ clean:
 	
 .PHONY: clean-repo
 clean-repo:
+	mv dist /tmp/dist
 	git filter-repo --invert-paths \
 		--path dist/pamphlet \
 		--path dist/Pamphlet \
@@ -43,6 +44,7 @@ clean-repo:
 		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
 		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
 		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
+	mv /tmp/dist dist
 	
 .PHONY: update
 update:
