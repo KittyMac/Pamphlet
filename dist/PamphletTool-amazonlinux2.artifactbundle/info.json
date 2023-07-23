@@ -1,0 +1,31 @@
+{
+    "artifacts": {
+        "PamphletTool-amazonlinux2": {
+            "version": "v1.0.0",
+            "type": "executable",
+            "variants": [
+                {
+                    "path": "PamphletTool-amd64/bin/PamphletTool",
+                    "supportedTriples": [
+                        "x86_64-unknown-linux-gnu"
+                    ]
+                },
+                {
+                    "path": "PamphletTool-arm64/bin/PamphletTool",
+                    "supportedTriples": [
+                        "aarch64-unknown-linux-gnu",
+                        "arm64-unknown-linux-gnu"
+                    ]
+                },
+                {
+                    "path": "PamphletTool-macos/bin/PamphletTool",
+                    "supportedTriples": [
+                        "x86_64-apple-macosx",
+                        "arm64-apple-macosx"
+                    ]
+                }
+            ]
+        }
+    },
+    "schemaVersion": "1.0"
+}
