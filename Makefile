@@ -23,28 +23,18 @@ clean:
 	
 .PHONY: clean-repo
 clean-repo:
-	mv dist /tmp/dist
-	git filter-repo --invert-paths \
-		--path dist/pamphlet \
-		--path dist/Pamphlet \
-		--path dist/PamphletTool \
-		--path dist/PamphletTool-amazonlinux2.zip \
-		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
-		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
-		--path dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool \
-		--path dist/PamphletTool-fedora.zip \
-		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
-		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
-		--path dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool \
-		--path dist/PamphletTool-fedora38.zip \
-		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
-		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
-		--path dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool \
-		--path dist/PamphletTool-focal.zip \
-		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool \
-		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool \
-		--path dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	mv /tmp/dist dist
+	rm -rf /tmp/clean-repo/
+	mkdir -p /tmp/clean-repo/
+	cd /tmp/clean-repo/ && git clone https://github.com/KittyMac/Pamphlet.git/
+	cd /tmp/clean-repo/Pamphlet && cp -r dist ../dist.tmp && cp .git/config ../config
+	cd /tmp/clean-repo/Pamphlet && git filter-repo --invert-paths --path dist
+	cd /tmp/clean-repo/Pamphlet && mv ../dist.tmp dist && mv ../config .git/config
+	cd /tmp/clean-repo/Pamphlet && git add dist
+	cd /tmp/clean-repo/Pamphlet && git commit -a -m "clean-repo"
+	open /tmp/clean-repo/Pamphlet
+	# clean complete; manual push required
+	# git push origin --force --all
+	# git push origin --force --tags
 	
 .PHONY: update
 update:
