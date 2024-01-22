@@ -75,8 +75,8 @@ static int      collect_args( const DEFBUF * defp, char ** arglist, int m_num);
                 /* Collect arguments of a macro call*/
 static int      get_an_arg( int c, char ** argpp, char * arg_end
         , char ** seqp, int var_arg, int nargs, LOCATION ** locp, int m_num
-        , MAGIC_SEQ * mgc_prefix);      /* Get an argument          */
-static int      squeeze_ws( char ** out, char ** endf, MAGIC_SEQ * mgc_seq);
+        , MAGIC_SEQ * mgc_prefix, int ismacro);      /* Get an argument          */
+static int      squeeze_ws( char ** out, char ** endf, MAGIC_SEQ * mgc_seq, int nospaces);
                 /* Squeeze white spaces to a space  */
 static void     skip_macro( void);
                 /* Skip the rest of macro call      */
@@ -143,7 +143,7 @@ static DEFBUF * is_macro_call(
 
     if (defp->nargs >= 0                    /* Function-like macro  */
             || defp->nargs == DEF_PRAGMA) { /* _Pragma() pseudo-macro       */
-        c = squeeze_ws( cp, endf, mgc_seq); /* See the next char.   */
+        c = squeeze_ws( cp, endf, mgc_seq, 0); /* See the next char.   */
         if (c == CHAR_EOF)                  /* End of file          */
             unget_string( "\n", NULL);      /* Restore skipped '\n' */
         else if (! standard || c != RT_END)
@@ -741,7 +741,7 @@ static char *   replace(
         cwarn( "Old style predefined macro \"%s\" is used", /* _W2_ */
                 defp->name, 0L, NULL);
     } else if (nargs >= 0) {                /* Function-like macro  */
-        squeeze_ws( NULL, NULL, NULL);      /* Skip to '('          */
+        squeeze_ws( NULL, NULL, NULL, 0);      /* Skip to '('          */
             /* Magic sequences are already read over by is_macro_call() */
         arglist = (char **) xmalloc( (nargs + 1) * sizeof (char *));
         arglist[ 0] = xmalloc( (size_t) (NMACWORK + IDMAX * 2));
@@ -947,7 +947,7 @@ static DEFBUF * def_special(
                 defp->nargs = DEF_NOARGS;   /* Enable to redefine   */
                 prevp = look_prev( defp->name, &cmp);
                 defp = install_macro( "__FILE__", DEF_NOARGS_DYNAMIC - 2, ""
-                        , work_buf, prevp, cmp, 0); /* Re-define    */
+                        , work_buf, prevp, cmp, 0, 0); /* Re-define    */
                 break;     
             }
         }
@@ -2312,7 +2312,7 @@ static int  replace_pre(
     case DEF_NOARGS_PREDEF:         /* Compiler-specific predef     */
         break;
     default:                                /* defp->nargs >= 0     */
-        c = squeeze_ws( NULL, NULL, NULL);  /* Look for and skip '('*/
+        c = squeeze_ws( NULL, NULL, NULL, 0);  /* Look for and skip '('*/
         if (c != '(') {         /* Macro name without following '(' */
             unget_ch();
             if (warn_level & 8)
@@ -2462,7 +2462,7 @@ static int  collect_args(
     while (1) {
         memset( &mgc_prefix, 0, sizeof (MAGIC_SEQ));
         c = squeeze_ws( &seq, NULL
-                , (trace_macro && m_num) ? &mgc_prefix : NULL);
+                , (trace_macro && m_num) ? &mgc_prefix : NULL, 0);
             /* Skip MAC_INF seqs and white spaces, still remember   */
             /* the sequence in buffer, if necessary.                */
         if (c == ')' || c == ',')
@@ -2485,7 +2485,7 @@ static int  collect_args(
             if (standard && var_arg && nargs == args - 1) {
                 /* Variable arguments begin with an empty argument  */
                 c = get_an_arg( c, &argp, arg_end, &seq, 1, nargs, &loc
-                        , m_num, (trace_macro && m_num) ? &mgc_prefix : NULL);
+                        , m_num, (trace_macro && m_num) ? &mgc_prefix : NULL, defp->ismacro);
             } else {
                 if (mcpp_mode == STD)
                     *argp++ = RT_END;
@@ -2516,7 +2516,7 @@ static int  collect_args(
 
         c = get_an_arg( c, &argp, arg_end, &seq
                 , (var_arg && nargs == args - 1) ? 1 : 0, nargs, &loc
-                , m_num, (trace_macro && m_num) ? &mgc_prefix : NULL);
+                , m_num, (trace_macro && m_num) ? &mgc_prefix : NULL, defp->ismacro);
 
         if (++nargs == args)
             valid_argp = argp;          /* End of valid arguments   */
@@ -2597,7 +2597,8 @@ static int  get_an_arg(
     int     nargs,                  /* Argument number              */
     LOCATION **     locp,           /* Where to save location infs  */
     int     m_num,                  /* Macro number to trace        */
-    MAGIC_SEQ * mgc_prefix  /* White space and magics leading to argument   */
+    MAGIC_SEQ * mgc_prefix,  /* White space and magics leading to argument   */
+    int ismacro
 )
 /*
  * Get an argument of macro into '*argpp', return the next punctuator.
@@ -2768,7 +2769,7 @@ static int  get_an_arg(
             e_line_col.col = infile->bptr - infile->buffer;
         }
         memset( &mgc_seq, 0, sizeof (MAGIC_SEQ));
-        c = squeeze_ws( &argp, NULL, &mgc_seq);
+        c = squeeze_ws( &argp, NULL, &mgc_seq, ismacro == 2);
                                             /* To the next token    */
     }                                       /* Collected an argument*/
 
@@ -2809,7 +2810,8 @@ static int  get_an_arg(
 static int  squeeze_ws(
     char **     out,                /* Pointer to output pointer    */
     char **     endf,               /* Pointer to end of infile data*/
-    MAGIC_SEQ * mgc_seq         /* Sequence of MAC_INFs and space   */
+    MAGIC_SEQ * mgc_seq,         /* Sequence of MAC_INFs and space   */
+    int nospaces
             /* mgc_seq should be initialized in the calling routine */
 )
 /*
@@ -2908,7 +2910,9 @@ static int  squeeze_ws(
 
     if (out) {
         if (space) {            /* Write a space to output pointer  */
-            *(*out)++ = ' ';    /*   and increment the pointer.     */
+            if (nospaces == 0) {
+                *(*out)++ = ' ';    /*   and increment the pointer.     */
+            }
             if (mgc_seq)
                 mgc_seq->space = TRUE;
         }
