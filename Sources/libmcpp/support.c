@@ -1809,12 +1809,14 @@ end_line:
         temp = infile->buffer;
         while (char_type[ *temp & UCHARMAX] & HSP)
             temp++;
-        if (*temp == '#'        /* This line starts with # token    */
+        /*
+        if (*temp == '#'        // This line starts with # token
                 || (mcpp_mode == STD && *temp == '%' && *(temp + 1) == ':'))
             if (warn_level & 1)
                 cwarn(
-    "Macro started at line %.0s%ld swallowed directive-like line"   /* _W1_ */
+    "Macro started at line %.0s%ld swallowed directive-like line"
                     , NULL, macro_line, NULL);
+         */
     }
     return  infile->buffer;
 }
