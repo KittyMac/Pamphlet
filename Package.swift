@@ -101,6 +101,7 @@ let package = Package(
         .plugin(name: "PamphletGzipOnlyPlugin", targets: ["PamphletGzipOnlyPlugin"])
     ],
     dependencies: [
+        .package(url: "https://github.com/KittyMac/Sextant.git", from: "0.4.29"),
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
@@ -113,6 +114,7 @@ let package = Package(
                 "Hitch",
                 "libmcpp",
                 "Jib",
+                "Sextant",
                 .product(name: "Gzip", package: "GzipSwift"),
             ]
         ),

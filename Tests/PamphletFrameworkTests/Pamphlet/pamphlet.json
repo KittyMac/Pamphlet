@@ -1,0 +1,6 @@
+[
+	{
+		"file": "\\.png$",
+		"platforms": ["macOS", "Linux"],
+	}
+]

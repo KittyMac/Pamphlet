@@ -1,6 +1,8 @@
 import Foundation
 import libmcpp
 import Hitch
+import Sextant
+import Spanker
 
 enum OutputType: String {
     case debug = "debug"
@@ -58,6 +60,7 @@ public class PamphletFramework {
     private var gitHashString: String = ""
     
     var options = PamphletOptions.default
+    var pamphletJson = ^[]
     
     var debugPath: String = ""
     var releasePath: String = ""
@@ -198,31 +201,19 @@ public class PamphletFramework {
             public static let version = "\(version)"
 
             public static func get(string member: String) -> StaticString? {
-                switch member {
         {2}
-                default: break
-                }
                 return nil
             }
             public static func get(gzip member: String) -> Data? {
-                switch member {
         {3}
-                default: break
-                }
                 return nil
             }
             public static func get(data member: String) -> Data? {
-                switch member {
         {4}
-                default: break
-                }
                 return nil
             }
             public static func get(md5 member: String) -> StaticString? {
-                switch member {
         {6}
-                default: break
-                }
                 return nil
             }
         }
@@ -238,26 +229,20 @@ public class PamphletFramework {
             val version = "\(version)"
         
             fun getAsString(member: String): String? {
-                return when (member) {
         {1}
-                    else -> null
-                }
+                return null
             }
             fun getAsGzip(member: String): ByteArray? {
                 if (BuildConfig.DEBUG) {
                     return null
                 } else {
-                    return when (member) {
         {3}
-                        else -> null
-                    }
+                    return null
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
-                return when (member) {
         {4}
-                    else -> null
-                }
+                    return null
             }
         }
         {5}
@@ -272,22 +257,16 @@ public class PamphletFramework {
             val version = "\(version)"
 
             fun getAsString(member: String): String? {
-                return when (member) {
         {2}
-                    else -> null
-                }
+                    return null
             }
             fun getAsGzip(member: String): ByteArray? {
-                return when (member) {
         {3}
-                    else -> null
-                }
+                    return null
             }
             fun getAsByteArray(member: String): ByteArray? {
-                return when (member) {
         {4}
-                    else -> null
-                }
+                    return null
             }
         }
         {5}
@@ -310,43 +289,54 @@ public class PamphletFramework {
         
         let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return platformsWrap(for: $0,
+                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
             } else {
                 if $0.isStaticString {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)().description"
+                    return platformsWrap(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)().description }")
                 } else {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                    return platformsWrap(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
                 }
             }
         }.joined(separator: "\n")
         
         let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return platformsWrap(for: $0,
+                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                return platformsWrap(for: $0,
+                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
         
         let compressedPagesCode = (compressedDataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)Gzip()"
+                return platformsWrap(for: $0,
+                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }")
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)Gzip()"
+                return platformsWrap(for: $0,
+                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
             }
         }.joined(separator: "\n")
         let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return platformsWrap(for: $0,
+                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                return platformsWrap(for: $0,
+                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
         let md5PagesCode = (dataPages + textPages).map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)MD5()"
+                return platformsWrap(for: $0,
+                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)MD5() }")
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)MD5()"
+                return platformsWrap(for: $0,
+                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)MD5() }")
             }
         }.joined(separator: "\n")
         
@@ -420,6 +410,8 @@ public class PamphletFramework {
             scratchDebug.append(string)
             scratchRelease.append(string)
         }
+        
+        appendBoth(platformsOpen(for: path))
         
         if options.contains(.kotlin) {
             
@@ -520,6 +512,8 @@ public class PamphletFramework {
                 scratchRelease.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n\n")
             }
         }
+        
+        appendBoth(platformsClose(for: path))
         
         return (scratchDebug, scratchRelease)
     }
@@ -906,7 +900,6 @@ public class PamphletFramework {
                              path: releasePath,
                              type: .release)
             }
-            
                         
             let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                             includingPropertiesForKeys: resourceKeys,
@@ -931,8 +924,15 @@ public class PamphletFramework {
             
             var allDirectories: [URL] = []
             var filesByDirectory: [URL: BoxedArray<URL>] = [:]
+            var pamphletJsonHitch: Hitch = ""
             
             for case let fileURL as URL in enumerator {
+                
+                if fileURL.lastPathComponent == "pamphlet.json" {
+                    pamphletJsonHitch = Hitch(contentsOfFile: fileURL.path) ?? ""
+                    continue
+                }
+                
                 if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
                     if let isDirectory = resourceValues.isDirectory {
                         if isDirectory {
@@ -950,6 +950,8 @@ public class PamphletFramework {
                     }
                 }
             }
+            
+            pamphletJson = Spanker.parse(halfhitch: pamphletJsonHitch.halfhitch()) ?? ^[]
             
             for directoryURL in filesByDirectory.keys {
                 guard let files = filesByDirectory[directoryURL] else { continue }
