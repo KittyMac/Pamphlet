@@ -167,27 +167,18 @@ public class PamphletFramework {
             public static let version = "\(version)"
             
             public static func get(string member: String) -> String? {
-                switch member {
         {1}
-                default: break
-                }
                 return nil
             }
             public static func get(gzip member: String) -> Data? {
                 return nil
             }
             public static func get(data member: String) -> Data? {
-                switch member {
         {4}
-                default: break
-                }
                 return nil
             }
             public static func get(md5 member: String) -> StaticString? {
-                switch member {
         {6}
-                default: break
-                }
                 return nil
             }
         }
