@@ -1,6 +1,6 @@
 [
 	{
 		"file": "\\.png$",
-		"platforms": ["macOS", "Linux"],
+        "format": "#if DEBUG\n{0}\n#endif"
 	}
 ]

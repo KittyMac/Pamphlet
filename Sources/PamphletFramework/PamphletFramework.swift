@@ -289,54 +289,49 @@ public class PamphletFramework {
         
         let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return platformsWrap(for: $0,
-                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
                 if $0.isStaticString {
-                    return platformsWrap(for: $0,
-                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)().description }")
+                    return preprocessorWraps(for: $0,
+                                             string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)().description }")
                 } else {
-                    return platformsWrap(for: $0,
-                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
+                    return preprocessorWraps(for: $0,
+                                             string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
                 }
             }
         }.joined(separator: "\n")
         
         let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return platformsWrap(for: $0,
-                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return platformsWrap(for: $0,
-                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
         
         let compressedPagesCode = (compressedDataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
-                return platformsWrap(for: $0,
-                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }")
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }"
             } else {
-                return platformsWrap(for: $0,
-                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
             }
         }.joined(separator: "\n")
         let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return platformsWrap(for: $0,
-                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }")
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return platformsWrap(for: $0,
-                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
         let md5PagesCode = (dataPages + textPages).map {
             if options.contains(.kotlin) {
-                return platformsWrap(for: $0,
-                                     string: "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)MD5() }")
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)MD5() }"
             } else {
-                return platformsWrap(for: $0,
-                                     string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)MD5() }")
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)MD5() }")
             }
         }.joined(separator: "\n")
         
@@ -410,9 +405,7 @@ public class PamphletFramework {
             scratchDebug.append(string)
             scratchRelease.append(string)
         }
-        
-        appendBoth(platformsOpen(for: path))
-        
+                
         if options.contains(.kotlin) {
             
         } else {
@@ -513,9 +506,12 @@ public class PamphletFramework {
             }
         }
         
-        appendBoth(platformsClose(for: path))
-        
-        return (scratchDebug, scratchRelease)
+        return (
+            preprocessorWraps(for: path,
+                              string: scratchDebug),
+            preprocessorWraps(for: path,
+                              string: scratchRelease)
+        )
     }
     
     private func processStringAsFile(_ path: FilePath,

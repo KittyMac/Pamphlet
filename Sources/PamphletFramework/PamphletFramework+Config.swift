@@ -1,50 +1,39 @@
 import Foundation
 import libmcpp
 import Hitch
+import Spanker
 
 extension PamphletFramework {
-    func platforms(for file: FilePath) -> [String] {
-        
+    private func rule(for file: FilePath) -> JsonElement? {
         for rule in pamphletJson.iterValues {
             guard let ruleRegex = rule[string: "file"] else { continue }
-            guard let platforms = rule[element: "platforms"] else { continue }
             if file.fileName.test(ruleRegex) {
-                return platforms.iterValues.compactMap { $0.stringValue }
+                return rule
             }
         }
-        
-        return []
+        return nil
     }
     
-    func platformsOpen(for file: FilePath) -> String {
-        let hitch = Hitch()
-        let platforms = platforms(for: file)
-        if platforms.isEmpty == false {
-            hitch.append("#if ")
-            hitch.append(
-                platforms.map {  "os(\($0))" }.joined(separator: " || ")
-            )
-            hitch.append("\n")
+    func gzip(for file: FilePath) -> Bool {
+        if let rule = rule(for: file),
+           let value = rule[bool: "gzip"] {
+            return value
         }
-        return hitch.toString()
+        return true
     }
     
-    func platformsClose(for file: FilePath) -> String {
+    func preprocessorWraps(for file: FilePath,
+                           string: String) -> String {
+        let rule = rule(for: file)
         let hitch = Hitch()
-        let platforms = platforms(for: file)
-        if platforms.isEmpty == false {
-            hitch.append("#endif\n")
+        if let rule = rule,
+           let format = rule[halfHitch: "format"] {
+            hitch.append(.newLine)
+            hitch.append(format: format, string)
+            hitch.append(.newLine)
+        } else {
+            hitch.append(string)
         }
-        return hitch.toString()
-    }
-    
-    func platformsWrap(for file: FilePath,
-                       string: String) -> String {
-        let hitch = Hitch()
-        hitch.append(platformsOpen(for: file))
-        hitch.append(string)
-        hitch.append("\n")
-        hitch.append(platformsClose(for: file))
         return hitch.toString()
     }
 }
