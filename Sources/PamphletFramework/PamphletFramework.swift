@@ -3,6 +3,7 @@ import libmcpp
 import Hitch
 import Sextant
 import Spanker
+import SWCompression
 
 enum OutputType: String {
     case debug = "debug"
@@ -537,7 +538,8 @@ public class PamphletFramework {
     
     private func gzipContentsForDataFile(_ inFile: String) -> String? {
         guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
-        guard let fileDataAsGzip = try? fileData.gzipped(level: .bestCompression) else { return nil }
+            
+        guard let fileDataAsGzip = try? GzipArchive.archive(data: fileData) else { return nil }
         guard fileDataAsGzip.count < fileData.count else {
             return nil
         }

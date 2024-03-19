@@ -1,6 +1,6 @@
 import Foundation
 import libmcpp
-import Gzip
+import SWCompression
 
 extension PamphletFramework {
     func gzip(path: FilePath,
@@ -16,9 +16,11 @@ extension PamphletFramework {
                     return fileContentsAsData.base64EncodedString()
                 }
                 
-                if let fileContentsAsGzip = try? fileContentsAsData.gzipped(level: .bestCompression) {
+                if let fileContentsAsGzip = try? GzipArchive.archive(data: fileContentsAsData) {
                     return fileContentsAsGzip.base64EncodedString()
                 }
+                
+                return fileContentsAsData.base64EncodedString()
             }
             
             fatalError("Failed to compress the requested file")

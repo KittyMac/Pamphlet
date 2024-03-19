@@ -105,7 +105,7 @@ let package = Package(
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
-        .package(url: "https://github.com/KittyMac/GzipSwift.git", from: "5.3.0")
+        .package(url: "https://github.com/KittyMac/SWCompression.git", from: "4.8.5")
     ],
     targets: pluginTarget + [
         .target(
@@ -115,7 +115,7 @@ let package = Package(
                 "libmcpp",
                 "Jib",
                 "Sextant",
-                .product(name: "Gzip", package: "GzipSwift"),
+                "SWCompression"
             ]
         ),
         .target(
