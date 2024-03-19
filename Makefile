@@ -72,10 +72,8 @@ tools-simple: install
 
 .PHONY: release
 release: install focal fedora fedora38 amazonlinux2
-
-docker: focal amazonlinux2 fedora fedora38
-
-focal: docker-login
+	
+focal: docker
 	docker buildx build --file Dockerfile-focal --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-focal .
 	
 	docker pull kittymac/pamphlet-focal:latest
@@ -89,7 +87,7 @@ focal: docker-login
 	rm -f ./dist/PamphletTool-focal.zip
 	cd ./dist && zip -r ./PamphletTool-focal.zip ./PamphletTool-focal.artifactbundle
 	
-amazonlinux2: docker-login
+amazonlinux2: docker
 	docker buildx build --file Dockerfile-amazonlinux2 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-amazonlinux2 .
 	
 	docker pull kittymac/pamphlet-amazonlinux2:latest
@@ -105,7 +103,7 @@ amazonlinux2: docker-login
 	cd ./dist && zip -r ./PamphletTool-amazonlinux2.zip ./PamphletTool-amazonlinux2.artifactbundle
 
 
-fedora: docker-login
+fedora: docker
 	docker buildx build --file Dockerfile-fedora38 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora38 .
 	
 	docker pull kittymac/pamphlet-fedora:latest
@@ -119,7 +117,7 @@ fedora: docker-login
 	rm -f ./dist/PamphletTool-fedora.zip
 	cd ./dist && zip -r ./PamphletTool-fedora.zip ./PamphletTool-fedora.artifactbundle
 
-fedora38: docker-login
+fedora38: docker
 	docker buildx build --file Dockerfile-fedora --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora .
 	
 	docker pull kittymac/pamphlet-fedora38:latest
@@ -133,7 +131,7 @@ fedora38: docker-login
 	rm -f ./dist/PamphletTool-fedora38.zip
 	cd ./dist && zip -r ./PamphletTool-fedora38.zip ./PamphletTool-fedora38.artifactbundle
 
-docker-login:
+docker: docker
 	-docker buildx create --name cluster_builder203
 	-DOCKER_HOST=ssh://rjbowli@192.168.111.203 docker buildx create --name cluster_builder203 --platform linux/amd64 --append
 	-docker buildx use cluster_builder203
