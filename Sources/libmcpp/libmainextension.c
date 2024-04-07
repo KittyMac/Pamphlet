@@ -30,7 +30,7 @@
 #include    "system.H"
 #include    "internal.H"
 
-#include <libgen.h>
+//#include <libgen.h>
 #include <string.h>
 #include <pthread.h>
 #include <sys/resource.h>

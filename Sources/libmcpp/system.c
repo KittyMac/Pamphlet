@@ -64,7 +64,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <strings.h>
+
+#ifndef _WIN32
 #include <libgen.h>
+#endif
 
 #define PATH_DELIM      '/'
 
