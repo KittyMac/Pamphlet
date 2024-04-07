@@ -1,4 +1,4 @@
-FROM swift:5.6.2-amazonlinux2 as builder
+FROM swift:5.7.1-amazonlinux2 as builder
 
 RUN yum install -y \
     libatomic \
@@ -16,7 +16,7 @@ COPY ./Tests ./Tests
 RUN swift test
 RUN swift build --configuration release
 
-FROM fedora:37
+FROM swift:5.7.1-amazonlinux2
 
 WORKDIR /root/Pamphlet
 COPY --from=builder /root/Pamphlet/.build/release/PamphletTool-focal .

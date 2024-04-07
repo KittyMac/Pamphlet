@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Chronometer.git",
       "state" : {
-        "revision" : "1360b46bfa6eecbdedd24590b95f97d3e59dc027",
-        "version" : "0.1.6"
+        "revision" : "b4808d59a175b1f764cc3d7e2e927e5476b10427",
+        "version" : "0.1.11"
       }
     },
     {
@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/GzipSwift.git",
       "state" : {
-        "revision" : "ca15e2487b21e6f9d8829997184f14de32654b5b",
-        "version" : "5.3.0"
+        "revision" : "a9bbc39238e197e3e20b4346c45bfed767a817fe",
+        "version" : "5.3.3"
       }
     },
     {
@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "02c5a0b672776106aca615f827dd1f60eda6908f",
-        "version" : "0.4.92"
+        "revision" : "b23dba215ecaf089996b6975cdc996376ce27cd5",
+        "version" : "0.4.117"
       }
     },
     {
@@ -32,8 +32,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "25172a79f0479e2938c6a020861c0e0c5fbc2322",
-        "version" : "0.0.49"
+        "revision" : "c44d90702f7c9d724a29bde857271b8a78a5b516",
+        "version" : "0.0.69"
+      }
+    },
+    {
+      "identity" : "sextant",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KittyMac/Sextant.git",
+      "state" : {
+        "revision" : "7c940fcb7a84c9d1a310707f91e1710c9803d8ea",
+        "version" : "0.4.29"
       }
     },
     {
@@ -41,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Spanker.git",
       "state" : {
-        "revision" : "98b15034240c9ff68279d929cb365b6fb389db27",
-        "version" : "0.2.29"
+        "revision" : "6b0edd2996d1f3bebb534fb05e20eac6bf8c8739",
+        "version" : "0.2.46"
       }
     },
     {
@@ -50,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "fddd1c00396eed152c45a46bea9f47b98e59301d",
-        "version" : "1.2.0"
+        "revision" : "c8ed701b513cf5177118a175d85fbbbcd707ab41",
+        "version" : "1.3.0"
       }
     }
   ],

@@ -7,9 +7,9 @@ import PackagePlugin
             return []
         }
         
-        let (toolPath, copiesDirectory, inputFiles, outputFiles) = try pluginShared(context: context,
-                                                                                    target: target,
-                                                                                    includeDebug: false)
+        let (toolPath, repoPath, copiesDirectory, inputFiles, outputFiles) = try pluginShared(context: context,
+                                                                                              target: target,
+                                                                                              includeDebug: false)
         
         return [
             .buildCommand(
@@ -19,6 +19,8 @@ import PackagePlugin
                     "--prefix",
                     target.name,
                     "--release",
+                    "--git-path",
+                    repoPath,
                     copiesDirectory,
                     context.pluginWorkDirectory.string
                 ],

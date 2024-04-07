@@ -43,7 +43,8 @@ let productsTarget: [PackageDescription.Product] = [
     .library(name: "PamphletTool", targets: [
         "PamphletTool-focal",
         "PamphletTool-amazonlinux2",
-        "PamphletTool-fedora"
+        "PamphletTool-fedora",
+        "PamphletTool-fedora38"
     ]),
 ]
 let pluginTarget: [PackageDescription.Target] = [
@@ -53,13 +54,16 @@ let pluginTarget: [PackageDescription.Target] = [
                   path: "dist/PamphletTool-amazonlinux2.zip"),
     .binaryTarget(name: "PamphletTool-fedora",
                   path: "dist/PamphletTool-fedora.zip"),
+    .binaryTarget(name: "PamphletTool-fedora38",
+                  path: "dist/PamphletTool-fedora38.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),
         dependencies: [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora"
+            "PamphletTool-fedora",
+            "PamphletTool-fedora38"
         ]
     ),
     .plugin(
@@ -68,7 +72,8 @@ let pluginTarget: [PackageDescription.Target] = [
         dependencies: [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora"
+            "PamphletTool-fedora",
+            "PamphletTool-fedora38"
         ]
     ),
     .plugin(
@@ -77,7 +82,8 @@ let pluginTarget: [PackageDescription.Target] = [
         dependencies: [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora"
+            "PamphletTool-fedora",
+            "PamphletTool-fedora38"
         ]
     ),
 ]
@@ -95,6 +101,7 @@ let package = Package(
         .plugin(name: "PamphletGzipOnlyPlugin", targets: ["PamphletGzipOnlyPlugin"])
     ],
     dependencies: [
+        .package(url: "https://github.com/KittyMac/Sextant.git", from: "0.4.29"),
         .package(url: "https://github.com/KittyMac/Jib.git", from: "0.0.2"),
 		.package(url: "https://github.com/KittyMac/Hitch.git", from: "0.4.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
@@ -107,6 +114,7 @@ let package = Package(
                 "Hitch",
                 "libmcpp",
                 "Jib",
+                "Sextant",
                 .product(name: "Gzip", package: "GzipSwift"),
             ]
         ),

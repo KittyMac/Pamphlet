@@ -42,6 +42,16 @@ extension String {
             }
         } catch { }
     }
+    
+    func test(_ pattern: String) -> Bool {
+        do {
+            let body = self
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let nsrange = NSRange(location: Int(0), length: Int(count))
+            return regex.firstMatch(in: body, range: nsrange) != nil
+        } catch { }
+        return false
+    }
 }
 
 private func toVariableName(_ source: String) -> String {

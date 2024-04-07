@@ -1,4 +1,4 @@
-FROM swift:5.6.2-focal as builder
+FROM swift:5.7.1-focal as builder
 
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true && apt-get -q update && \
     apt-get install -y \
@@ -16,7 +16,7 @@ COPY ./Tests ./Tests
 RUN swift test
 RUN swift build --configuration release
 
-FROM fedora:37
+FROM swift:5.7.1-focal
 
 WORKDIR /root/Pamphlet
 COPY --from=builder /root/Pamphlet/.build/release/PamphletTool-focal .

@@ -847,19 +847,20 @@ chk_limit:
                     && (delim == '"' || delim == '\''))
                 goto  done;
             if (delim == '"') {
-                if (mcpp_mode != POST_STD && option_flags.lang_asm) {
-                    /* STD, KR      */
-                    /* Concatenate the unterminated string to the next line */
-                    if (warn_level & 1)
-                        cwarn( unterm_string
-                                , ", catenated to the next line"    /* _W1_ */
-                                , 0L, NULL);
-                    if (cat_line( FALSE) != NULL)
-                        goto  scan;         /* Splice the lines     */
-                    /* Else end of file     */
-                } else {
-                    cerror( unterm_string, skip, 0L, NULL); /* _E_  */
-                }
+                goto  done;
+                //if (mcpp_mode != POST_STD && option_flags.lang_asm) {
+                //    /* STD, KR      */
+                //    /* Concatenate the unterminated string to the next line */
+                //    if (warn_level & 1)
+                //        cwarn( unterm_string
+                //                , ", catenated to the next line"    /* _W1_ */
+                //                , 0L, NULL);
+                //    if (cat_line( FALSE) != NULL)
+                //        goto  scan;         /* Splice the lines     */
+                //    /* Else end of file     */
+                //} else {
+                //    cerror( unterm_string, skip, 0L, NULL); /* _E_  */
+                //}
             } else if (delim == '\'') {
                 goto  done;
             } else {
@@ -1808,12 +1809,14 @@ end_line:
         temp = infile->buffer;
         while (char_type[ *temp & UCHARMAX] & HSP)
             temp++;
-        if (*temp == '#'        /* This line starts with # token    */
+        /*
+        if (*temp == '#'        // This line starts with # token
                 || (mcpp_mode == STD && *temp == '%' && *(temp + 1) == ':'))
             if (warn_level & 1)
                 cwarn(
-    "Macro started at line %.0s%ld swallowed directive-like line"   /* _W1_ */
+    "Macro started at line %.0s%ld swallowed directive-like line"
                     , NULL, macro_line, NULL);
+         */
     }
     return  infile->buffer;
 }
@@ -1995,23 +1998,25 @@ static char *   get_line(
             if (converted)
                 len = strlen( ptr);
             /* Translation phase 2  */
-            len -= 2;
-            if (len >= 0) {
-                if ((*(ptr + len) == '\\') && ! last_is_mbchar( ptr, (int)len)) {
-                            /* <backslash><newline> (not MBCHAR)    */
-                    ptr = infile->bptr += len;  /* Splice the lines */
-                    wrong_line = TRUE;
-                    if ((mcpp_debug & MACRO_CALL) && compiling) {
-                                    /* Save location informations   */
-                        if (cat_line == 0)      /* First line of catenation */
-                            bsl_cat_line.start_line = src_line;
-                        if (cat_line < MAX_CAT_LINE)
-                                    /* Record the catenated length  */
-                            bsl_cat_line.len[ ++cat_line]
-                                    = strlen( infile->buffer) - 2;
-                        /* Else ignore  */
+            if (len >= 2) {
+                len -= 2;
+                if (len >= 0) {
+                    if ((*(ptr + len) == '\\') && ! last_is_mbchar( ptr, (int)len)) {
+                                /* <backslash><newline> (not MBCHAR)    */
+                        ptr = infile->bptr += len;  /* Splice the lines */
+                        wrong_line = TRUE;
+                        if ((mcpp_debug & MACRO_CALL) && compiling) {
+                                        /* Save location informations   */
+                            if (cat_line == 0)      /* First line of catenation */
+                                bsl_cat_line.start_line = src_line;
+                            if (cat_line < MAX_CAT_LINE)
+                                        /* Record the catenated length  */
+                                bsl_cat_line.len[ ++cat_line]
+                                        = strlen( infile->buffer) - 2;
+                            /* Else ignore  */
+                        }
+                        continue;
                     }
-                    continue;
                 }
             }
 #if NBUFF-2 > SLEN90MIN

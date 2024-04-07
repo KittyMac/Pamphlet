@@ -77,6 +77,7 @@ static void     dump_repl( const DEFBUF * dp, FILE * fp, int gcc2_va);
 #define L_else          ('e' ^ ('s' << 1))
 #define L_endif         ('e' ^ ('d' << 1))
 #define L_define        ('d' ^ ('f' << 1))
+#define L_nbmacro       ('n' ^ ('m' << 1))
 #define L_macro         ('m' ^ ('c' << 1))
 #define L_endmacro      ('e' ^ ('d' << 1) ^ ('o' << 1))
 #define L_undef         ('u' ^ ('d' << 1))
@@ -162,6 +163,7 @@ void    directive( void)
     case L_else:     tp = "else";      break;
     case L_endif:    tp = "endif";     break;
     case L_define:   tp = "define";    break;
+    case L_nbmacro:  tp = "nbmacro";     break;
     case L_macro:    tp = "macro";     break;
     case L_endmacro: tp = "endmacro";  break;
     case L_undef:    tp = "undef";     break;
@@ -307,13 +309,16 @@ ifdo:
         --ifptr;
         break;
 
+    case L_nbmacro:
+        do_define( FALSE, 0, 2);
+        break;
             
     case L_macro:
-        do_define( FALSE, 0, TRUE);
+        do_define( FALSE, 0, 1);
         break;
             
     case L_define:
-        do_define( FALSE, 0, FALSE);
+        do_define( FALSE, 0, 0);
         break;
 
     case L_undef:
@@ -820,7 +825,7 @@ DEFBUF *    do_define(
     }
     
     defp = install_macro( macroname, nargs, work_buf, repl_list, prevp, cmp
-            , predefine);
+            , predefine, ismacro);
     if ((mcpp_debug & MACRO_CALL) && src_line) {
                                     /* Get location on source file  */        
         LINE_COL    s_line_col, e_line_col;
@@ -1021,7 +1026,7 @@ static int  get_repl(
     // skip leading new line
     int macroDidEnd = FALSE;
     while (c != CHAR_EOF && macroDidEnd == FALSE) {
-        if (c == '\n' && ismacro == FALSE) {
+        if (c == '\n' && ismacro == 0) {
             break;
         }
         if (standard) {
@@ -1449,7 +1454,7 @@ DEFBUF *    look_and_install(
     int         cmp;    /* Result of comparison of new name and old */
 
     prevp = look_prev( name, &cmp);
-    defp = install_macro( name, numargs, parmnames, repl, prevp, cmp, 0);
+    defp = install_macro( name, numargs, parmnames, repl, prevp, cmp, 0, 0);
     return  defp;
 }
 
@@ -1460,7 +1465,8 @@ DEFBUF *    install_macro(
     const char *    repl,                   /* Replacement text     */
     DEFBUF **  prevp,           /* The place to insert definition   */
     int     cmp,        /* Result of comparison of new name and old */
-    int     predefine   /* Predefined macro without leading '_'     */
+    int     predefine,   /* Predefined macro without leading '_'     */
+    int     ismacro
 )
 /*
  * Enter this name in the lookup table.
@@ -1519,6 +1525,9 @@ DEFBUF *    install_macro(
         /* '&& std_limits.n_macro' to avoid warning before initialization   */
         cwarn( "More than %.0s%ld macros defined"           /* _W4_ */
                 , NULL , std_limits.n_macro, NULL);
+    
+    dp->ismacro = ismacro;
+    
     return  dp;
 }
 

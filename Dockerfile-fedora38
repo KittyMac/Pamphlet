@@ -1,0 +1,27 @@
+FROM fedora:38 as builder
+
+RUN dnf install -y \
+    git \
+    unzip \
+    swift-lang-5.7.3-2.fc38 \
+    javascriptcoregtk4.1-devel \
+    libatomic_ops
+
+RUN ln -s /usr/libexec/swift/*/lib/libsourcekitdInProc.so /usr/lib/libsourcekitdInProc.so
+
+WORKDIR /root/Pamphlet
+COPY ./dist ./dist
+COPY ./Package.resolved ./Package.resolved
+COPY ./Package.swift ./Package.swift
+COPY ./Plugins ./Plugins
+COPY ./Sources ./Sources
+COPY ./Tests ./Tests
+
+RUN swift test
+RUN swift build --configuration release
+
+FROM fedora:38
+
+WORKDIR /root/Pamphlet
+COPY --from=builder /root/Pamphlet/.build/release/PamphletTool-focal .
+COPY --from=builder /root/Pamphlet/.build/release/PamphletTool-focal .

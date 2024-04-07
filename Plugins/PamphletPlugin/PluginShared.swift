@@ -1,7 +1,7 @@
 import Foundation
 import PackagePlugin
 
-func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
+func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
     
     // Note: We want to load the right pre-compiled tool for the right OS
     // There are currently two tools:
@@ -21,8 +21,12 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
            let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
             tool = osTool
         }
-        if osFile.contains("Fedora Linux"),
+        if osFile.contains("Fedora Linux 37"),
            let osTool = try? context.tool(named: "PamphletTool-fedora") {
+            tool = osTool
+        }
+        if osFile.contains("Fedora Linux 38"),
+           let osTool = try? context.tool(named: "PamphletTool-fedora38") {
             tool = osTool
         }
     }
@@ -53,7 +57,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     
     // detect when the git version changes and reprocess
     let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
-    if let version = git() {
+    if let version = git(repoPath: target.directory.string) {
         // save the version number as an input in our tool working directory
         if let lastVersion = try? String(contentsOfFile: gitVersionPath),
            lastVersion == version {
@@ -73,6 +77,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     }
     
     return (tool.path,
+            target.directory.string,
             copiesDirectory,
             inputFiles.map { PackagePlugin.Path($0) },
             outputFiles.map { PackagePlugin.Path($0) })
@@ -136,12 +141,10 @@ func pathFor(executable name: String) -> String {
     return "./\(name)"
 }
 
-func git() -> String? {
+func git(repoPath: String) -> String? {
     do {
         let path = pathFor(executable: "git")
-        
-        let repoPath = FileManager.default.currentDirectoryPath
-        
+                
         let task = Process()
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = [
@@ -166,7 +169,7 @@ func git() -> String? {
             if tagString.hasPrefix("v") && tagString.components(separatedBy: ".").count == 3 {
                 return tagString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             } else {
-                print("warning: git describe did not return a valid semver, got \(tagString) instead")
+                print("warning: git describe did not return a valid semver for repo at \(repoPath)")
             }
         }
         

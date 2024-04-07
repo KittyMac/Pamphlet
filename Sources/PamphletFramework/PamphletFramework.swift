@@ -1,6 +1,8 @@
 import Foundation
 import libmcpp
 import Hitch
+import Sextant
+import Spanker
 
 enum OutputType: String {
     case debug = "debug"
@@ -54,7 +56,11 @@ public class PamphletFramework {
     private let queue1 = OperationQueue()
     private let queue2 = OperationQueue()
     
+    private var gitVersionString: String = ""
+    private var gitHashString: String = ""
+    
     var options = PamphletOptions.default
+    var pamphletJson = ^[]
     
     var debugPath: String = ""
     var releasePath: String = ""
@@ -109,6 +115,7 @@ public class PamphletFramework {
     private func createPamphletFile(_ pamphletName: String,
                                     _ inTextPages: [FilePath],
                                     _ inDataPages: [FilePath],
+                                    _ inCompressedDataPages: [FilePath],
                                     _ inDirectoryPages: [FilePath]) {
         
         
@@ -119,6 +126,10 @@ public class PamphletFramework {
         }
         
         let dataPages = inDataPages.sorted { (lhs, rhs) -> Bool in
+            return lhs.fileName < rhs.fileName
+        }
+        
+        let compressedDataPages = inCompressedDataPages.sorted { (lhs, rhs) -> Bool in
             return lhs.fileName < rhs.fileName
         }
         
@@ -147,7 +158,7 @@ public class PamphletFramework {
         }
         
         // ------------- Swift -------------
-        let version = git() ?? "v0.0.0"
+        let version = gitVersionString
         
         let templateDebugOnlySwift = """
         {0}
@@ -156,20 +167,18 @@ public class PamphletFramework {
             public static let version = "\(version)"
             
             public static func get(string member: String) -> String? {
-                switch member {
         {1}
-                default: break
-                }
                 return nil
             }
             public static func get(gzip member: String) -> Data? {
                 return nil
             }
             public static func get(data member: String) -> Data? {
-                switch member {
         {4}
-                default: break
-                }
+                return nil
+            }
+            public static func get(md5 member: String) -> StaticString? {
+        {6}
                 return nil
             }
         }
@@ -183,24 +192,19 @@ public class PamphletFramework {
             public static let version = "\(version)"
 
             public static func get(string member: String) -> StaticString? {
-                switch member {
         {2}
-                default: break
-                }
                 return nil
             }
             public static func get(gzip member: String) -> Data? {
-                switch member {
         {3}
-                default: break
-                }
                 return nil
             }
             public static func get(data member: String) -> Data? {
-                switch member {
         {4}
-                default: break
-                }
+                return nil
+            }
+            public static func get(md5 member: String) -> StaticString? {
+        {6}
                 return nil
             }
         }
@@ -216,26 +220,20 @@ public class PamphletFramework {
             val version = "\(version)"
         
             fun getAsString(member: String): String? {
-                return when (member) {
         {1}
-                    else -> null
-                }
+                return null
             }
             fun getAsGzip(member: String): ByteArray? {
                 if (BuildConfig.DEBUG) {
                     return null
                 } else {
-                    return when (member) {
         {3}
-                        else -> null
-                    }
+                    return null
                 }
             }
             fun getAsByteArray(member: String): ByteArray? {
-                return when (member) {
         {4}
-                    else -> null
-                }
+                    return null
             }
         }
         {5}
@@ -250,22 +248,16 @@ public class PamphletFramework {
             val version = "\(version)"
 
             fun getAsString(member: String): String? {
-                return when (member) {
         {2}
-                    else -> null
-                }
+                    return null
             }
             fun getAsGzip(member: String): ByteArray? {
-                return when (member) {
         {3}
-                    else -> null
-                }
+                    return null
             }
             fun getAsByteArray(member: String): ByteArray? {
-                return when (member) {
         {4}
-                    else -> null
-                }
+                    return null
             }
         }
         {5}
@@ -288,36 +280,49 @@ public class PamphletFramework {
         
         let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
                 if $0.isStaticString {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)().description"
+                    return preprocessorWraps(for: $0,
+                                             string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)().description }")
                 } else {
-                    return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                    return preprocessorWraps(for: $0,
+                                             string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
                 }
             }
         }.joined(separator: "\n")
         
         let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
         
-        let compressedPagesCode = textPages.filter { _ in options.contains(.includeGzip) }.map {
+        let compressedPagesCode = (compressedDataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)Gzip()"
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)Gzip()"
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
             }
         }.joined(separator: "\n")
         let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
             if options.contains(.kotlin) {
-                return "                \"\($0.fullPath)\" -> return \($0.fullVariablePath)()"
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return "        case \"\($0.fullPath)\": return \($0.fullVariablePath)()"
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
+            }
+        }.joined(separator: "\n")
+        let md5PagesCode = (dataPages + textPages).map {
+            if options.contains(.kotlin) {
+                return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)MD5() }"
+            } else {
+                return preprocessorWraps(for: $0,
+                                         string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)MD5() }")
             }
         }.joined(separator: "\n")
         
@@ -327,7 +332,8 @@ public class PamphletFramework {
             textPagesCodeRelease,
             compressedPagesCode,
             dataPagesCode,
-            allDirectoryExtensions
+            allDirectoryExtensions,
+            md5PagesCode,
         ]
 
         let releaseSwift = templateReleaseOnly << [
@@ -336,7 +342,8 @@ public class PamphletFramework {
             textPagesCodeRelease,
             compressedPagesCode,
             dataPagesCode,
-            allDirectoryExtensions
+            allDirectoryExtensions,
+            md5PagesCode,
         ]
         
         appendOutput(string: debugSwift.description,
@@ -352,7 +359,7 @@ public class PamphletFramework {
         var fileContents = string
         if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
             // This file wants to use the mcpp preprocessor
-            if let cPtr = mcpp_preprocessFile(inFile) {
+            if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
                 fileContents = String(cString: cPtr)
                 free(cPtr)
             }
@@ -362,9 +369,11 @@ public class PamphletFramework {
             }
         }
         
-        minifyHtml(inFile: inFile, fileContents: &fileContents)
-        minifyJs(inFile: inFile, fileContents: &fileContents)
-        minifyJson(inFile: inFile, fileContents: &fileContents)
+        if inFile.contains(".min") == false {
+            minifyHtml(inFile: inFile, fileContents: &fileContents)
+            minifyJs(inFile: inFile, fileContents: &fileContents)
+            minifyJson(inFile: inFile, fileContents: &fileContents)
+        }
         
         return fileContents
     }
@@ -387,16 +396,29 @@ public class PamphletFramework {
             scratchDebug.append(string)
             scratchRelease.append(string)
         }
-        
+                
         if options.contains(.kotlin) {
             
         } else {
             appendBoth("public extension \(path.extensionName) {\n")
         }
         
+        if let uncompressed = uncompressed,
+           let md5 = HalfHitch(string: uncompressed).md5() {
+            if options.contains(.kotlin) {
+                appendBoth("fun \(path.extensionName).\(path.variableName)MD5(): String {\n")
+                appendBoth("    return \"\(md5)\"\n")
+                appendBoth("}\n")
+            } else {
+                appendBoth("    static func \(path.variableName)MD5() -> StaticString {\n")
+                appendBoth("        return \"\(md5)\"\n")
+                appendBoth("    }\n")
+            }
+        }
+        
         if uncompressed != nil && options.contains(.includeOriginal) {
             var reifiedDataType = dataType
-            if dataType == "String" {
+            if dataType == "String" && options.contains(.kotlin) == false {
                 reifiedDataType = "StaticString"
             }
             
@@ -475,7 +497,12 @@ public class PamphletFramework {
             }
         }
         
-        return (scratchDebug, scratchRelease)
+        return (
+            preprocessorWraps(for: path,
+                              string: scratchDebug),
+            preprocessorWraps(for: path,
+                              string: scratchRelease)
+        )
     }
     
     private func processStringAsFile(_ path: FilePath,
@@ -508,13 +535,27 @@ public class PamphletFramework {
         return fileData.base64EncodedString()
     }
     
+    private func gzipContentsForDataFile(_ inFile: String) -> String? {
+        guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
+        guard let fileDataAsGzip = try? fileData.gzipped(level: .bestCompression) else { return nil }
+        guard fileDataAsGzip.count < fileData.count else {
+            return nil
+        }
+        return fileDataAsGzip.base64EncodedString()
+    }
+    
     private func processDataFile(_ path: FilePath,
                                  _ inFile: String,
-                                 _ options: PamphletOptions) -> (String, String)? {
+                                 _ options: PamphletOptions,
+                                 _ compressedDataPages: BoxedArray<FilePath>) -> (String, String)? {
+        let gzipContent = gzipContentsForDataFile(inFile)
+        if gzipContent != nil {
+            compressedDataPages.append(path)
+        }
         return generateFile(path,
                             inFile,
                             fileContentsForDataFile(inFile),
-                            nil,
+                            gzipContent,
                             "Data",
                             options)
     }
@@ -527,7 +568,8 @@ public class PamphletFramework {
                          generateFilesDirectory: String,
                          options: PamphletOptions,
                          textPages: BoxedArray<FilePath>,
-                         dataPages: BoxedArray<FilePath>) {
+                         dataPages: BoxedArray<FilePath>,
+                         compressedDataPages: BoxedArray<FilePath>) {
         
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         
@@ -641,7 +683,7 @@ public class PamphletFramework {
                     collapsedReleaseContent += contentRelease + "\n"
                     textPages.append(filePath)
                     appendLock.unlock()
-                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options) {
+                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options, compressedDataPages) {
                     appendLock.lock()
                     collapsedDebugContent += contentDebug + "\n"
                     collapsedReleaseContent += contentRelease + "\n"
@@ -721,10 +763,37 @@ public class PamphletFramework {
             var fileContents = try String(contentsOfFile: inFile)
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                if let cPtr = mcpp_preprocessFile(inFile) {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
                     fileContents = String(cString: cPtr)
                     free(cPtr)
                 }
+            }
+            
+            result = fileContents
+        } catch {
+            result = "unable to parse file"
+        }
+        print(result)
+        return result
+    }
+    
+    @discardableResult
+    public func fullprocess(file inFile: String) -> String {
+        var result: String = ""
+        do {
+            var fileContents = try String(contentsOfFile: inFile)
+            
+            if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
+                    fileContents = String(cString: cPtr)
+                    free(cPtr)
+                }
+            }
+            
+            if inFile.contains(".min") == false {
+                minifyHtml(inFile: inFile, fileContents: &fileContents)
+                minifyJs(inFile: inFile, fileContents: &fileContents)
+                minifyJson(inFile: inFile, fileContents: &fileContents)
             }
             
             result = fileContents
@@ -761,7 +830,11 @@ public class PamphletFramework {
                         extensions: [String],
                         inDirectory: String,
                         outDirectory: String,
+                        gitPath: String,
                         options: PamphletOptions) {
+        
+        gitVersionString = git(repoPath: gitPath) ?? ""
+        gitHashString = gitHash(repoPath: gitPath)
         
         measure(message: inDirectory) {
             self.options = options
@@ -814,7 +887,6 @@ public class PamphletFramework {
                              path: releasePath,
                              type: .release)
             }
-            
                         
             let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: inDirectory),
                                                             includingPropertiesForKeys: resourceKeys,
@@ -826,6 +898,7 @@ public class PamphletFramework {
             
             let textPages = BoxedArray<FilePath>()
             let dataPages = BoxedArray<FilePath>()
+            let compressedDataPages = BoxedArray<FilePath>()
             let directoryPages = BoxedArray<FilePath>()
             
             //print("in: " + inDirectory)
@@ -838,8 +911,15 @@ public class PamphletFramework {
             
             var allDirectories: [URL] = []
             var filesByDirectory: [URL: BoxedArray<URL>] = [:]
+            var pamphletJsonHitch: Hitch = ""
             
             for case let fileURL as URL in enumerator {
+                
+                if fileURL.lastPathComponent == "pamphlet.json" {
+                    pamphletJsonHitch = Hitch(contentsOfFile: fileURL.path) ?? ""
+                    continue
+                }
+                
                 if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
                     if let isDirectory = resourceValues.isDirectory {
                         if isDirectory {
@@ -858,6 +938,8 @@ public class PamphletFramework {
                 }
             }
             
+            pamphletJson = Spanker.parse(halfhitch: pamphletJsonHitch.halfhitch()) ?? ^[]
+            
             for directoryURL in filesByDirectory.keys {
                 guard let files = filesByDirectory[directoryURL] else { continue }
                 queue2.addOperation {
@@ -869,7 +951,8 @@ public class PamphletFramework {
                                  generateFilesDirectory: generateFilesDirectory,
                                  options: options,
                                  textPages: textPages,
-                                 dataPages: dataPages)
+                                 dataPages: dataPages,
+                                 compressedDataPages: compressedDataPages)
                 }
             }
             queue2.waitUntilAllOperationsAreFinished()
@@ -883,6 +966,7 @@ public class PamphletFramework {
             createPamphletFile(pamphletName,
                                textPages.array,
                                dataPages.array,
+                               compressedDataPages.array,
                                directoryPages.array)
             
             appendOutput(string: fileFooterDebug,

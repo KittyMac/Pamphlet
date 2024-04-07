@@ -219,6 +219,7 @@ typedef struct defbuf {
         const char *    fname;      /* Macro is defined in the source file  */
         long            mline;      /*          at the line.        */
         char            push;       /* Push level indicator         */
+        char            ismacro;    /* macro type identifier        */
         char            name[1];    /* Macro name                   */
 } DEFBUF;
 
@@ -412,7 +413,8 @@ extern DEFBUF * look_and_install( const char * name, int numargs
                 /* Look and insert macro def.   */
 extern DEFBUF * install_macro( const char * name, int numargs
         , const char * parmnames, const char * repl, DEFBUF ** prevp, int cmp
-        , int predefine);
+        , int predefine
+        , int ismacro);
                 /* Install a def to symbol table*/
 extern int      undefine( const char * name);
                 /* Delete from symbol table     */

@@ -10,7 +10,7 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
-    
+    /*
     func testProcessOptimize() {
         let extensions: [String] = []
         
@@ -22,13 +22,14 @@ final class PamphletTests: XCTestCase {
         //                                     options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
         //}
     }
-                
+                */
     func testPamphlet() {
         let extensions: [String] = []
         PamphletFramework.shared.process(prefix: nil,
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: path(to: "Pamphlet"),
                                          options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
@@ -38,6 +39,7 @@ final class PamphletTests: XCTestCase {
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: path(to: "Pamphlet"),
                                          options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
     
@@ -95,6 +97,11 @@ final class PamphletTests: XCTestCase {
         XCTAssertEqual(result, try! String(contentsOfFile: filepath))
     }
     
+    func testPreprocess7() {
+        let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/test7.html"))
+        XCTAssertEqual(result, "/(?:#f|term1|term2|term3)/i\n")
+    }
+    
     func testNotAValidPreprocessingToken() {
         let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/test2.js"))
         XCTAssertEqual(result, "\n\nvar x = 5\n`width:${x}em;height:${x}em;`\n")
@@ -121,6 +128,7 @@ final class PamphletTests: XCTestCase {
                                          extensions: extensions,
                                          inDirectory: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
                                          outDirectory: "/tmp/Pamphlet",
+                                         gitPath: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
                                          options:PamphletOptions.default)
     }
 }

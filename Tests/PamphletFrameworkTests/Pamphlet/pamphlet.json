@@ -1,0 +1,6 @@
+[
+	{
+		"file": "\\.png$",
+        "format": "#if DEBUG\n{0}\n#endif"
+	}
+]
