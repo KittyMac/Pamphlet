@@ -30,12 +30,11 @@
 #include    "system.H"
 #include    "internal.H"
 
-//#include <libgen.h>
 #include <string.h>
-#include <pthread.h>
-#include <sys/resource.h>
 
 #ifndef _WIN32
+#include <sys/resource.h>
+#include <pthread.h>
 #include <unistd.h>
 extern char *strdup(const char *__s1);
 #endif
