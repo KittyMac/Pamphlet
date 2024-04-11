@@ -283,10 +283,10 @@ public class PamphletFramework {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
                 if $0.isStaticString {
-                    return preprocessorWraps(for: $0,
+                    return preprocessorWraps(for: $0.fileName,
                                              string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)().description }")
                 } else {
-                    return preprocessorWraps(for: $0,
+                    return preprocessorWraps(for: $0.fileName,
                                              string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
                 }
             }
@@ -296,7 +296,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return preprocessorWraps(for: $0,
+                return preprocessorWraps(for: $0.fileName,
                                          string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
@@ -305,7 +305,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }"
             } else {
-                return preprocessorWraps(for: $0,
+                return preprocessorWraps(for: $0.fileName,
                                          string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
             }
         }.joined(separator: "\n")
@@ -313,7 +313,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
-                return preprocessorWraps(for: $0,
+                return preprocessorWraps(for: $0.fileName,
                                          string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)() }")
             }
         }.joined(separator: "\n")
@@ -321,7 +321,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)MD5() }"
             } else {
-                return preprocessorWraps(for: $0,
+                return preprocessorWraps(for: $0.fileName,
                                          string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)MD5() }")
             }
         }.joined(separator: "\n")
@@ -498,9 +498,9 @@ public class PamphletFramework {
         }
         
         return (
-            preprocessorWraps(for: path,
+            preprocessorWraps(for: path.fileName,
                               string: scratchDebug),
-            preprocessorWraps(for: path,
+            preprocessorWraps(for: path.fileName,
                               string: scratchRelease)
         )
     }

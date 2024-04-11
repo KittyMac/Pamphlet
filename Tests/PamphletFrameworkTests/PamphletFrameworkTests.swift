@@ -10,19 +10,20 @@ final class PamphletTests: XCTestCase {
             .appendingPathComponent(to, isDirectory: true)
             .path
     }
-    /*
+    
     func testProcessOptimize() {
         let extensions: [String] = []
         
-        measure {
+        //measure {
             PamphletFramework.shared.process(prefix: nil,
                                              extensions: extensions,
-                                             inDirectory: "/Users/rjbowli/Development/chimerasw/starbaseorion10/Server/Sources/SOServerFramework/Pamphlet",
+                                             inDirectory: "/Users/rjbowli/Development/smallplanet/smallplanet_RoverCore_SDK/Sources/RoverCore/Pamphlet",
                                              outDirectory: "/tmp/Pamphlet",
+                                             gitPath: path(to: "Pamphlet"),
                                              options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
-        }
+        //}
     }
-                */
+                
     func testPamphlet() {
         let extensions: [String] = []
         PamphletFramework.shared.process(prefix: nil,

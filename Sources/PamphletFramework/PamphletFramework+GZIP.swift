@@ -5,7 +5,7 @@ import Gzip
 extension PamphletFramework {
     func gzip(path: FilePath,
               contents: String) -> String? {
-        if options.contains(.includeGzip) {
+        if options.contains(.includeGzip) && includeGzip(for: path.fileName) {
             let ext = URL(fileURLWithPath: path.fullPath).pathExtension
             
             if let fileContentsAsData = contents.data(using: .utf8) {

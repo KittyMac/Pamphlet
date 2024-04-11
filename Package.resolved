@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/GzipSwift.git",
       "state" : {
-        "revision" : "a9bbc39238e197e3e20b4346c45bfed767a817fe",
-        "version" : "5.3.3"
+        "revision" : "0f5ce356dc9b75cde454caec96f9e7c2b931caae",
+        "version" : "5.3.6"
       }
     },
     {
@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "b23dba215ecaf089996b6975cdc996376ce27cd5",
-        "version" : "0.4.117"
+        "revision" : "733c8e04e04813bc6e3cc105850a4eb657bdacfb",
+        "version" : "0.4.133"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "c44d90702f7c9d724a29bde857271b8a78a5b516",
-        "version" : "0.0.69"
+        "revision" : "e47dd93b5f8c1a41decf1992601f90bb0ee59b86",
+        "version" : "0.0.75"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Sextant.git",
       "state" : {
-        "revision" : "7c940fcb7a84c9d1a310707f91e1710c9803d8ea",
-        "version" : "0.4.29"
+        "revision" : "52a77d0bce0210cf9557faef7fd0adb9a6da02fb",
+        "version" : "0.4.31"
       }
     },
     {
@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Spanker.git",
       "state" : {
-        "revision" : "6b0edd2996d1f3bebb534fb05e20eac6bf8c8739",
-        "version" : "0.2.46"
+        "revision" : "96e58f68274a2e6f370fff153ceb5674a06936c4",
+        "version" : "0.2.47"
       }
     },
     {
@@ -59,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "c8ed701b513cf5177118a175d85fbbbcd707ab41",
-        "version" : "1.3.0"
+        "revision" : "46989693916f56d1186bd59ac15124caef896560",
+        "version" : "1.3.1"
       }
     }
   ],

@@ -4,25 +4,58 @@ import Hitch
 import Spanker
 
 extension PamphletFramework {
-    private func rule(for file: FilePath) -> JsonElement? {
+    
+    private func rule(for file: String) -> JsonElement? {
         for rule in pamphletJson.iterValues {
             guard let ruleRegex = rule[string: "file"] else { continue }
-            if file.fileName.test(ruleRegex) {
+            if file.test(ruleRegex) {
                 return rule
             }
         }
         return nil
     }
     
-    func gzip(for file: FilePath) -> Bool {
+    func includeOriginal(for file: String) -> Bool {
         if let rule = rule(for: file),
-           let value = rule[bool: "gzip"] {
+           let value = rule[bool: "includeOriginal"] {
             return value
         }
         return true
     }
     
-    func preprocessorWraps(for file: FilePath,
+    func includeGzip(for file: String) -> Bool {
+        if let rule = rule(for: file),
+           let value = rule[bool: "includeGzip"] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyHtml(for file: String) -> Bool {
+        if let rule = rule(for: file),
+           let value = rule[bool: "minifyHtml"] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyJs(for file: String) -> Bool {
+        if let rule = rule(for: file),
+           let value = rule[bool: "minifyJs"] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyJson(for file: String) -> Bool {
+        if let rule = rule(for: file),
+           let value = rule[bool: "minifyJson"] {
+            return value
+        }
+        return true
+    }
+        
+    func preprocessorWraps(for file: String,
                            string: String) -> String {
         let rule = rule(for: file)
         let hitch = Hitch()
