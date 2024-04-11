@@ -16,7 +16,12 @@ extension PamphletFramework {
                     return fileContentsAsData.base64EncodedString()
                 }
                 
-                if let fileContentsAsGzip = try? fileContentsAsData.gzipped(level: .bestCompression) {
+                var gzipLevel: CompressionLevel = .bestCompression
+                if let level = compressionLevel(for: path.fileName) {
+                    gzipLevel = CompressionLevel(Int32(level))
+                }
+                
+                if let fileContentsAsGzip = try? fileContentsAsData.gzipped(level: gzipLevel) {
                     return fileContentsAsGzip.base64EncodedString()
                 }
             }

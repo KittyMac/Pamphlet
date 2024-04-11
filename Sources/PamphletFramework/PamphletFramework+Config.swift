@@ -16,43 +16,61 @@ extension PamphletFramework {
     }
     
     func includeOriginal(for file: String) -> Bool {
+        let key: HalfHitch = "includeOriginal"
         if let rule = rule(for: file),
-           let value = rule[bool: "includeOriginal"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
     }
     
     func includeGzip(for file: String) -> Bool {
+        let key: HalfHitch = "includeGzip"
         if let rule = rule(for: file),
-           let value = rule[bool: "includeGzip"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
     }
     
     func minifyHtml(for file: String) -> Bool {
+        let key: HalfHitch = "minifyHtml"
         if let rule = rule(for: file),
-           let value = rule[bool: "minifyHtml"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
     }
     
     func minifyJs(for file: String) -> Bool {
+        let key: HalfHitch = "minifyJs"
         if let rule = rule(for: file),
-           let value = rule[bool: "minifyJs"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
     }
     
     func minifyJson(for file: String) -> Bool {
+        let key: HalfHitch = "minifyJson"
         if let rule = rule(for: file),
-           let value = rule[bool: "minifyJson"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
+    }
+    
+    func compressionLevel(for file: String) -> Int? {
+        if let rule = rule(for: file),
+           let value = rule[int: "compressionLevel"] {
+            return value
+        }
+        return nil
     }
         
     func preprocessorWraps(for file: String,
