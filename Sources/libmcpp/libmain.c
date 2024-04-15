@@ -461,9 +461,11 @@ fatal_error_exit:
         fclose( fp_err);
     
     if (len == 0 || memory_buffer == NULL) {
-        len = ftell(fp_out);
+        len = ftell(fp_out) + 1;
         memory_buffer = malloc(len);
         
+        memory_buffer[len-1] = 0;
+        memory_buffer[len-2] = 0;
         fseek(fp_out, 0, SEEK_SET);
         fread(memory_buffer, len, 1, fp_out);
     }
