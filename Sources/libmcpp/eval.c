@@ -544,7 +544,7 @@ static int  eval_lex( void)
             } else if (mcpp_mode != POST_STD
                     && (openum = id_operator( identifier)) != 0) {
                 /* Identifier-like operator in C++98    */
-                strncpy( work_buf, identifier, NWORK + IDMAX);
+                strcpy( work_buf, identifier);
                 return  chk_ops();
             }
         } else if (! standard && str_eq( identifier, "sizeof")) {
@@ -758,17 +758,17 @@ static int  look_type(
         if (token_type == NAM) {
 #if HAVE_LONG_LONG
             if (str_eq( identifier, "long")) {
-                strncpy( work_buf, "long long", NWORK + IDMAX);
+                strcpy( work_buf, "long long");
                 goto  basic;
             }
 #endif
             if (str_eq( identifier, "double")) {
-                strncpy( work_buf, "long double", NWORK + IDMAX);
+                strcpy( work_buf, "long double");
                 goto  basic;
             }
         }
         unget_string( work_buf, NULL);      /* Not long long        */
-        strncpy( work_buf, "long", NWORK + IDMAX);          /*   nor long double    */
+        strcpy( work_buf, "long");          /*   nor long double    */
     }
 
     /*

@@ -652,17 +652,17 @@ plus:
                 break;  /* Ignore '-auxbase some' or such nonsence  */
 #if SYSTEM == SYS_MAC
             } else if (str_eq( mcpp_optarg, "rch")) {   /* -arch    */
-                strncpy( arch, argv[ mcpp_optind++], MAX_ARCH_LEN);
+                strcpy( arch, argv[ mcpp_optind++]);
                 if (str_eq( arch, "ppc") || str_eq( arch, "ppc7400")
                         || str_eq( arch, "ppc64")
                         || str_eq( arch, "i386") || str_eq( arch, "i686")
                         || str_eq( arch, "x86_64") || str_eq( arch, "amd64")) {
                     if (str_eq( arch, "i686"))
-                        strncpy( arch, "i386", MAX_ARCH_LEN);
+                        strcpy( arch, "i386");
                     else if (str_eq( arch, "amd64"))
-                        strncpy( arch, "x86_64", MAX_ARCH_LEN);
+                        strcpy( arch, "x86_64");
                     else if (str_eq( arch, "ppc7400"))
-                        strncpy( arch, "ppc", MAX_ARCH_LEN);
+                        strcpy( arch, "ppc");
                     break;
                 }   /* Else usage() */
 #endif
@@ -1003,16 +1003,16 @@ plus:
         case 'm':
             if (str_eq( mcpp_optarg, "64")) {               /* -m64 */
                 if (str_eq( CPU, "i386"))
-                    strncpy( arch, "x86_64", MAX_ARCH_LEN);
+                    strcpy( arch, "x86_64");
                 else if (str_eq( CPU, "ppc"))
-                    strncpy( arch, "ppc64", MAX_ARCH_LEN);
+                    strcpy( arch, "ppc64");
                 /* Else ignore  */
                 break;
             } else if (str_eq( mcpp_optarg, "32")) {        /* -m32 */
                 if (str_eq( CPU, "x86_64"))
-                    strncpy( arch, "i386", MAX_ARCH_LEN);
+                    strcpy( arch, "i386");
                 else if (str_eq( CPU, "ppc64"))
-                    strncpy( arch, "ppc", MAX_ARCH_LEN);
+                    strcpy( arch, "ppc");
                 /* Else ignore  */
                 break;
             } else if (str_eq( mcpp_optarg, "mmx")) {   /* -mmmx    */
@@ -1401,7 +1401,7 @@ Version:
     if (! arch[ 0]) {
         /* None of -arch, -m32 or -m64 options has been specified.  */
         /* The CPU-specific-macros will be defined in init_cpu_macro(). */
-        strncpy( arch, CPU, MAX_ARCH_LEN);
+        strcpy( arch, CPU);
     }
 #if COMPILER != GNUC
     init_cpu_macro( gval, sse);

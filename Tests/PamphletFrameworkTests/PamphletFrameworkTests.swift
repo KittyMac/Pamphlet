@@ -2,6 +2,12 @@ import XCTest
 //@testable import Pamphlet
 import PamphletFramework
 
+#if os(Windows)
+public let pamphletTempPath = "C:/WINDOWS/Temp/"
+#else
+public let pamphletTempPath = "/tmp/"
+#endif
+
 final class PamphletTests: XCTestCase {
     
     private func path(to: String) -> String {
@@ -19,7 +25,7 @@ final class PamphletTests: XCTestCase {
         PamphletFramework.shared.process(prefix: nil,
                                          extensions: extensions,
                                          inDirectory: "/Users/rjbowli/Development/smallplanet/smallplanet_RoverCore_SDK/Sources/RoverCore/Pamphlet",
-                                         outDirectory: "/tmp/Pamphlet",
+                                         outDirectory: "\(pamphletTempPath)Pamphlet",
                                          gitPath: path(to: "Pamphlet"),
                                          options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
@@ -31,7 +37,7 @@ final class PamphletTests: XCTestCase {
         PamphletFramework.shared.process(prefix: nil,
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
-                                         outDirectory: "/tmp/Pamphlet",
+                                         outDirectory: "\(pamphletTempPath)Pamphlet",
                                          gitPath: path(to: "Pamphlet"),
                                          options:[.includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
@@ -41,7 +47,7 @@ final class PamphletTests: XCTestCase {
         PamphletFramework.shared.process(prefix: nil,
                                          extensions: extensions,
                                          inDirectory: path(to: "Pamphlet"),
-                                         outDirectory: "/tmp/Pamphlet",
+                                         outDirectory: "\(pamphletTempPath)Pamphlet",
                                          gitPath: path(to: "Pamphlet"),
                                          options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
@@ -130,7 +136,7 @@ final class PamphletTests: XCTestCase {
         PamphletFramework.shared.process(prefix: nil,
                                          extensions: extensions,
                                          inDirectory: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
-                                         outDirectory: "/tmp/Pamphlet",
+                                         outDirectory: "\(pamphletTempPath)Pamphlet",
                                          gitPath: "/Users/rjbowli/Development/chimerasw/Pamphlet/meta",
                                          options:PamphletOptions.default)
     }

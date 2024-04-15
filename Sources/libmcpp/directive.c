@@ -134,7 +134,7 @@ void    directive( void)
         goto  skip_line;
     if (token_type != NAM) {
         if (mcpp_mode == OLD_PREP && token_type == NUM) {   /* # 123 [fname]*/
-            strncpy( identifier, "line", IDMAX + IDMAX/8);
+            strcpy( identifier, "line");
         } else {
             if (compiling) {
                 if (option_flags.lang_asm) {
@@ -776,7 +776,7 @@ DEFBUF *    do_define(
             }
         }
     }
-    strncpy( macroname, identifier, IDMAX + 1);         /* Remember the name    */
+    strcpy( macroname, identifier);         /* Remember the name    */
 
     in_define = TRUE;                       /* Recognize '#', '##'  */
     if (get_parm() == FALSE) {              /* Get parameter list   */

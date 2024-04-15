@@ -4,6 +4,12 @@ import Hitch
 import Sextant
 import Spanker
 
+#if os(Windows)
+public let pamphletTempPath = "C:/WINDOWS/Temp/"
+#else
+public let pamphletTempPath = "/tmp/"
+#endif
+
 enum OutputType: String {
     case debug = "debug"
     case release = "release"
@@ -742,7 +748,7 @@ public class PamphletFramework {
         let timeElapsed = abs(startTime.timeIntervalSinceNow)
         
         let log = "[\(timeElapsed)s] \(message)\n"
-        let logPath = "/tmp/Pamphlet.log"
+        let logPath = "\(pamphletTempPath)Pamphlet.log"
         
         if FileManager.default.fileExists(atPath: logPath) == false {
             try? "".write(toFile: logPath, atomically: false, encoding: .utf8)
@@ -849,8 +855,8 @@ public class PamphletFramework {
                                     
             let pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
             
-            debugPath = "/tmp/\(UUID().uuidString).pamphlet.debug.swift"
-            releasePath = "/tmp/\(UUID().uuidString).pamphlet.release.swift"
+            debugPath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.debug.swift"
+            releasePath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.release.swift"
             
             if options.contains(.releaseOnly) == false {
                 createOutput(path: debugPath,
