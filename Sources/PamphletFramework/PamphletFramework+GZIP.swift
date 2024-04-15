@@ -18,7 +18,11 @@ extension PamphletFramework {
                 
                 var gzipLevel: CompressionLevel = .bestCompression
                 if let level = compressionLevel(for: path.fileName) {
-                    gzipLevel = CompressionLevel(Int32(level))
+                    #if os(Windows)
+                    gzipLevel = CompressionLevel(rawValue: Int32(level)) ?? .bestCompression
+                    #else
+                    gzipLevel = CompressionLevel(rawValue: Int32(level))
+                    #endif
                 }
                 
                 if let fileContentsAsGzip = try? fileContentsAsData.gzipped(level: gzipLevel) {
