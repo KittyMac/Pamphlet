@@ -4,25 +4,76 @@ import Hitch
 import Spanker
 
 extension PamphletFramework {
-    private func rule(for file: FilePath) -> JsonElement? {
+    
+    private func rule(for file: String) -> JsonElement? {
         for rule in pamphletJson.iterValues {
             guard let ruleRegex = rule[string: "file"] else { continue }
-            if file.fileName.test(ruleRegex) {
+            if file.test(ruleRegex) {
                 return rule
             }
         }
         return nil
     }
     
-    func gzip(for file: FilePath) -> Bool {
+    func includeOriginal(for file: String) -> Bool {
+        let key: HalfHitch = "includeOriginal"
         if let rule = rule(for: file),
-           let value = rule[bool: "gzip"] {
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
             return value
         }
         return true
     }
     
-    func preprocessorWraps(for file: FilePath,
+    func includeGzip(for file: String) -> Bool {
+        let key: HalfHitch = "includeGzip"
+        if let rule = rule(for: file),
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyHtml(for file: String) -> Bool {
+        let key: HalfHitch = "minifyHtml"
+        if let rule = rule(for: file),
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyJs(for file: String) -> Bool {
+        let key: HalfHitch = "minifyJs"
+        if let rule = rule(for: file),
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
+            return value
+        }
+        return true
+    }
+    
+    func minifyJson(for file: String) -> Bool {
+        let key: HalfHitch = "minifyJson"
+        if let rule = rule(for: file),
+           rule.contains(key: key) == true,
+           let value = rule[bool: key] {
+            return value
+        }
+        return true
+    }
+    
+    func compressionLevel(for file: String) -> Int? {
+        if let rule = rule(for: file),
+           let value = rule[int: "compressionLevel"] {
+            return value
+        }
+        return nil
+    }
+        
+    func preprocessorWraps(for file: String,
                            string: String) -> String {
         let rule = rule(for: file)
         let hitch = Hitch()
