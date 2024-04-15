@@ -45,7 +45,7 @@ let productsTarget: [PackageDescription.Product] = [
         "PamphletTool-amazonlinux2",
         "PamphletTool-fedora",
         "PamphletTool-fedora38",
-        "FlynnPluginTool-windows",
+        "PamphletTool-windows",
     ]),
 ]
 let pluginTarget: [PackageDescription.Target] = [

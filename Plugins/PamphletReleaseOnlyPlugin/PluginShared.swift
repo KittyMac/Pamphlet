@@ -17,7 +17,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     var tool = try? context.tool(named: "PamphletTool-focal")
     
     #if os(Windows)
-    if let osTool = try? context.tool(named: "FlynnPluginTool-windows") {
+    if let osTool = try? context.tool(named: "PamphletTool-windows") {
         tool = osTool
     }
     #endif
