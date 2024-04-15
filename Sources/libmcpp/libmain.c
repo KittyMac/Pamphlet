@@ -831,7 +831,7 @@ static void do_pragma_op( void)
                 put_seq( output, cp1);
                 return;
             }
-            strcpy( workp, "\n");       /* Terminate with <newline> */
+            strncpy( workp, "\n", NWORK + IDMAX);       /* Terminate with <newline> */
             unget_string( work_buf, NULL);
             do_pragma();                /* Do the #pragma "line"    */
             infile->bptr += strlen( infile->bptr);      /* Clear sequence   */

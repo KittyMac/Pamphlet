@@ -1279,8 +1279,9 @@ static const char *     remove_magics(
     max_magics = INIT_MAGICS;
 
     mac_n = arg_n = ind = 0;
-    ap = arg_p = xmalloc( strlen( argp) + 1);
-    strcpy( arg_p, argp);
+    size_t l = strlen( argp) + 1;
+    ap = arg_p = xmalloc(l);
+    strncpy( arg_p, argp, l);
     ep = arg_p + strlen( arg_p);
     if (*(ep - 1) == RT_END) {
         with_rtend = TRUE;

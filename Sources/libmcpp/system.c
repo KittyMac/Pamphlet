@@ -456,7 +456,7 @@ char* mcpp_basename(char * path) {
 
 char* mcpp_dirname(char * path) {
 #ifdef _WIN32
-    static char dirpath[ PATHMAX + 1 ] = {0};
+    char dirpath[ PATHMAX + 1 ] = {0};
     _splitpath(path, NULL, dirpath, NULL, NULL);
     return dirpath;
 #else
@@ -652,17 +652,17 @@ plus:
                 break;  /* Ignore '-auxbase some' or such nonsence  */
 #if SYSTEM == SYS_MAC
             } else if (str_eq( mcpp_optarg, "rch")) {   /* -arch    */
-                strcpy( arch, argv[ mcpp_optind++]);
+                strncpy( arch, argv[ mcpp_optind++], MAX_ARCH_LEN);
                 if (str_eq( arch, "ppc") || str_eq( arch, "ppc7400")
                         || str_eq( arch, "ppc64")
                         || str_eq( arch, "i386") || str_eq( arch, "i686")
                         || str_eq( arch, "x86_64") || str_eq( arch, "amd64")) {
                     if (str_eq( arch, "i686"))
-                        strcpy( arch, "i386");
+                        strncpy( arch, "i386", MAX_ARCH_LEN);
                     else if (str_eq( arch, "amd64"))
-                        strcpy( arch, "x86_64");
+                        strncpy( arch, "x86_64", MAX_ARCH_LEN);
                     else if (str_eq( arch, "ppc7400"))
-                        strcpy( arch, "ppc");
+                        strncpy( arch, "ppc", MAX_ARCH_LEN);
                     break;
                 }   /* Else usage() */
 #endif
@@ -1003,16 +1003,16 @@ plus:
         case 'm':
             if (str_eq( mcpp_optarg, "64")) {               /* -m64 */
                 if (str_eq( CPU, "i386"))
-                    strcpy( arch, "x86_64");
+                    strncpy( arch, "x86_64", MAX_ARCH_LEN);
                 else if (str_eq( CPU, "ppc"))
-                    strcpy( arch, "ppc64");
+                    strncpy( arch, "ppc64", MAX_ARCH_LEN);
                 /* Else ignore  */
                 break;
             } else if (str_eq( mcpp_optarg, "32")) {        /* -m32 */
                 if (str_eq( CPU, "x86_64"))
-                    strcpy( arch, "i386");
+                    strncpy( arch, "i386", MAX_ARCH_LEN);
                 else if (str_eq( CPU, "ppc64"))
-                    strcpy( arch, "ppc");
+                    strncpy( arch, "ppc", MAX_ARCH_LEN);
                 /* Else ignore  */
                 break;
             } else if (str_eq( mcpp_optarg, "mmx")) {   /* -mmmx    */
@@ -1401,7 +1401,7 @@ Version:
     if (! arch[ 0]) {
         /* None of -arch, -m32 or -m64 options has been specified.  */
         /* The CPU-specific-macros will be defined in init_cpu_macro(). */
-        strcpy( arch, CPU);
+        strncpy( arch, CPU, MAX_ARCH_LEN);
     }
 #if COMPILER != GNUC
     init_cpu_macro( gval, sse);

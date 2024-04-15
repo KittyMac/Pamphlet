@@ -27,11 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#include    "system.H"
-#include    "internal.H"
-
-#include <string.h>
-
 #ifndef _WIN32
 #include    "system.H"
 #include    "internal.H"
@@ -63,11 +58,14 @@ void mcpp_help() {
     mcpp_lib_main(2, argv);
 }
 
+void * mcpp_thread_result = NULL;
 
 void * mcpp_thread(void * mcpp_source_file) {
+    mcpp_thread_result = NULL;
+    
     char * srcFile = strdup(mcpp_source_file);
     char * srcFileCopy = strdup(mcpp_source_file);
-            
+    
     char * argv[] = {
         "mcpp",
         "-NPCk",
@@ -85,6 +83,8 @@ void * mcpp_thread(void * mcpp_source_file) {
     
     free(srcFile);
     free(srcFileCopy);
+    
+    mcpp_thread_result = result;
     
     return result;
 }
@@ -128,15 +128,26 @@ const char * mcpp_preprocessFile(const char * srcFile, const char * gitVersion, 
     return result;
 #else
     
-    uintptr_t p = _beginthreadex(NULL, 8 * 1024 * 1024, (unsigned int (*)(void *))mcpp_thread, srcFile, 0, NULL);
-    /*
-    while (WaitForSingleObjectEx(thread, INFINITE, true) == WAIT_IO_COMPLETION);
+    static HANDLE mcppLock = NULL;
+    if (mcppLock == NULL) {
+        mcppLock = CreateMutex(NULL, FALSE, NULL);
+    }
+    WaitForSingleObject(mcppLock, INFINITE);
     
-    void * result;
-
-    GetExitCodeThread(hThread, &result);
+    snprintf(GITVERSION, sizeof(GITVERSION), "GITVERSION=%s", gitVersion);
+    snprintf(VERSIONED_URL, sizeof(VERSIONED_URL), "VERSIONED_URL(X)=X##?v=%s", gitHash);
+    
+    HANDLE thread = (HANDLE)_beginthreadex(NULL, 8 * 1024 * 1024, (unsigned int (*)(void *))mcpp_thread, (void *)srcFile, 0, NULL);
+    
+    while (WaitForSingleObjectEx(thread, INFINITE, 1) == WAIT_IO_COMPLETION);
+    
+    void * result = mcpp_thread_result;
+    mcpp_thread_result = NULL;
     
     CloseHandle(thread);
-    */
+    
+    ReleaseMutex(mcppLock);
+    
+    return result;
 #endif
 }

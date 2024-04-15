@@ -380,7 +380,7 @@ const char *    set_encoding(
             mcpp_fputc( '\n', STDERR);
         }
     }
-    strcpy( norm, name);
+    strncpy( norm, name, NAMLEN);
     if (norm[ 5] == '.')
         memmove( norm, norm + 5, strlen( norm + 5) + 1);
         /* Remove initial 'xxxxx.' as 'ja_JP.', 'en_US.' or any other   */
