@@ -55,7 +55,13 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
                      isDependency: false,
                      inputFiles: &inputFiles)
             
-    gatherInputFiles(targets: target.recursiveTargetDependencies.map { $0.directory.string },
+    gatherInputFiles(targets: target.recursiveTargetDependencies.map {
+        #if os(Windows)
+        "C:" + $0.directory.string
+        #else
+        $0.directory.string
+        #endif
+    },
                      destinationDir: copiesDirectory,
                      isDependency: true,
                      inputFiles: &inputFiles)
