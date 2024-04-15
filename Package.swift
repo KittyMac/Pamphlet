@@ -44,7 +44,8 @@ let productsTarget: [PackageDescription.Product] = [
         "PamphletTool-focal",
         "PamphletTool-amazonlinux2",
         "PamphletTool-fedora",
-        "PamphletTool-fedora38"
+        "PamphletTool-fedora38",
+        "FlynnPluginTool-windows",
     ]),
 ]
 let pluginTarget: [PackageDescription.Target] = [
@@ -56,6 +57,8 @@ let pluginTarget: [PackageDescription.Target] = [
                   path: "dist/PamphletTool-fedora.zip"),
     .binaryTarget(name: "PamphletTool-fedora38",
                   path: "dist/PamphletTool-fedora38.zip"),
+    .binaryTarget(name: "PamphletTool-windows",
+                  path: "dist/PamphletTool-windows.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),
@@ -63,7 +66,8 @@ let pluginTarget: [PackageDescription.Target] = [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
             "PamphletTool-fedora",
-            "PamphletTool-fedora38"
+            "PamphletTool-fedora38",
+            "PamphletTool-windows",
         ]
     ),
     .plugin(
@@ -119,7 +123,10 @@ let package = Package(
             ]
         ),
         .target(
-            name: "libmcpp"
+            name: "libmcpp",
+            linkerSettings: [
+                .linkedLibrary("swiftCore", .when(platforms: [.windows])),
+            ]
         ),
         .testTarget(
             name: "PamphletFrameworkTests",

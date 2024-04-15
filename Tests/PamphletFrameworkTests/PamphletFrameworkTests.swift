@@ -11,18 +11,20 @@ final class PamphletTests: XCTestCase {
             .path
     }
     
+    #if os(macOS)
+    
     func testProcessOptimize() {
         let extensions: [String] = []
         
-        //measure {
-            PamphletFramework.shared.process(prefix: nil,
-                                             extensions: extensions,
-                                             inDirectory: "/Users/rjbowli/Development/smallplanet/smallplanet_RoverCore_SDK/Sources/RoverCore/Pamphlet",
-                                             outDirectory: "/tmp/Pamphlet",
-                                             gitPath: path(to: "Pamphlet"),
-                                             options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
-        //}
+        PamphletFramework.shared.process(prefix: nil,
+                                         extensions: extensions,
+                                         inDirectory: "/Users/rjbowli/Development/smallplanet/smallplanet_RoverCore_SDK/Sources/RoverCore/Pamphlet",
+                                         outDirectory: "/tmp/Pamphlet",
+                                         gitPath: path(to: "Pamphlet"),
+                                         options:[.releaseOnly, .includeOriginal, .includeGzip, .minifyHtml, .minifyJs, .minifyJson])
     }
+    
+    #endif
                 
     func testPamphlet() {
         let extensions: [String] = []

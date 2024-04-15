@@ -16,6 +16,12 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     // and to load the correct tool there.
     var tool = try? context.tool(named: "PamphletTool-focal")
     
+    #if os(Windows)
+    if let osTool = try? context.tool(named: "FlynnPluginTool-windows") {
+        tool = osTool
+    }
+    #endif
+    
     if let osFile = try? String(contentsOfFile: "/etc/os-release") {
         if osFile.contains("Amazon Linux"),
            let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
@@ -44,8 +50,13 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     var inputFiles: [String] = [
         tool.path.string
     ]
+    
+    var directoryPath = target.directory.string
+    #if os(Windows)
+    directoryPath = "C:" + directoryPath
+    #endif
             
-    gatherInputFiles(targets: [target.directory.string],
+    gatherInputFiles(targets: [directoryPath],
                      destinationDir: copiesDirectory,
                      isDependency: false,
                      inputFiles: &inputFiles)
@@ -57,7 +68,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     
     // detect when the git version changes and reprocess
     let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
-    if let version = git(repoPath: target.directory.string) {
+    if let version = git(repoPath: directoryPath) {
         // save the version number as an input in our tool working directory
         if let lastVersion = try? String(contentsOfFile: gitVersionPath),
            lastVersion == version {
@@ -77,7 +88,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     }
     
     return (tool.path,
-            target.directory.string,
+            directoryPath,
             copiesDirectory,
             inputFiles.map { PackagePlugin.Path($0) },
             outputFiles.map { PackagePlugin.Path($0) })
