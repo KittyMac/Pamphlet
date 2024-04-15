@@ -18,12 +18,9 @@ build:
 	cp .build/PamphletTool-focal ./dist/Pamphlet
 	
 build-windows:
-	swift build $(SWIFT_BUILD_FLAGS)
-	-rm .build/PamphletTool
-	cp ./dist/PamphletTool ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	cp .build/plugins/tools/debug/PamphletTool-focal.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
-	-rm ./dist/PamphletTool-windows.zip
-	# cd ./dist && zip -r ./PamphletTool-windows.zip ./PamphletTool-windows.artifactbundle
+	swift build --configuration release
+	cp .build/release/PamphletTool-focal.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
+	rm ./dist/PamphletTool-windows.zip
 	Compress-Archive -Path ./dist/PamphletTool-windows.artifactbundle -DestinationPath ./dist/PamphletTool-windows.zip
 
 .PHONY: clean
