@@ -52,7 +52,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     try? FileManager.default.createDirectory(atPath: copiesDirectory, withIntermediateDirectories: false)
     
     var inputFiles: [String] = [
-        tool.path.string
+        "C:" + tool.path.string
     ]
     
     var directoryPath = target.directory.string
@@ -97,7 +97,12 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
         )
     }
     
-    return (tool.path,
+    var toolPath = tool.path.string
+    #if os(Windows)
+    toolPath = "C:" + toolPath
+    #endif
+        
+    return (PackagePlugin.Path(toolPath),
             directoryPath,
             copiesDirectory,
             inputFiles.map { PackagePlugin.Path($0) },
