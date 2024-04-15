@@ -567,7 +567,7 @@ static char *   chk_magic_balance(
                                     * UCHARMAX;
                             mac_s_n += (to_be_edge[ 3] & UCHARMAX) - 1;
                             arg_s_n = (to_be_edge[ 4] & UCHARMAX) - 1;
-                            mcpp_fprintf( ERR,
+                            mcpp_fprintf( STDERR,
                                 "Stray arg inf of macro: %d:%d at line:%d\n"
                                             , mac_s_n, arg_s_n, src_line);
                         }
@@ -593,7 +593,7 @@ static char *   chk_magic_balance(
                         arg_s_n += (arg_p[ 1] & UCHARMAX) - 1;
                         arg_e_n = ((buf_p[ 0] & UCHARMAX) - 1) * UCHARMAX;
                         arg_e_n += (buf_p[ 1] & UCHARMAX) - 1;
-                        mcpp_fprintf( ERR,
+                        mcpp_fprintf( STDERR,
                 "Asymmetry of arg inf found: start %d, end %d at line:%d\n"
                                 , arg_s_n, arg_e_n, src_line);
                     }
@@ -614,7 +614,7 @@ static char *   chk_magic_balance(
                     mac_s_n += (mac_p[ 1] & UCHARMAX) - 1;
                     mac_e_n = ((buf_p[ 0] & UCHARMAX) - 1) * UCHARMAX;
                     mac_e_n += (buf_p[ 1] & UCHARMAX) - 1;
-                    mcpp_fprintf( ERR,
+                    mcpp_fprintf( STDERR,
                 "Asymmetry of macro inf found: start %d, end %d at line:%d\n"
                             , mac_s_n, mac_e_n, src_line);
                 }
@@ -634,7 +634,7 @@ static char *   chk_magic_balance(
         if ((mac || arg) && (mcpp_debug & EXPAND))
             mcpp_fputs(
 "Imbalance of magics occurred (perhaps a moved magic), see <expand_std exit> and diagnostics.\n"
-                    , DBG);
+                    , STDDBG);
     }
 
     return  buf;
@@ -672,7 +672,7 @@ static char *   replace(
         dump_unget( "replace entry");
     }
     if ((mcpp_debug & MACRO_CALL) && in_if)
-        mcpp_fprintf( OUT, "/*%s*/", defp->name);
+        mcpp_fprintf( STDOUT, "/*%s*/", defp->name);
 
     enable_trace_macro = trace_macro && defp->nargs != DEF_PRAGMA;
     if (enable_trace_macro) {
@@ -772,7 +772,7 @@ static char *   replace(
 
     catbuf = xmalloc( (size_t) (NMACWORK + IDMAX));
     if (mcpp_debug & EXPAND) {
-        mcpp_fprintf( DBG, "(%s)", defp->name);
+        mcpp_fprintf( STDDBG, "(%s)", defp->name);
         dump_string( "prescan entry", defp->repl);
     }
     if (prescan( defp, (const char **) arglist, catbuf, catbuf + NMACWORK)
@@ -791,14 +791,14 @@ static char *   replace(
     catbuf = xrealloc( catbuf, strlen( catbuf) + 1);
                                             /* Use memory sparingly */
     if (mcpp_debug & EXPAND) {
-        mcpp_fprintf( DBG, "(%s)", defp->name);
+        mcpp_fprintf( STDDBG, "(%s)", defp->name);
         dump_string( "prescan exit", catbuf);
     }
 
     if (nargs > 0) {    /* Function-like macro with any argument    */
         expbuf = xmalloc( (size_t) (NMACWORK + IDMAX));
         if (mcpp_debug & EXPAND) {
-            mcpp_fprintf( DBG, "(%s)", defp->name);
+            mcpp_fprintf( STDDBG, "(%s)", defp->name);
             dump_string( "substitute entry", catbuf);
         }
         out_p = substitute( defp, (const char **) arglist, catbuf, expbuf
@@ -810,7 +810,7 @@ static char *   replace(
         expbuf = xrealloc( expbuf, strlen( expbuf) + 1);
                                             /* Use memory sparingly */
         if (mcpp_debug & EXPAND) {
-            mcpp_fprintf( DBG, "(%s)", defp->name);
+            mcpp_fprintf( STDDBG, "(%s)", defp->name);
             dump_string( "substitute exit", expbuf);
         }
     } else {                                /* Object-like macro or */
@@ -1545,11 +1545,11 @@ static void     chk_symmetry(
     if (len >= 3) {
         arg_s_n = (start_id[ 3] & UCHARMAX) - 1;
         arg_e_n = (end_id[ 3] & UCHARMAX) - 1;
-        mcpp_fprintf( ERR,
+        mcpp_fprintf( STDERR,
 "Asymmetry of arg inf found removing magics: start %d:%d, end: %d:%d at line:%d\n"
                 , s_id, arg_s_n, e_id, arg_e_n, src_line);
     } else {
-        mcpp_fprintf( ERR,
+        mcpp_fprintf( STDERR,
 "Asymmetry of macro inf found removing magics: start %d, end: %d at line:%d\n"
                 , s_id, e_id, src_line);
     }
@@ -1765,7 +1765,7 @@ static char *   substitute(
         if (c == MAC_PARM) {                /* Formal parameter     */
             c = *in++ & UCHARMAX;           /* Parameter number     */
             if (mcpp_debug & EXPAND) {
-                mcpp_fprintf( DBG, " (expanding arg[%d])", c);
+                mcpp_fprintf( STDDBG, " (expanding arg[%d])", c);
                 dump_string( NULL, arglist[ c - 1]);
             }
 #if COMPILER == GNUC || COMPILER == MSC
@@ -1853,7 +1853,7 @@ static char *   rescan(
 #endif
 
     if (mcpp_debug & EXPAND) {
-        mcpp_fprintf( DBG, "rescan_level--%d (%s) "
+        mcpp_fprintf( STDDBG, "rescan_level--%d (%s) "
                 , rescan_level + 1, outer ? outer->name : "<arg>");
         dump_string( "rescan entry", in);
     }
@@ -2042,7 +2042,7 @@ static char *   rescan(
     }
     enable_repl( outer, TRUE);      /* Enable macro for later text  */
     if (mcpp_debug & EXPAND) {
-        mcpp_fprintf( DBG, "rescan_level--%d (%s) "
+        mcpp_fprintf( STDDBG, "rescan_level--%d (%s) "
                 , rescan_level + 1, outer ? outer->name : "<arg>");
         dump_string( "rescan exit", out);
     }
@@ -2983,9 +2983,9 @@ static void dump_args(
 {
     int     i;
 
-    mcpp_fprintf( DBG, "dump of %d actual arguments %s\n", nargs, why);
+    mcpp_fprintf( STDDBG, "dump of %d actual arguments %s\n", nargs, why);
     for (i = 0; i < nargs; i++) {
-        mcpp_fprintf( DBG, "arg[%d]", i + 1);
+        mcpp_fprintf( STDDBG, "arg[%d]", i + 1);
         dump_string( NULL, arglist[ i]);
     }
 }

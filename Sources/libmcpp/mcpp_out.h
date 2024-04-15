@@ -4,9 +4,9 @@
 
 /* Choices for output destination */
 typedef enum {
-    OUT,                        /* ~= fp_out    */
-    ERR,                        /* ~= fp_err    */
-    DBG,                        /* ~= fp_debug  */
+    STDOUT,                        /* ~= fp_out    */
+    STDERR,                        /* ~= fp_err    */
+    STDDBG,                        /* ~= fp_debug  */
     NUM_OUTDEST
 } OUTDEST;
 

@@ -376,8 +376,8 @@ const char *    set_encoding(
         if ((env || pragma) && (warn_level & 1)) {
             cwarn( too_long, name, 0L, NULL);
         } else {
-            mcpp_fprintf( ERR, too_long, name);
-            mcpp_fputc( '\n', ERR);
+            mcpp_fprintf( STDERR, too_long, name);
+            mcpp_fputc( '\n', STDERR);
         }
     }
     strcpy( norm, name);
@@ -405,8 +405,8 @@ const char *    set_encoding(
         if ((env || pragma) && (warn_level & 1)) {
             cwarn( unknown_encoding, name, 0L, NULL);
         } else {                        /* -m option            */
-            mcpp_fprintf( ERR, unknown_encoding, name);
-            mcpp_fputc( '\n', ERR);
+            mcpp_fprintf( STDERR, unknown_encoding, name);
+            mcpp_fputc( '\n', STDERR);
         }
     } else {
         mb_init();                      /* Re-initialize        */

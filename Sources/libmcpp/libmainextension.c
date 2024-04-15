@@ -33,10 +33,20 @@
 #include <string.h>
 
 #ifndef _WIN32
+#include    "system.H"
+#include    "internal.H"
+#include <string.h>
+
 #include <sys/resource.h>
 #include <pthread.h>
 #include <unistd.h>
 extern char *strdup(const char *__s1);
+#else
+#include <windows.h>
+#include <process.h>
+#include    "system.H"
+#include    "internal.H"
+#include <string.h>
 #endif
 
 extern char* mcpp_dirname(char * path);
@@ -117,6 +127,16 @@ const char * mcpp_preprocessFile(const char * srcFile, const char * gitVersion, 
     
     return result;
 #else
-    return mcpp_thread((void *)srcFile);
+    
+    uintptr_t p = _beginthreadex(NULL, 8 * 1024 * 1024, (unsigned int (*)(void *))mcpp_thread, srcFile, 0, NULL);
+    /*
+    while (WaitForSingleObjectEx(thread, INFINITE, true) == WAIT_IO_COMPLETION);
+    
+    void * result;
+
+    GetExitCodeThread(hThread, &result);
+    
+    CloseHandle(thread);
+    */
 #endif
 }

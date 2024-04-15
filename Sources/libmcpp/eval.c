@@ -299,7 +299,7 @@ expr_t  eval_if( void)
 
     while (1) {
         if (mcpp_debug & EXPRESSION)
-            mcpp_fprintf( DBG
+            mcpp_fprintf( STDDBG
                     , "In eval loop skip = %d, binop = %d, line is: %s\n"
                     , opp->skip, binop, infile->bptr);
         skip = opp->skip;
@@ -318,7 +318,7 @@ expr_t  eval_if( void)
             return  0L;                     /* Token error          */
         }
         if (mcpp_debug & EXPRESSION)
-            mcpp_fprintf( DBG
+            mcpp_fprintf( STDDBG
                     , "op = %s, opdope = %04o, binop = %d, skip = %d\n"
                     , opname[ op], opdope[ op], binop, opp->skip);
         if (op == VAL) {                    /* Value?               */
@@ -333,7 +333,7 @@ expr_t  eval_if( void)
             } else {
                 if (mcpp_debug & EXPRESSION) {
                     dump_val( "pushing ", &ev);
-                    mcpp_fprintf( DBG, " onto value stack[%d]\n"
+                    mcpp_fprintf( STDDBG, " onto value stack[%d]\n"
                             , (int)(valp - value));
                 }
                 valp->val = ev.val;
@@ -356,7 +356,7 @@ expr_t  eval_if( void)
 
         while (1) {
             if (mcpp_debug & EXPRESSION)
-                mcpp_fprintf( DBG
+                mcpp_fprintf( STDDBG
                         , "op %s, prec %d, stacked op %s, prec %d, skip %d\n"
                 , opname[ op], prec, opname[ opp->op], opp->prec, opp->skip);
 
@@ -408,10 +408,10 @@ expr_t  eval_if( void)
                     opp->skip = op1;        /*  skipping unchanged. */
                 }
                 if (mcpp_debug & EXPRESSION) {
-                    mcpp_fprintf( DBG, "stacking %s, ", opname[ op]);
+                    mcpp_fprintf( STDDBG, "stacking %s, ", opname[ op]);
                     if (&value[0] < valp)
                         dump_val( "valp[-1].val == ", valp - 1);
-                    mcpp_fprintf( DBG, " at %s\n", infile->bptr);
+                    mcpp_fprintf( STDDBG, " at %s\n", infile->bptr);
                     dump_stack( opstack, opp, value, valp);
                 }
                 break;
@@ -455,7 +455,7 @@ expr_t  eval_if( void)
             default:                        /* Others:              */
                 opp--;                      /* Unstack the operator */
                 if (mcpp_debug & EXPRESSION) {
-                    mcpp_fprintf( DBG, "Stack before evaluation of %s\n"
+                    mcpp_fprintf( STDDBG, "Stack before evaluation of %s\n"
                             , opname[ op1]);
                     dump_stack( opstack, opp, value, valp);
                 }
@@ -469,7 +469,7 @@ expr_t  eval_if( void)
                 valp++;
                 skip = 0;
                 if (mcpp_debug & EXPRESSION) {
-                    mcpp_fprintf( DBG, "Stack after evaluation\n");
+                    mcpp_fprintf( STDDBG, "Stack after evaluation\n");
                     dump_stack( opstack, opp, value, valp);
                 }
             }                               /* op1 switch end       */
@@ -526,7 +526,7 @@ static int  eval_lex( void)
                     ev.val = (defp != NULL);
                     if ((mcpp_debug & MACRO_CALL) && ! skip && defp)
                         /* Annotate if the macro is in non-skipped expr.    */
-                        mcpp_fprintf( OUT, "/*%s*/", defp->name);
+                        mcpp_fprintf( STDOUT, "/*%s*/", defp->name);
                 }
                 if (c1 != '(' || skip_ws() == ')')  /* Balanced ?   */
                     return  VAL;            /* Parsed ok            */
@@ -573,7 +573,7 @@ static int  eval_lex( void)
             break;
         if (mcpp_debug & EXPRESSION) {
             dump_val( "eval_char returns ", &ev);
-            mcpp_fputc( '\n', DBG);
+            mcpp_fputc( '\n', STDDBG);
         }
         return  VAL;                        /* Return a value       */
     case STR:                               /* String literal       */
@@ -587,7 +587,7 @@ static int  eval_lex( void)
             break;
         if (mcpp_debug & EXPRESSION) {
             dump_val( "eval_num returns ", &ev);
-            mcpp_fputc( '\n', DBG);
+            mcpp_fputc( '\n', STDDBG);
         }
         return  VAL;
     case OPE:                           /* Operator or punctuator   */
@@ -726,7 +726,7 @@ static int  do_sizeof( void)
 
     if (mcpp_debug & EXPRESSION) {
         if (sizp)
-            mcpp_fprintf( DBG,
+            mcpp_fprintf( STDDBG,
             "sizp->bits:0x%x sizp->size:0x%x sizp->psize:0x%x ev.val:0x%lx\n"
                     , sizp->bits, sizp->size, sizp->psize
                     , (unsigned long) ev.val);
@@ -799,7 +799,7 @@ basic:
 
     if (mcpp_debug & EXPRESSION) {
         if (tp->token_name)
-            mcpp_fprintf( DBG,
+            mcpp_fprintf( STDDBG,
             "sizeof -- typecode:0x%x tp->token_name:\"%s\" tp->type:0x%x\n"
                     , typecode, tp->token_name, tp->type);
     }
@@ -1300,12 +1300,12 @@ static VAL_SIGN *   eval_eval(
     v1 = (--valp)->val;
     sign1 = valp->sign;
     if (mcpp_debug & EXPRESSION) {
-        mcpp_fprintf( DBG, "%s op %s", (is_binary( op)) ? "binary" : "unary"
+        mcpp_fprintf( STDDBG, "%s op %s", (is_binary( op)) ? "binary" : "unary"
                 , opname[ op]);
         dump_val( ", v1 = ", valp);
         if (is_binary( op))
             dump_val( ", v2 = ", valp + 1);
-        mcpp_fputc( '\n', DBG);
+        mcpp_fputc( '\n', STDDBG);
     }
 
     if (standard
@@ -1641,7 +1641,7 @@ static void dump_val(
 #endif
     int     sign = valp->sign;
 
-    mcpp_fprintf( DBG, format, msg, sign ? "" : "un", valp->val);
+    mcpp_fprintf( STDDBG, format, msg, sign ? "" : "un", valp->val);
 }
 
 static void dump_stack(
@@ -1655,19 +1655,19 @@ static void dump_stack(
  */
 {
     if (opstack < opp)
-        mcpp_fprintf( DBG, "Index op prec skip name -- op stack at %s"
+        mcpp_fprintf( STDDBG, "Index op prec skip name -- op stack at %s"
                 , infile->bptr);
 
     while (opstack < opp) {
-        mcpp_fprintf( DBG, " [%2d] %2d %04o    %d %s\n", (int)(opp - opstack)
+        mcpp_fprintf( STDDBG, " [%2d] %2d %04o    %d %s\n", (int)(opp - opstack)
                 , opp->op, opp->prec, opp->skip, opname[ opp->op]);
         opp--;
     }
 
     while (value <= --valp) {
-        mcpp_fprintf( DBG, "value[%d].val = ", (int)(valp - value));
+        mcpp_fprintf( STDDBG, "value[%d].val = ", (int)(valp - value));
         dump_val( "", valp);
-        mcpp_fputc( '\n', DBG);
+        mcpp_fputc( '\n', STDDBG);
     }
 }
 
