@@ -3,7 +3,7 @@ import PackageDescription
 
 // When runnning "make release" to build the binary tools change this to true
 // Otherwise always set it to false
-#if true
+#if false
 let productsTarget: [PackageDescription.Product] = [
     
 ]
@@ -77,7 +77,8 @@ let pluginTarget: [PackageDescription.Target] = [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
             "PamphletTool-fedora",
-            "PamphletTool-fedora38"
+            "PamphletTool-fedora38",
+            "PamphletTool-windows",
         ]
     ),
     .plugin(
@@ -87,7 +88,8 @@ let pluginTarget: [PackageDescription.Target] = [
             "PamphletTool-focal",
             "PamphletTool-amazonlinux2",
             "PamphletTool-fedora",
-            "PamphletTool-fedora38"
+            "PamphletTool-fedora38",
+            "PamphletTool-windows",
         ]
     ),
 ]
