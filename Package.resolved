@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "bitbytedata",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tsolomko/BitByteData",
+      "state" : {
+        "revision" : "36df26fe4586b4f23d76cfd8b47076998343a2b2",
+        "version" : "2.0.3"
+      }
+    },
+    {
       "identity" : "chronometer",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Chronometer.git",
@@ -23,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Hitch.git",
       "state" : {
-        "revision" : "92f32ad70b9e61807cf0cf9fa89993eac2c0dd56",
-        "version" : "0.4.130"
+        "revision" : "733c8e04e04813bc6e3cc105850a4eb657bdacfb",
+        "version" : "0.4.133"
       }
     },
     {
@@ -32,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "d5da68667f231bb887eb158db2efc9a75d3a47fd",
-        "version" : "0.0.70"
+        "revision" : "451b74a7db879d45705aba2aae6150ad8b71157a",
+        "version" : "0.0.77"
       }
     },
     {
@@ -52,6 +61,15 @@
       "state" : {
         "revision" : "96e58f68274a2e6f370fff153ceb5674a06936c4",
         "version" : "0.2.47"
+      }
+    },
+    {
+      "identity" : "swcompression",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/KittyMac/SWCompression.git",
+      "state" : {
+        "revision" : "cd39ca0a3b269173bab06f68b182b72fa690765c",
+        "version" : "4.8.5"
       }
     },
     {

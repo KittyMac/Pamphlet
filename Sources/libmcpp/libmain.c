@@ -42,7 +42,16 @@
 #include    "internal.H"
 #endif
 
-extern FILE *open_memstream(char **__bufp, size_t *__sizep);
+#if defined(_WIN32)
+    FILE *open_memstream(char **__bufp, size_t *__sizep) {
+        *__bufp = NULL;
+        __sizep = 0;
+        return tmpfile();
+    }
+#else
+    extern FILE *open_memstream(char **__bufp, size_t *__sizep);
+#endif
+
 
     /* Function pointer to expand_macro() functions.    */
     char *   (*expand_macro)( DEFBUF * defp, char * out, char * out_end
@@ -450,6 +459,14 @@ fatal_error_exit:
         fclose( fp_in);
     if (fp_err != stderr)
         fclose( fp_err);
+    
+    if (len == 0 || memory_buffer == NULL) {
+        len = ftell(fp_out);
+        memory_buffer = malloc(len);
+        
+        fseek(fp_out, 0, SEEK_SET);
+        fread(memory_buffer, len, 1, fp_out);
+    }
     
     fclose( fp_out);
 

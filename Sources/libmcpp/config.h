@@ -116,7 +116,11 @@
 #define HAVE_STDLIB_H 1
 
 /* Define to 1 if you have the `stpcpy' function. */
+#if defined(_WIN32)
+#define HAVE_STPCPY 0
+#else
 #define HAVE_STPCPY 1
+#endif
 
 /* Define to 1 if you have the <strings.h> header file. */
 #define HAVE_STRINGS_H 1
