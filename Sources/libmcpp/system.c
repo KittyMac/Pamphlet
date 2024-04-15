@@ -456,9 +456,17 @@ char* mcpp_basename(char * path) {
 
 char* mcpp_dirname(char * path) {
 #ifdef _WIN32
-    char dirpath[ PATHMAX + 1 ] = {0};
-    _splitpath(path, NULL, dirpath, NULL, NULL);
-    return dirpath;
+    static char result[FILENAME_MAX];
+    char* lastBackslash = strrchr(path, '/');
+    if (lastBackslash == NULL) {
+        strcpy(result, ".");
+    } else if (lastBackslash == path) {
+        strcpy(result, "/");
+    } else {
+        strncpy(result, path, lastBackslash - path);
+        result[lastBackslash - path] = '\0';
+    }
+    return result;
 #else
     return dirname((char *)path);
 #endif
