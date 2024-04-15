@@ -11,6 +11,11 @@ import PackagePlugin
                                                                                               target: target,
                                                                                               includeDebug: true)
         
+        var pluginWorkDirectory = context.pluginWorkDirectory.string
+        #if os(Windows)
+        pluginWorkDirectory = "C:" + pluginWorkDirectory
+        #endif
+        
         return [
             .buildCommand(
                 displayName: "Pamphlet - generating resources...",
@@ -21,7 +26,7 @@ import PackagePlugin
                     "--git-path",
                     repoPath,
                     copiesDirectory,
-                    context.pluginWorkDirectory.string
+                    pluginWorkDirectory
                 ],
                 inputFiles: inputFiles,
                 outputFiles: outputFiles

@@ -40,9 +40,13 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     guard let tool = tool else {
         fatalError("PamphletPlugin unable to load PamphletTool")
     }
-
-        
-    let copiesDirectory = context.pluginWorkDirectory.string + "/Pamphlet/"
+    
+    var pluginWorkDirectory = context.pluginWorkDirectory.string
+    #if os(Windows)
+    pluginWorkDirectory = "C:" + pluginWorkDirectory
+    #endif
+    
+    let copiesDirectory = pluginWorkDirectory + "/Pamphlet/"
     
     try? FileManager.default.removeItem(atPath: copiesDirectory)
     try? FileManager.default.createDirectory(atPath: copiesDirectory, withIntermediateDirectories: false)
@@ -67,7 +71,7 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
                      inputFiles: &inputFiles)
     
     // detect when the git version changes and reprocess
-    let gitVersionPath = context.pluginWorkDirectory.string + "/git.version"
+    let gitVersionPath = pluginWorkDirectory + "/git.version"
     if let version = git(repoPath: directoryPath) {
         // save the version number as an input in our tool working directory
         if let lastVersion = try? String(contentsOfFile: gitVersionPath),
@@ -78,12 +82,12 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
     }
     
     var outputFiles: [String] = [
-        context.pluginWorkDirectory.string + "/\(target.name)Pamphlet.release.swift"
+        pluginWorkDirectory + "/\(target.name)Pamphlet.release.swift"
     ]
     
     if includeDebug {
         outputFiles.append(
-            context.pluginWorkDirectory.string + "/\(target.name)Pamphlet.debug.swift"
+            pluginWorkDirectory + "/\(target.name)Pamphlet.debug.swift"
         )
     }
     
