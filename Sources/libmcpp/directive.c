@@ -126,7 +126,7 @@ void    directive( void)
     c = skip_ws();
     if (c == '\n')                              /* 'null' directive */
         goto  ret;
-    token_type = scan_token( c, (workp = work_buf, &workp), work_end);
+    token_type = scan_token( (int)c, (workp = work_buf, &workp), work_end);
     if (in_asm && (token_type != NAM
             || (! str_eq( identifier, "asm")
                 && ! str_eq( identifier, "endasm"))))

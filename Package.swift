@@ -39,16 +39,24 @@ let pluginTarget: [PackageDescription.Target] = [
     ),
 ]
 #else
-let productsTarget: [PackageDescription.Product] = [
-    .library(name: "PamphletTool", targets: [
-        "PamphletTool-focal",
-        "PamphletTool-amazonlinux2",
-        "PamphletTool-fedora",
-        "PamphletTool-fedora38",
-        "PamphletTool-windows",
-    ]),
+
+var plugins = [
+    "PamphletTool-focal",
+    "PamphletTool-amazonlinux2",
+    "PamphletTool-fedora",
+    "PamphletTool-fedora38",
 ]
-let pluginTarget: [PackageDescription.Target] = [
+
+#if os(Windows)
+plugins += [
+    "PamphletTool-windows",
+]
+#endif
+
+var productsTarget: [PackageDescription.Product] = [
+    .library(name: "PamphletTool", targets: plugins),
+]
+var pluginTarget: [PackageDescription.Target] = [
     .binaryTarget(name: "PamphletTool-focal",
                   path: "dist/PamphletTool-focal.zip"),
     .binaryTarget(name: "PamphletTool-amazonlinux2",
@@ -57,42 +65,30 @@ let pluginTarget: [PackageDescription.Target] = [
                   path: "dist/PamphletTool-fedora.zip"),
     .binaryTarget(name: "PamphletTool-fedora38",
                   path: "dist/PamphletTool-fedora38.zip"),
-    .binaryTarget(name: "PamphletTool-windows",
-                  path: "dist/PamphletTool-windows.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),
-        dependencies: [
-            "PamphletTool-focal",
-            "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora",
-            "PamphletTool-fedora38",
-            "PamphletTool-windows",
-        ]
+        dependencies: plugins.map({ Target.Dependency(stringLiteral: $0) })
     ),
     .plugin(
         name: "PamphletReleaseOnlyPlugin",
         capability: .buildTool(),
-        dependencies: [
-            "PamphletTool-focal",
-            "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora",
-            "PamphletTool-fedora38",
-            "PamphletTool-windows",
-        ]
+        dependencies: plugins.map({ Target.Dependency(stringLiteral: $0) })
     ),
     .plugin(
         name: "PamphletGzipOnlyPlugin",
         capability: .buildTool(),
-        dependencies: [
-            "PamphletTool-focal",
-            "PamphletTool-amazonlinux2",
-            "PamphletTool-fedora",
-            "PamphletTool-fedora38",
-            "PamphletTool-windows",
-        ]
+        dependencies: plugins.map({ Target.Dependency(stringLiteral: $0) })
     ),
 ]
+
+#if os(Windows)
+pluginTarget += [
+    .binaryTarget(name: "PamphletTool-windows",
+                  path: "dist/PamphletTool-windows.zip"),
+]
+#endif
+
 #endif
 
 let package = Package(
