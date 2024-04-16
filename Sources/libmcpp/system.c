@@ -49,6 +49,7 @@
 #include <string.h>
 
 #define PATH_DELIM      '/'
+#define SPECIAL_PATH_DELIM  FALSE
 
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
@@ -70,6 +71,7 @@
 #endif
 
 #define PATH_DELIM      '/'
+#define SPECIAL_PATH_DELIM  FALSE
 
 #define str_case_eq( str1, str2)    (strcasecmp( str1, str2) == 0)
 
