@@ -3,40 +3,7 @@ import PackagePlugin
 
 func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
     
-    // Note: We want to load the right pre-compiled tool for the right OS
-    // There are currently two tools:
-    // PamphletPluginTool-focal: supports macos and ubuntu-focal
-    // PamphletPluginTool-focal: supports macos and amazonlinux2
-    //
-    // When we are compiling to build the precompiled tools, only the
-    // default ( PamphletPluginTool-focal ) is available.
-    //
-    // When we are running and want to use the pre-compiled tools, we look in
-    // /etc/os-release (available on linux) to see what distro we are running
-    // and to load the correct tool there.
-    var tool = try? context.tool(named: "PamphletTool-focal")
-    
-    #if os(Windows)
-    if let osTool = try? context.tool(named: "PamphletTool-windows") {
-        tool = osTool
-    }
-    #endif
-    
-    if let osFile = try? String(contentsOfFile: "/etc/os-release") {
-        if osFile.contains("Amazon Linux"),
-           let osTool = try? context.tool(named: "PamphletTool-amazonlinux2") {
-            tool = osTool
-        }
-        if osFile.contains("Fedora Linux 37"),
-           let osTool = try? context.tool(named: "PamphletTool-fedora") {
-            tool = osTool
-        }
-        if osFile.contains("Fedora Linux 38"),
-           let osTool = try? context.tool(named: "PamphletTool-fedora38") {
-            tool = osTool
-        }
-    }
-    
+    let tool = try? context.tool(named: "PamphletTool")
     guard let tool = tool else {
         fatalError("PamphletPlugin unable to load PamphletTool")
     }
