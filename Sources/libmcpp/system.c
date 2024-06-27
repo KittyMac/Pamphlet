@@ -2105,7 +2105,7 @@ static void set_limit( void)
         std_limits.blk_nest = BLK_NEST_CPLUS_MIN;
         std_limits.inc_nest = INCLUDE_NEST_CPLUS_MIN;
         std_limits.n_macro = NMACRO_CPLUS_MIN;
-        std_limits.line_num = LINE_CPLUS_LIMIT;
+        std_limits.line_num = LINE99LIMIT;
     } else if (stdc_ver >= 199901L) {       /* Specified by C 1999 Standard */
         std_limits.str_len = SLEN99MIN;
         std_limits.id_len = IDLEN99MIN;
