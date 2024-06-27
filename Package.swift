@@ -7,6 +7,7 @@ let package = Package(
         .macOS(.v10_13), .iOS(.v11)
     ],
     products: [
+        .executable(name: "PamphletTool", targets: ["PamphletTool"]),
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
         .plugin(name: "PamphletReleaseOnlyPlugin", targets: ["PamphletReleaseOnlyPlugin"]),
