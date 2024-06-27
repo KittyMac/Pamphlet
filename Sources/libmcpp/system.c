@@ -67,6 +67,8 @@
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
+extern char *strdup(const char *__s1);
+extern char *realpath(const char * __restrict, char * __restrict);
 
 #ifndef _WIN32
 #include <libgen.h>
