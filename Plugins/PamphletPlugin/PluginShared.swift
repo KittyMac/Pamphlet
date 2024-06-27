@@ -1,10 +1,15 @@
 import Foundation
 import PackagePlugin
 
+func fatalLog(_ string: String) {
+    try! string.write(toFile: "/tmp/PamphletTool.error", atomically: true, encoding: .utf8)
+}
+
 func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
     
     let tool = try? context.tool(named: "PamphletTool")
     guard let tool = tool else {
+        fatalLog("PamphletPlugin unable to load PamphletTool")
         fatalError("PamphletPlugin unable to load PamphletTool")
     }
     
