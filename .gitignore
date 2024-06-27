@@ -4,5 +4,5 @@
 /*.xcodeproj
 xcuserdata/
 node_modules
-*/PamphletTool
+dist/PamphletTool
 *.artifactbundle/
