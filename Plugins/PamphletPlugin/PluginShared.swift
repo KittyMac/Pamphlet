@@ -26,7 +26,6 @@ public extension String {
 }
 
 func binaryTool(named toolName: String) -> String {
-    let toolName = "FlynnPluginTool"
     var osName = "focal"
     var swiftVersion = "unknown"
     
