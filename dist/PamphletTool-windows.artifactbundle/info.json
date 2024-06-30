@@ -1,0 +1,24 @@
+{
+    "artifacts": {
+        "PamphletTool-windows": {
+            "version": "v1.0.0",
+            "type": "executable",
+            "variants": [
+                {
+                    "path": "PamphletTool-amd64/bin/PamphletTool.exe",
+                    "supportedTriples": [
+                        "x86_64-unknown-windows-msvc"
+                    ]
+                },
+                {
+                    "path": "PamphletTool-macos/bin/PamphletTool",
+                    "supportedTriples": [
+                        "x86_64-apple-macosx",
+                        "arm64-apple-macosx"
+                    ]
+                }
+            ]
+        }
+    },
+    "schemaVersion": "1.0"
+}
