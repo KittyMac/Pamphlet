@@ -33,6 +33,8 @@ build:
 	cp .build/PamphletTool ./dist/Pamphlet
 	
 build-windows:
+	# note: you probably don't have make on windows, so you need to run these manually
+	swift test
 	swift build --configuration release
 	cp .build/release/PamphletTool.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
 	rm ./dist/PamphletTool-windows.zip
