@@ -3,7 +3,7 @@ import libmcpp
 
 extension PamphletFramework {
     func minifyJson(inFile: String, fileContents: inout String) {
-        if options.contains(.minifyJson) && minifyJson(for: inFile) {
+        if minifyJson(for: inFile) {
             if (inFile.hasSuffix(".json")) {
                 if let results = ToolsManager.shared.toolJSON(input: fileContents) {
                     fileContents = results

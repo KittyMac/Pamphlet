@@ -17,6 +17,14 @@ enum OutputType: String {
 
 public class PamphletFramework {
     public static let shared = PamphletFramework()
+    
+    var gIncludeOriginal: Bool? = nil
+    var gReleaseOnly: Bool? = nil
+    var gIncludeGzip: Bool? = nil
+    var gMinifyHtml: Bool? = nil
+    var gMinifyJs: Bool? = nil
+    var gMinifyJson: Bool? = nil
+    var gCompressionLevel: Int? = nil
 
     var fileHeaderDebug = """
     // swiftlint:disable all
@@ -284,7 +292,7 @@ public class PamphletFramework {
             }
         }
         
-        let textPagesCodeDebug = textPages.filter { _ in options.contains(.includeOriginal) }.map {
+        let textPagesCodeDebug = textPages.filter { _ in includeOriginal(for: nil) }.map {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
@@ -298,7 +306,7 @@ public class PamphletFramework {
             }
         }.joined(separator: "\n")
         
-        let textPagesCodeRelease = textPages.filter { _ in options.contains(.includeOriginal) }.map {
+        let textPagesCodeRelease = textPages.filter { _ in includeOriginal(for: nil) }.map {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
@@ -307,7 +315,7 @@ public class PamphletFramework {
             }
         }.joined(separator: "\n")
         
-        let compressedPagesCode = (compressedDataPages + textPages).filter { _ in options.contains(.includeGzip) }.map {
+        let compressedPagesCode = (compressedDataPages + textPages).filter { _ in includeGzip(for: nil) }.map {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)Gzip() }"
             } else {
@@ -315,7 +323,7 @@ public class PamphletFramework {
                                          string: "        if member == \"\($0.fullPath)\" { return \($0.fullVariablePath)Gzip() }")
             }
         }.joined(separator: "\n")
-        let dataPagesCode = dataPages.filter { _ in options.contains(.includeOriginal) }.map {
+        let dataPagesCode = dataPages.filter { _ in includeOriginal(for: nil) }.map {
             if options.contains(.kotlin) {
                 return "                if (member == \"\($0.fullPath)\") { return \($0.fullVariablePath)() }"
             } else {
@@ -422,7 +430,7 @@ public class PamphletFramework {
             }
         }
         
-        if uncompressed != nil && options.contains(.includeOriginal) {
+        if uncompressed != nil && includeOriginal(for: path.fileName) {
             var reifiedDataType = dataType
             if dataType == "String" && options.contains(.kotlin) == false {
                 reifiedDataType = "StaticString"
@@ -445,7 +453,7 @@ public class PamphletFramework {
             }
         }
         
-        if compressed != nil && options.contains(.includeGzip) {
+        if compressed != nil && includeGzip(for: path.fileName) {
             if options.contains(.kotlin) {
                 appendBoth("fun \(path.extensionName).\(path.variableName)Gzip(): ByteArray {\n")
                 appendBoth("    return compressed\(path.fullVariableName)\n")
@@ -474,7 +482,7 @@ public class PamphletFramework {
             appendBoth("\n")
         }
         
-        if let uncompressed = uncompressed, options.contains(.includeOriginal) {
+        if let uncompressed = uncompressed, includeOriginal(for: path.fileName) {
             var conditionalAppend = appendBoth
             if fileOnDisk != nil {
                 conditionalAppend = { string in
@@ -495,7 +503,7 @@ public class PamphletFramework {
                 }
             }
         }
-        if let compressed = compressed, options.contains(.includeGzip) {
+        if let compressed = compressed, includeGzip(for: path.fileName) {
             if options.contains(.kotlin) {
                 scratchRelease.append("private val compressed\(path.fullVariableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n\n")
             } else {
@@ -843,6 +851,11 @@ public class PamphletFramework {
         gitHashString = gitHash(repoPath: gitPath)
         
         measure(message: inDirectory) {
+            
+            if let pamphletJsonHitch = Hitch(contentsOfFile: "\(inDirectory)/pamphlet.json") {
+                pamphletJson = Spanker.parse(halfhitch: pamphletJsonHitch.halfhitch()) ?? ^[]
+            }
+            
             self.options = options
             
             let pamphletName = (prefix != nil ? prefix! + "Pamphlet" : "Pamphlet")
@@ -858,7 +871,7 @@ public class PamphletFramework {
             debugPath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.debug.swift"
             releasePath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.release.swift"
             
-            if options.contains(.releaseOnly) == false {
+            if releaseOnly(for: nil) == false {
                 createOutput(path: debugPath,
                              type: .debug)
             }
@@ -866,7 +879,7 @@ public class PamphletFramework {
             createOutput(path: releasePath,
                          type: .release)
             
-            if options.contains(.releaseOnly) {
+            if releaseOnly(for: nil) {
                 fileHeaderRelease = fileHeaderReleaseOnly
                 fileFooterRelease = fileFooterReleaseOnly
             }
@@ -917,15 +930,8 @@ public class PamphletFramework {
             
             var allDirectories: [URL] = []
             var filesByDirectory: [URL: BoxedArray<URL>] = [:]
-            var pamphletJsonHitch: Hitch = ""
             
             for case let fileURL as URL in enumerator {
-                
-                if fileURL.lastPathComponent == "pamphlet.json" {
-                    pamphletJsonHitch = Hitch(contentsOfFile: fileURL.path) ?? ""
-                    continue
-                }
-                
                 if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
                     if let isDirectory = resourceValues.isDirectory {
                         if isDirectory {
@@ -943,8 +949,6 @@ public class PamphletFramework {
                     }
                 }
             }
-            
-            pamphletJson = Spanker.parse(halfhitch: pamphletJsonHitch.halfhitch()) ?? ^[]
             
             for directoryURL in filesByDirectory.keys {
                 guard let files = filesByDirectory[directoryURL] else { continue }

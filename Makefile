@@ -1,3 +1,18 @@
+define DOCKER_BUILD_TOOL
+	docker buildx build --file Dockerfile-$(1) --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-$(1) .
+	
+	docker pull kittymac/pamphlet-$(1):latest
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/
+	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/PamphletTool'
+	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	cp ./dist/PamphletTool ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	rm -f ./dist/PamphletTool-$(1).zip
+	cd ./dist && zip -r ./PamphletTool-$(1).zip ./PamphletTool-$(1).artifactbundle
+endef
+
 DIST:=$(shell cd dist && pwd)
 SWIFT_BUILD_FLAGS=--configuration release
 PROJECTNAME := $(shell basename `pwd`)
@@ -77,7 +92,16 @@ tools-simple: install
 	./dist/Pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 .PHONY: release
-release: install docker
+release: install docker focal-571 focal-592 fedora38-573
+	
+focal-571:
+	@$(call DOCKER_BUILD_TOOL,focal-571)
+	
+focal-592:
+	@$(call DOCKER_BUILD_TOOL,focal-592)
+
+fedora38-573:
+	@$(call DOCKER_BUILD_TOOL,fedora38-573)
 
 docker: docker
 	-docker buildx create --name cluster_builder203
@@ -85,8 +109,6 @@ docker: docker
 	-docker buildx use cluster_builder203
 	-docker buildx inspect --bootstrap
 	-docker login
-	
-	docker buildx build --file Dockerfile-focal --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-focal .
 
 docker-shell:
 	docker pull kittymac/pamphlet

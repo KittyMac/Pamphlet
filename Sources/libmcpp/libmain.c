@@ -460,6 +460,7 @@ fatal_error_exit:
     if (fp_err != stderr)
         fclose( fp_err);
     
+#if defined(_WIN32)
     if (len == 0 || memory_buffer == NULL) {
         len = ftell(fp_out) + 1;
         memory_buffer = malloc(len);
@@ -469,6 +470,7 @@ fatal_error_exit:
         fseek(fp_out, 0, SEEK_SET);
         fread(memory_buffer, len, 1, fp_out);
     }
+#endif
     
     fclose( fp_out);
 

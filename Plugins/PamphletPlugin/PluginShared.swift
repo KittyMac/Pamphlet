@@ -1,18 +1,69 @@
 import Foundation
 import PackagePlugin
 
-func fatalLog(_ string: String) {
-    try! string.write(toFile: "/tmp/PamphletTool.error", atomically: true, encoding: .utf8)
+struct RuntimeError: Error {
+    let message: String
+
+    init(_ message: String) {
+        self.message = message
+    }
+
+    public var localizedDescription: String {
+        return message
+    }
 }
 
-func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
-    
-    let tool = try? context.tool(named: "PamphletTool")
-    guard let tool = tool else {
-        fatalLog("PamphletPlugin unable to load PamphletTool")
-        fatalError("PamphletPlugin unable to load PamphletTool")
+public extension String {
+    func decoded<T: Decodable>() throws -> T {
+        guard let jsonData = self.data(using: .utf8) else {
+            throw RuntimeError("Unable to convert json String to Data")
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(positiveInfinity: "+Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+        return try decoder.decode(T.self, from: jsonData)
     }
+}
+
+func binaryTool(named toolName: String) -> String {
+    var osName = "focal"
+    var swiftVersion = "unknown"
     
+    #if os(Windows)
+    osName = "windows"
+    #else
+    if let osFile = try? String(contentsOfFile: "/etc/os-release") {
+        if osFile.contains("Amazon Linux") {
+            osName = "amazonlinux2"
+        }
+        if osFile.contains("Fedora Linux 37") {
+            osName = "fedora37"
+        }
+        if osFile.contains("Fedora Linux 38") {
+            osName = "fedora38"
+        }
+    }
+    #endif
+    
+#if swift(>=5.9.2)
+    swiftVersion = "592"
+#elseif swift(>=5.7.3)
+    swiftVersion = "573"
+#elseif swift(>=5.7.1)
+    swiftVersion = "571"
+#endif
+
+    return "\(toolName)-\(osName)-\(swiftVersion)"
+}
+
+func pluginShared(context: PluginContext, target: Target) throws -> (PackagePlugin.Path, String, String, [PackagePlugin.Path], [PackagePlugin.Path]) {
+    
+    let toolName = "PamphletTool"
+    let binaryToolName = binaryTool(named: toolName)
+    guard let tool = (try? context.tool(named: binaryToolName)) ?? (try? context.tool(named: toolName)) else {
+        fatalError("FlynnPlugin unable to load \(binaryToolName)")
+    }
+
     var pluginWorkDirectory = context.pluginWorkDirectory.string
     #if os(Windows)
     pluginWorkDirectory = "C:" + pluginWorkDirectory
@@ -66,10 +117,20 @@ func pluginShared(context: PluginContext, target: Target, includeDebug: Bool) th
         pluginWorkDirectory + "/\(target.name)Pamphlet.release.swift"
     ]
     
-    if includeDebug {
-        outputFiles.append(
-            pluginWorkDirectory + "/\(target.name)Pamphlet.debug.swift"
-        )
+    if let pamphletJson = try? String(contentsOfFile: "\(directoryPath)/Pamphlet/pamphlet.json") {
+        struct Rule: Codable {
+            var file: String?
+            var includeOriginal: Bool?
+        }
+        if let rules: [Rule] = try? pamphletJson.decoded() {
+            for rule in rules where rule.file == nil {
+                if rule.includeOriginal == true {
+                    outputFiles.append(
+                        pluginWorkDirectory + "/\(target.name)Pamphlet.debug.swift"
+                    )
+                }
+            }
+        }
     }
     
     var toolPath = tool.path.string
