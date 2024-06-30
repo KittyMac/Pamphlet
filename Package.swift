@@ -9,7 +9,7 @@ let productsTarget: [PackageDescription.Product] = [
 ]
 let pluginTarget: [PackageDescription.Target] = [
     .executableTarget(
-        name: "PamphletTool-focal",
+        name: "PamphletTool",
         dependencies: [
             "Hitch",
             "PamphletFramework",
@@ -20,31 +20,30 @@ let pluginTarget: [PackageDescription.Target] = [
         name: "PamphletPlugin",
         capability: .buildTool(),
         dependencies: [
-            "PamphletTool-focal",
+            "PamphletTool",
         ]
     ),
     .plugin(
         name: "PamphletReleaseOnlyPlugin",
         capability: .buildTool(),
         dependencies: [
-            "PamphletTool-focal",
+            "PamphletTool",
         ]
     ),
     .plugin(
         name: "PamphletGzipOnlyPlugin",
         capability: .buildTool(),
         dependencies: [
-            "PamphletTool-focal",
+            "PamphletTool",
         ]
     ),
 ]
 #else
 
 var plugins = [
-    "PamphletTool-focal",
-    "PamphletTool-amazonlinux2",
-    "PamphletTool-fedora",
-    "PamphletTool-fedora38",
+    "PamphletTool-focal-571",
+    "PamphletTool-focal-592",
+    "PamphletTool-fedora38-573",
 ]
 
 #if os(Windows)
@@ -57,14 +56,12 @@ var productsTarget: [PackageDescription.Product] = [
     .library(name: "PamphletTool", targets: plugins),
 ]
 var pluginTarget: [PackageDescription.Target] = [
-    .binaryTarget(name: "PamphletTool-focal",
-                  path: "dist/PamphletTool-focal.zip"),
-    .binaryTarget(name: "PamphletTool-amazonlinux2",
-                  path: "dist/PamphletTool-amazonlinux2.zip"),
-    .binaryTarget(name: "PamphletTool-fedora",
-                  path: "dist/PamphletTool-fedora.zip"),
-    .binaryTarget(name: "PamphletTool-fedora38",
-                  path: "dist/PamphletTool-fedora38.zip"),
+    .binaryTarget(name: "PamphletTool-focal-571",
+                  path: "dist/PamphletTool-focal-571.zip"),
+    .binaryTarget(name: "PamphletTool-focal-592",
+                  path: "dist/PamphletTool-focal-592.zip"),
+    .binaryTarget(name: "PamphletTool-fedora38-573",
+                  path: "dist/PamphletTool-fedora38-573.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),
@@ -132,7 +129,7 @@ let package = Package(
                 "PamphletFramework"
             ],
             plugins: [
-                .plugin(name: "PamphletGzipOnlyPlugin")
+                .plugin(name: "PamphletPlugin")
             ]
         )
     ]

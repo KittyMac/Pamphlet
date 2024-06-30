@@ -8,8 +8,7 @@ import PackagePlugin
         }
         
         let (toolPath, repoPath, copiesDirectory, inputFiles, outputFiles) = try pluginShared(context: context,
-                                                                                              target: target,
-                                                                                              includeDebug: true)
+                                                                                              target: target)
         
         var pluginWorkDirectory = context.pluginWorkDirectory.string
         #if os(Windows)

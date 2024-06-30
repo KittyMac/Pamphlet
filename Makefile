@@ -1,3 +1,18 @@
+define DOCKER_BUILD_TOOL
+	docker buildx build --file Dockerfile-$(1) --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-$(1) .
+	
+	docker pull kittymac/pamphlet-$(1):latest
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/
+	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/
+	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/PamphletTool'
+	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/PamphletTool'
+	cp ./dist/PamphletTool ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/PamphletTool
+	
+	rm -f ./dist/PamphletTool-$(1).zip
+	cd ./dist && zip -r ./PamphletTool-$(1).zip ./PamphletTool-$(1).artifactbundle
+endef
+
 DIST:=$(shell cd dist && pwd)
 SWIFT_BUILD_FLAGS=--configuration release
 PROJECTNAME := $(shell basename `pwd`)
@@ -12,14 +27,14 @@ all: build
 build:
 	swift build --triple arm64-apple-macosx $(SWIFT_BUILD_FLAGS) 
 	swift build --triple x86_64-apple-macosx $(SWIFT_BUILD_FLAGS)
-	-rm .build/PamphletTool-focal
-	lipo -create -output .build/PamphletTool-focal .build/arm64-apple-macosx/release/PamphletTool-focal .build/x86_64-apple-macosx/release/PamphletTool-focal
-	cp .build/PamphletTool-focal ./dist/PamphletTool
-	cp .build/PamphletTool-focal ./dist/Pamphlet
+	-rm .build/PamphletTool
+	lipo -create -output .build/PamphletTool .build/arm64-apple-macosx/release/PamphletTool .build/x86_64-apple-macosx/release/PamphletTool
+	cp .build/PamphletTool ./dist/PamphletTool
+	cp .build/PamphletTool ./dist/Pamphlet
 	
 build-windows:
 	swift build --configuration release
-	cp .build/release/PamphletTool-focal.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
+	cp .build/release/PamphletTool.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
 	rm ./dist/PamphletTool-windows.zip
 	Compress-Archive -Path ./dist/PamphletTool-windows.artifactbundle -DestinationPath ./dist/PamphletTool-windows.zip
 
@@ -57,13 +72,13 @@ test:
 .PHONY: install
 install: clean build
 	-rm ./dist/Pamphlet
-	cp .build/PamphletTool-focal ./dist/Pamphlet
+	cp .build/PamphletTool ./dist/Pamphlet
 	
 	-rm /opt/homebrew/bin/pamphlet
-	-cp .build/PamphletTool-focal /opt/homebrew/bin/pamphlet
+	-cp .build/PamphletTool /opt/homebrew/bin/pamphlet
 	
 	-rm /usr/local/bin/pamphlet
-	-cp .build/PamphletTool-focal /usr/local/bin/pamphlet
+	-cp .build/PamphletTool /usr/local/bin/pamphlet
 	
 
 .PHONY: tools
@@ -77,65 +92,16 @@ tools-simple: install
 	./dist/Pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 .PHONY: release
-release: install focal fedora fedora38 amazonlinux2
+release: build docker focal-571 focal-592 fedora38-573
 	
-focal: docker
-	docker buildx build --file Dockerfile-focal --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-focal .
+focal-571:
+	@$(call DOCKER_BUILD_TOOL,focal-571)
 	
-	docker pull kittymac/pamphlet-focal:latest
-	mkdir -p ./dist/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/
-	mkdir -p ./dist/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/
-	mkdir -p ./dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/
-	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-focal /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-focal.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
-	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-focal /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-focal.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
-	cp ./dist/PamphletTool ./dist/PamphletTool-focal.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	rm -f ./dist/PamphletTool-focal.zip
-	cd ./dist && zip -r ./PamphletTool-focal.zip ./PamphletTool-focal.artifactbundle
-	
-amazonlinux2: docker
-	docker buildx build --file Dockerfile-amazonlinux2 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-amazonlinux2 .
-	
-	docker pull kittymac/pamphlet-amazonlinux2:latest
-	mkdir -p ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/
-	mkdir -p ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/
-	mkdir -p ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/
-	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-amazonlinux2 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
-	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-amazonlinux2 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
-	mkdir -p ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/
-	cp ./dist/PamphletTool ./dist/PamphletTool-amazonlinux2.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	
-	rm -f ./dist/PamphletTool-amazonlinux2.zip
-	cd ./dist && zip -r ./PamphletTool-amazonlinux2.zip ./PamphletTool-amazonlinux2.artifactbundle
+focal-592:
+	@$(call DOCKER_BUILD_TOOL,focal-592)
 
-
-fedora: docker
-	docker buildx build --file Dockerfile-fedora38 --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora38 .
-	
-	docker pull kittymac/pamphlet-fedora:latest
-	mkdir -p ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/
-	mkdir -p ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/
-	mkdir -p ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/
-	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
-	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
-	mkdir -p ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/
-	cp ./dist/PamphletTool ./dist/PamphletTool-fedora.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	rm -f ./dist/PamphletTool-fedora.zip
-	cd ./dist && zip -r ./PamphletTool-fedora.zip ./PamphletTool-fedora.artifactbundle
-
-fedora38: docker
-	docker buildx build --file Dockerfile-fedora --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-fedora .
-	
-	docker pull kittymac/pamphlet-fedora38:latest
-	mkdir -p ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/
-	mkdir -p ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/
-	mkdir -p ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/
-	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-arm64/bin/PamphletTool'
-	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-fedora38 /bin/bash -lc 'cp PamphletTool-focal /outTemp/PamphletTool-fedora38.artifactbundle/PamphletTool-amd64/bin/PamphletTool'
-	mkdir -p ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/
-	cp ./dist/PamphletTool ./dist/PamphletTool-fedora38.artifactbundle/PamphletTool-macos/bin/PamphletTool
-	rm -f ./dist/PamphletTool-fedora38.zip
-	cd ./dist && zip -r ./PamphletTool-fedora38.zip ./PamphletTool-fedora38.artifactbundle
+fedora38-573:
+	@$(call DOCKER_BUILD_TOOL,fedora38-573)
 
 docker: docker
 	-docker buildx create --name cluster_builder203
