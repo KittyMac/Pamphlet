@@ -133,16 +133,22 @@ func pluginShared(context: PluginContext, target: Target) throws -> (PackagePlug
     if let pamphletJson = try? String(contentsOfFile: "\(directoryPath)/Pamphlet/pamphlet.json") {
         struct Rule: Codable {
             var file: String?
+            var releaseOnly: Bool?
             var includeOriginal: Bool?
         }
+        var shouldIncludeDebug = true
         if let rules: [Rule] = try? pamphletJson.decoded() {
             for rule in rules where rule.file == nil {
-                if rule.includeOriginal == true {
-                    outputFiles.append(
-                        pluginWorkDirectory + "/\(target.name)Pamphlet.debug.swift"
-                    )
+                if rule.releaseOnly == true {
+                    shouldIncludeDebug = false
                 }
             }
+        }
+        
+        if shouldIncludeDebug {
+            outputFiles.append(
+                pluginWorkDirectory + "/\(target.name)Pamphlet.debug.swift"
+            )
         }
     }
     
