@@ -136,11 +136,11 @@ func pluginShared(context: PluginContext, target: Target) throws -> (PackagePlug
             var releaseOnly: Bool?
             var includeOriginal: Bool?
         }
-        var shouldIncludeDebug = true
+        var shouldIncludeDebug = false
         if let rules: [Rule] = try? pamphletJson.decoded() {
             for rule in rules where rule.file == nil {
-                if rule.releaseOnly == true {
-                    shouldIncludeDebug = false
+                if rule.releaseOnly == false {
+                    shouldIncludeDebug = true
                 }
             }
         }
