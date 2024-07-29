@@ -932,6 +932,10 @@ public class PamphletFramework {
             var filesByDirectory: [URL: BoxedArray<URL>] = [:]
             
             for case let fileURL as URL in enumerator {
+                if fileURL.lastPathComponent == "pamphlet.json" {
+                    continue
+                }
+                
                 if let resourceValues = try? fileURL.resourceValues(forKeys: Set(resourceKeys)) {
                     if let isDirectory = resourceValues.isDirectory {
                         if isDirectory {
