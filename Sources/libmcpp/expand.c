@@ -2910,19 +2910,17 @@ static int  squeeze_ws(
     }
 
     if (out) {
-        if (space) {            /* Write a space to output pointer  */
-            if (nospaces == 0 || nospaces == 2) {
-                *(*out)++ = ' ';    /*   and increment the pointer.     */
-                if (mgc_seq)
-                    mgc_seq->space = TRUE;
-            }
+        int shouldAddSpace = 0;
+        if (space) {
+            shouldAddSpace = 1;
         }
-        if (newline) {            /* Write a space to output pointer  */
-            if (nospaces == 0) {
-                *(*out)++ = ' ';    /*   and increment the pointer.     */
-                if (mgc_seq)
-                    mgc_seq->space = TRUE;
-            }
+        if (newline && nospaces != 2) {
+            shouldAddSpace = 1;
+        }
+        if (shouldAddSpace) {
+            *(*out)++ = ' ';    /*   and increment the pointer.     */
+            if (mgc_seq)
+                mgc_seq->space = TRUE;
         }
         if (tsep && !space && !newline)     /* Needs to preserve token separator*/
             *(*out)++ = TOK_SEP;

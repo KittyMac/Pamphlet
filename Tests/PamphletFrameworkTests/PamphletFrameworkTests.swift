@@ -91,7 +91,7 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocess3() {
         let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/test3.html"))
-        XCTAssertEqual(result, "{ command: 'external', progress: progressCurrent, provider: 'Some', storeId: 11, state: \"STATE_SOME\", tag: `Some ${11}` }\n")
+        XCTAssertEqual(result, "{ command: hasRover ? 'reset' : 'skip', progress: scraper.progressCurrent, delay: 0, state: scraper.state, scraperStorageJson: scraperStorageAsJson(), tag: checkStringLength(\"this is a tag\") };\n{ command: 'external', progress: progressCurrent, provider: 'Some', storeId: 11, state: \"STATE_SOME\", tag: `Some ${11}` }\n")
     }
     
     func testPreprocess4() {
@@ -108,7 +108,7 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocess7() {
         let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/test7.html"))
-        XCTAssertEqual(result, "/(?:#f|term1|term2|term3|term with space)/i\n")
+        XCTAssertEqual(result, "/(?:#f|term1|term2|term3|term with space)/i\n/(?: #f| term1| term2| term3| term with space )/i\n")
     }
     
     func testNotAValidPreprocessingToken() {

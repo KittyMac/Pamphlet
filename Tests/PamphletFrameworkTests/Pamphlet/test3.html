@@ -9,4 +9,15 @@
     state: STATE_SOME,                  \
     tag: `Some ${SOMEID}`               \
 }
+#macro COMMAND_RESET(DELAY,TAG)
+{
+    command: hasRover ? 'reset' : 'skip',
+    progress: scraper.progressCurrent,
+    delay: DELAY,
+    state: scraper.state,
+    scraperStorageJson: scraperStorageAsJson(),
+    tag: checkStringLength(TAG)
+}
+#endmacro
+COMMAND_RESET(0, "this is a tag");
 COMMAND(11)
