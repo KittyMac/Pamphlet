@@ -2769,7 +2769,7 @@ static int  get_an_arg(
             e_line_col.col = infile->bptr - infile->buffer;
         }
         memset( &mgc_seq, 0, sizeof (MAGIC_SEQ));
-        c = squeeze_ws( &argp, NULL, &mgc_seq, ismacro == 2);
+        c = squeeze_ws( &argp, NULL, &mgc_seq, ismacro);
                                             /* To the next token    */
     }                                       /* Collected an argument*/
 
@@ -2830,6 +2830,7 @@ static int  squeeze_ws(
 {
     int     c;
     int     space = 0;
+    int     newline = 0;
     int     tsep = 0;
     FILEINFO *      file = infile;
     FILE *  fp = infile->fp;
@@ -2849,7 +2850,7 @@ static int  squeeze_ws(
             break;                      /*   do not skip newline.   */
         switch (c) {
         case '\n':
-            space++;
+            newline++;
             wrong_line = TRUE;
             break;
         case TOK_SEP:
@@ -2910,13 +2911,20 @@ static int  squeeze_ws(
 
     if (out) {
         if (space) {            /* Write a space to output pointer  */
+            if (nospaces == 0 || nospaces == 2) {
+                *(*out)++ = ' ';    /*   and increment the pointer.     */
+                if (mgc_seq)
+                    mgc_seq->space = TRUE;
+            }
+        }
+        if (newline) {            /* Write a space to output pointer  */
             if (nospaces == 0) {
                 *(*out)++ = ' ';    /*   and increment the pointer.     */
                 if (mgc_seq)
                     mgc_seq->space = TRUE;
             }
         }
-        if (tsep && !space)     /* Needs to preserve token separator*/
+        if (tsep && !space && !newline)     /* Needs to preserve token separator*/
             *(*out)++ = TOK_SEP;
         **out = EOS;
     }

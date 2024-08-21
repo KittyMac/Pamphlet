@@ -108,7 +108,7 @@ final class PamphletTests: XCTestCase {
     
     func testPreprocess7() {
         let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/test7.html"))
-        XCTAssertEqual(result, "/(?:#f|term1|term2|term3)/i\n")
+        XCTAssertEqual(result, "/(?:#f|term1|term2|term3|term with space)/i\n")
     }
     
     func testNotAValidPreprocessingToken() {
