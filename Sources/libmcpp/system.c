@@ -83,7 +83,7 @@ extern char *realpath(const char * __restrict, char * __restrict);
 
 #include "b64.h"
 
-
+extern char IGNORE_HEADERS[];
 
 // #if PREPROCESSED
 // #include    "mcpp.H"
@@ -3252,6 +3252,11 @@ found_name:
 #endif
     filename = fname;
     
+    if (IGNORE_HEADERS[0] && strstr(filename, IGNORE_HEADERS) != NULL) {
+        fprintf(stderr, "ignoring %s\n", filename);
+        return  TRUE;
+    }
+    
     if (parentFile != NULL) {
         // Add the directory for the parent file to the include list
         char * parentDirectory = strdup(parentFile->filename);
@@ -3281,8 +3286,8 @@ found_name:
         }
     }
     
-    if (!strstr("rover/", filename)) {
-        fprintf(stderr, "Can't open include file \"%s\", ignoring", filename);
+    if (strstr(filename, "rover/") != NULL) {
+        fprintf(stderr, "Can't open include file \"%s\", ignoring\n", filename);
         return  TRUE;
     }
 

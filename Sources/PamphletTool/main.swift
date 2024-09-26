@@ -49,6 +49,9 @@ struct Pamphlet: ParsableCommand {
                 
         @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content")
         var json: Bool = true
+        
+        @Argument(help: "Ignore headers whose path includes")
+        var ignoreHeader: String? = nil
                 
         mutating func run() throws {
             if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
@@ -67,6 +70,8 @@ struct Pamphlet: ParsableCommand {
             if kotlin { options.insert(.kotlin) }
             if let kotlinPackage = kotlinPackage { options.kotlinPackage = kotlinPackage }
             
+            PamphletFramework.shared.ignoreHeader = ignoreHeader
+            
             PamphletFramework.shared.process(prefix: prefix,
                                              extensions: [],
                                              inDirectory: inDirectory,
@@ -82,11 +87,16 @@ struct Pamphlet: ParsableCommand {
         @Argument(help: "Path to the file resource to preprocess")
         var inFile: String
         
+        @Argument(help: "Ignore headers whose path includes")
+        var ignoreHeader: String? = nil
+        
         mutating func run() {
             if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
                buildAction == "indexbuild" {
                 return
             }
+            
+            PamphletFramework.shared.ignoreHeader = ignoreHeader
             
             PamphletFramework.shared.preprocess(file: inFile)
         }
@@ -97,12 +107,17 @@ struct Pamphlet: ParsableCommand {
             
             @Argument(help: "Path to the file resource to process")
             var inFile: String
+        
+            @Argument(help: "Ignore headers whose path includes")
+            var ignoreHeader: String? = nil
             
             mutating func run() {
                 if let buildAction = ProcessInfo.processInfo.environment["ACTION"],
                    buildAction == "indexbuild" {
                     return
                 }
+                
+                PamphletFramework.shared.ignoreHeader = ignoreHeader
                 
                 PamphletFramework.shared.fullprocess(file: inFile)
             }

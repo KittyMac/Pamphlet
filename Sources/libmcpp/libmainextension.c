@@ -49,6 +49,8 @@ extern char* mcpp_dirname(char * path);
 char GITVERSION[1024] = {0};
 char VERSIONED_URL[1024] = {0};
 
+char IGNORE_HEADERS[1024] = {0};
+
 void mcpp_help() {
     char * argv[] = {
         "mcpp",
@@ -89,7 +91,12 @@ void * mcpp_thread(void * mcpp_source_file) {
     return result;
 }
 
-const char * mcpp_preprocessFile(const char * srcFile, const char * gitVersion, const char * gitHash) {
+const char * mcpp_preprocessFile(const char * srcFile, const char * gitVersion, const char * gitHash, const char * ignoreHeader) {
+    
+    IGNORE_HEADERS[0] = 0;
+    if (ignoreHeader) {
+        strncpy(IGNORE_HEADERS, ignoreHeader, 1024);
+    }
     
 #ifndef _WIN32
     static pthread_mutex_t mcppLock = PTHREAD_MUTEX_INITIALIZER;

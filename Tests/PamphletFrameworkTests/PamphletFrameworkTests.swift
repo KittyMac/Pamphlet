@@ -122,6 +122,7 @@ final class PamphletTests: XCTestCase {
     }
     
     func testPreprocessIncludeFromSourcePath() {
+        PamphletFramework.shared.ignoreHeader = "rover/"
         let result = PamphletFramework.shared.preprocess(file: path(to: "Pamphlet/include1.css"))
         XCTAssertEqual(result, "\n#title {\n    border-image-slice: 22 fill;\n}\n\n#title {\n    border-image-slice: 22 fill;\n}\n")
     }

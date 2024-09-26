@@ -18,6 +18,8 @@ enum OutputType: String {
 public class PamphletFramework {
     public static let shared = PamphletFramework()
     
+    public var ignoreHeader: String? = nil
+    
     var gIncludeOriginal: Bool? = nil
     var gReleaseOnly: Bool? = nil
     var gIncludeGzip: Bool? = nil
@@ -373,7 +375,7 @@ public class PamphletFramework {
         var fileContents = string
         if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
             // This file wants to use the mcpp preprocessor
-            if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
+            if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString, ignoreHeader) {
                 fileContents = String(cString: cPtr)
                 free(cPtr)
             }
@@ -777,7 +779,7 @@ public class PamphletFramework {
             var fileContents = try String(contentsOfFile: inFile)
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString, ignoreHeader) {
                     fileContents = String(cString: cPtr)
                     free(cPtr)
                 }
@@ -798,7 +800,7 @@ public class PamphletFramework {
             var fileContents = try String(contentsOfFile: inFile)
             
             if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString) {
+                if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString, ignoreHeader) {
                     fileContents = String(cString: cPtr)
                     free(cPtr)
                 }
