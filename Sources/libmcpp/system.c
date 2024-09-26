@@ -3280,6 +3280,11 @@ found_name:
             return  TRUE;
         }
     }
+    
+    if (!strstr("rover/", filename)) {
+        fprintf(stderr, "Can't open include file \"%s\", ignoring", filename);
+        return  TRUE;
+    }
 
     cerror( "Can't open include file \"%s\"", filename, 0L, NULL);  /* _E_  */
 error:
