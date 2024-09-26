@@ -50,7 +50,7 @@ struct Pamphlet: ParsableCommand {
         @Flag(inversion: .prefixedEnableDisable, help: "Minify JSON content")
         var json: Bool = true
         
-        @Argument(help: "Ignore headers whose path includes")
+        @Option(help: "Ignore headers whose path includes")
         var ignoreHeader: String? = nil
                 
         mutating func run() throws {
@@ -87,7 +87,7 @@ struct Pamphlet: ParsableCommand {
         @Argument(help: "Path to the file resource to preprocess")
         var inFile: String
         
-        @Argument(help: "Ignore headers whose path includes")
+        @Option(help: "Ignore headers whose path includes")
         var ignoreHeader: String? = nil
         
         mutating func run() {
@@ -108,7 +108,7 @@ struct Pamphlet: ParsableCommand {
             @Argument(help: "Path to the file resource to process")
             var inFile: String
         
-            @Argument(help: "Ignore headers whose path includes")
+            @Option(help: "Ignore headers whose path includes")
             var ignoreHeader: String? = nil
             
             mutating func run() {
