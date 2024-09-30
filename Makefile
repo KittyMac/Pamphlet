@@ -84,7 +84,7 @@ install: clean build
 	
 
 .PHONY: tools
-tools: install
+tools:
 	make -C Tools
 	./dist/Pamphlet --prefix=Tools --release ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 

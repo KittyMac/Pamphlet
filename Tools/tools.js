@@ -7,14 +7,14 @@ global.toolJS = function(content, callback) {
         format: {
             ascii_only: true
         },
-        compress: {},
+        compress: {
+            unused: false
+        },
         mangle: {
-            properties: {
-                reserved: [ "preconfig" ]
-            }
+            reserved: [ "preconfig" ]
         }
     };
-    
+        
     terserMinify(content, options).then( function($) {
         callback($.code);
     });
