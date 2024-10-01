@@ -1,4 +1,5 @@
 define DOCKER_BUILD_TOOL
+	swift package resolve
 	docker buildx build --file Dockerfile-$(1) --platform linux/amd64,linux/arm64 --push -t kittymac/pamphlet-$(1) .
 	
 	docker pull kittymac/pamphlet-$(1):latest
@@ -110,9 +111,9 @@ focal-592:
 fedora38-573:
 	@$(call DOCKER_BUILD_TOOL,fedora38-573)
 
-docker: docker
-	-docker buildx create --name cluster_builder203
-	-DOCKER_HOST=ssh://rjbowli@192.168.111.203 docker buildx create --name cluster_builder203 --platform linux/amd64 --append
+docker:
+	-DOCKER_HOST=ssh://rjbowli@192.168.111.203 docker buildx create --name cluster_builder203 --platform linux/amd64
+	-docker buildx create --name cluster_builder203 --platform linux/arm64 --append
 	-docker buildx use cluster_builder203
 	-docker buildx inspect --bootstrap
 	-docker login
