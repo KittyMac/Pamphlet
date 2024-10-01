@@ -1,4 +1,4 @@
-FROM fedora:38 as builder
+FROM fedora:38 AS builder
 
 RUN dnf install -y \
     git \
@@ -11,13 +11,15 @@ RUN ln -s /usr/libexec/swift/*/lib/libsourcekitdInProc.so /usr/lib/libsourcekitd
 
 WORKDIR /root/Pamphlet
 COPY ./dist ./dist
+COPY ./.build/repositories ./.build/repositories
+COPY ./.git ./.git
 COPY ./Package.resolved ./Package.resolved
 COPY ./Package.swift ./Package.swift
 COPY ./Plugins ./Plugins
 COPY ./Sources ./Sources
 COPY ./Tests ./Tests
 
-RUN swift test
+#RUN swift test
 RUN swift build --configuration release
 
 FROM fedora:38

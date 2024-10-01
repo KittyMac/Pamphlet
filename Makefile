@@ -5,6 +5,8 @@ define DOCKER_BUILD_TOOL
 	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/
 	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/
 	mkdir -p ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/
+	
+	swift package resolve
 	docker run --platform linux/arm64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-arm64/bin/PamphletTool'
 	docker run --platform linux/amd64 --rm -v $(DIST):/outTemp kittymac/pamphlet-$(1) /bin/bash -lc 'cp PamphletTool /outTemp/PamphletTool-$(1).artifactbundle/PamphletTool-amd64/bin/PamphletTool'
 	cp ./dist/PamphletTool ./dist/PamphletTool-$(1).artifactbundle/PamphletTool-macos/bin/PamphletTool
