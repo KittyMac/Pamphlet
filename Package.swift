@@ -49,7 +49,7 @@ var plugins = [
 
 #if os(Windows)
 plugins += [
-    "PamphletTool-windows",
+    "PamphletTool-windows-592",
 ]
 #endif
 
@@ -84,8 +84,8 @@ var pluginTarget: [PackageDescription.Target] = [
 
 #if os(Windows)
 pluginTarget += [
-    .binaryTarget(name: "PamphletTool-windows",
-                  path: "dist/PamphletTool-windows.zip"),
+    .binaryTarget(name: "PamphletTool-windows-592",
+                  path: "dist/PamphletTool-windows-592.zip"),
 ]
 #endif
 

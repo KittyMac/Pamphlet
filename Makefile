@@ -37,11 +37,13 @@ build:
 	
 build-windows:
 	# note: you probably don't have make on windows, so you need to run these manually
+	Stop-Process -Name "FlynnPackageTests.xctest"
+	rm -Recurse -Force .build
 	swift test
 	swift build --configuration release
-	cp .build/release/PamphletTool.exe ./dist/PamphletTool-windows.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
-	rm ./dist/PamphletTool-windows.zip
-	Compress-Archive -Path ./dist/PamphletTool-windows.artifactbundle -DestinationPath ./dist/PamphletTool-windows.zip
+	cp .build/release/PamphletTool.exe ./dist/PamphletTool-windows-592.artifactbundle/PamphletTool-amd64/bin/PamphletTool.exe
+	rm ./dist/PamphletTool-windows-592.zip
+	Compress-Archive -Path ./dist/PamphletTool-windows-592.artifactbundle -DestinationPath ./dist/PamphletTool-windows-592.zip
 
 .PHONY: clean
 clean:
