@@ -1009,6 +1009,54 @@ public class PamphletFramework {
                 try? contents.write(toFile: finalReleasePath, atomically: false, encoding: .utf8)
             }
             try? FileManager.default.removeItem(atPath: releasePath)
+            
+            // NOTE: kotlin appears to have a hidden limit to the size of their source files,
+            // somewhere around 20 MB the file just gets ignored. To handle this, we split
+            // the generated files up in post
+            sanityCheckKotlinFile(finalDebugPath)
+            sanityCheckKotlinFile(finalReleasePath)
         }
+    }
+    
+    func sanityCheckKotlinFile(_ filepath: String) {
+        guard filepath.hasSuffix(".kt") else { return }
+        guard let hitch = Hitch(contentsOfFile: filepath) else { return }
+        guard hitch.count > 1024 * 1024 * 20 else { return }
+        
+        // Ok, the file is too large. Split into 15 MB chunks
+        let lines: [HalfHitch] = hitch.components(separatedBy: "\n")
+        
+        let header = Hitch()
+        
+        let scratch = Hitch(capacity: 1024 * 1024 * 20)
+        var chunk = 0
+        
+        let saveChunk: () -> () = {
+            let chunkFilePath = "\(filepath).\(chunk).kt"
+            try? scratch.toTempString().write(toFile: chunkFilePath,
+                                              atomically: false,
+                                              encoding: .utf8)
+            chunk += 1
+            scratch.count = 0
+            scratch.append(header)
+        }
+        
+        for line in lines {
+            if line.starts(with: "package") ||
+                line.starts(with: "import") {
+                header.append(line)
+                header.append(.newLine)
+            }
+            
+            scratch.append(line)
+            scratch.append(.newLine)
+            
+            if scratch.count > 1024 * 1024 * 15 {
+                saveChunk()
+            }
+        }
+        saveChunk()
+        
+        try? FileManager.default.removeItem(atPath: filepath)
     }
 }

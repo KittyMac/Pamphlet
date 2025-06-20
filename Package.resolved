@@ -1,15 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "bitbytedata",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tsolomko/BitByteData",
-      "state" : {
-        "revision" : "cdcdc5177ad536cfb11b95c620f926a81014b7fe",
-        "version" : "2.0.4"
-      }
-    },
-    {
       "identity" : "chronometer",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Chronometer.git",
@@ -61,15 +52,6 @@
       "state" : {
         "revision" : "d4b439bf76a40fb45d86a24d13b9c26e7d630eee",
         "version" : "0.2.49"
-      }
-    },
-    {
-      "identity" : "swcompression",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/KittyMac/SWCompression.git",
-      "state" : {
-        "revision" : "cd39ca0a3b269173bab06f68b182b72fa690765c",
-        "version" : "4.8.5"
       }
     },
     {
