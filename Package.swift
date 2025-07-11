@@ -96,9 +96,6 @@ pluginTarget += [
 
 let package = Package(
     name: "Pamphlet",
-    platforms: [
-        .macOS(.v10_13), .iOS(.v11)
-    ],
     products: productsTarget + [
         .library(name: "PamphletFramework", targets: ["PamphletFramework"]),
         .plugin(name: "PamphletPlugin", targets: ["PamphletPlugin"]),
