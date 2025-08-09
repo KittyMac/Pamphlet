@@ -22,6 +22,8 @@ private class JibRunner {
     var lastJsResult: String = "undefined"
     
     init() {
+        jib.useMockFunctions = true
+        
         _ = jib.eval(ToolsPamphlet.ToolsJs())
         
         jsToolJS = jib[function: "global.toolJS"]!

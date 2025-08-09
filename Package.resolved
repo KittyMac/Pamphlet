@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Chronometer.git",
       "state" : {
-        "revision" : "d21b89e5cb5929b5175bdb3ad710a52cbf497eaa",
-        "version" : "0.1.12"
+        "revision" : "99d4f4137837a28e1e294eb69ac66ad53c0934d3",
+        "version" : "0.1.14"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Jib.git",
       "state" : {
-        "revision" : "d5c7379c4100c4903921ca12bd3cc927f33e26ff",
-        "version" : "0.0.85"
+        "revision" : "57723e287c9edb495263de6ba566a8ad97ad4483",
+        "version" : "0.0.93"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Sextant.git",
       "state" : {
-        "revision" : "b2141d4a693e2a768720534009cb621252be39a0",
-        "version" : "0.4.33"
+        "revision" : "3a6ba431ecd4fd564e3c80e23d03ad1d9069a9f4",
+        "version" : "0.4.36"
       }
     },
     {
@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/KittyMac/Spanker.git",
       "state" : {
-        "revision" : "d4b439bf76a40fb45d86a24d13b9c26e7d630eee",
-        "version" : "0.2.49"
+        "revision" : "820f96e9e5836e2ac9808c1b706727b876fa3d9b",
+        "version" : "0.2.51"
       }
     },
     {
@@ -59,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "41982a3656a71c768319979febd796c6fd111d5c",
-        "version" : "1.5.0"
+        "revision" : "309a47b2b1d9b5e991f36961c983ecec72275be3",
+        "version" : "1.6.1"
       }
     }
   ],
