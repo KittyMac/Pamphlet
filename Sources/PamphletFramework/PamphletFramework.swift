@@ -455,14 +455,15 @@ public class PamphletFramework {
             }
         }
         
-        if compressed != nil && includeGzip(for: path.fileName) {
+        if let compressed = compressed,
+           includeGzip(for: path.fileName) {
             if options.contains(.kotlin) {
                 appendBoth("fun \(path.extensionName).\(path.variableName)Gzip(): ByteArray {\n")
                 appendBoth("    return compressed\(path.fullVariableName)\n")
                 appendBoth("}\n")
             } else {
                 scratchRelease.append("    static func \(path.variableName)Gzip() -> Data {\n")
-                scratchRelease.append("        return compressed\(path.fullVariableName)\n")
+                scratchRelease.append("        return Data(base64Encoded:\"\(compressed)\")!\n\n")
                 scratchRelease.append("    }\n")
                 
                 if dataType.contains("String") {
@@ -509,7 +510,7 @@ public class PamphletFramework {
             if options.contains(.kotlin) {
                 scratchRelease.append("private val compressed\(path.fullVariableName) = Base64.decode(\"\(compressed)\", Base64.DEFAULT)\n\n")
             } else {
-                scratchRelease.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n\n")
+                // scratchRelease.append("private let compressed\(path.fullVariableName) = Data(base64Encoded:\"\(compressed)\")!\n\n")
             }
         }
         
