@@ -46,6 +46,7 @@ var plugins = [
     "PamphletTool-focal-592",
     "PamphletTool-jammy-580",
     "PamphletTool-jammy-592",
+    "PamphletTool-noble-592",
     "PamphletTool-fedora38-573",
 ]
 
@@ -71,6 +72,8 @@ var pluginTarget: [PackageDescription.Target] = [
                   path: "dist/PamphletTool-jammy-580.zip"),
     .binaryTarget(name: "PamphletTool-jammy-592",
                   path: "dist/PamphletTool-jammy-592.zip"),
+    .binaryTarget(name: "PamphletTool-noble-592",
+                  path: "dist/PamphletTool-noble-592.zip"),
     .plugin(
         name: "PamphletPlugin",
         capability: .buildTool(),

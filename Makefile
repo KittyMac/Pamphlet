@@ -99,7 +99,7 @@ tools-simple: install
 	./dist/Pamphlet --prefix=Tools --release --disable-html --disable-js --disable-json ./Tools/Pamphlet ./Sources/PamphletFramework/Tools
 
 .PHONY: release
-release: install docker focal-571 fedora38-573 focal-580 focal-592 jammy-580 jammy-592
+release: install docker focal-571 fedora38-573 focal-580 focal-592 jammy-580 jammy-592 noble-592
 	
 focal-571:
 	@$(call DOCKER_BUILD_TOOL,focal-571)
@@ -115,6 +115,9 @@ jammy-580:
 
 jammy-592:
 	@$(call DOCKER_BUILD_TOOL,jammy-592)
+
+noble-592:
+	@$(call DOCKER_BUILD_TOOL,noble-592)
 
 fedora38-573:
 	@$(call DOCKER_BUILD_TOOL,fedora38-573)
