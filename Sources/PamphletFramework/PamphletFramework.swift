@@ -3,6 +3,7 @@ import libmcpp
 import Hitch
 import Sextant
 import Spanker
+import Gzip
 
 #if os(Windows)
 public let pamphletTempPath = "C:/WINDOWS/Temp/"
@@ -71,6 +72,10 @@ public class PamphletFramework {
     private var writeLock = NSLock()
     private let queue1 = OperationQueue()
     private let queue2 = OperationQueue()
+
+    private var cache: PamphletCache? = nil
+    private var fingerprintLock = NSLock()
+    private var fingerprints: [String: String] = [:]
     
     private var gitVersionString: String = ""
     private var gitHashString: String = ""
@@ -371,10 +376,9 @@ public class PamphletFramework {
                      type: .release)
     }
     
-    private func contentsFor(name inFile: String, fileContents string: String) -> String? {
+    private func expanded(name inFile: String, fileContents string: String) -> String {
         var fileContents = string
         if fileContents.hasPrefix("#define PAMPHLET_PREPROCESSOR") {
-            // This file wants to use the mcpp preprocessor
             if let cPtr = mcpp_preprocessFile(inFile, gitVersionString, gitHashString, ignoreHeader) {
                 fileContents = String(cString: cPtr)
                 free(cPtr)
@@ -384,16 +388,124 @@ public class PamphletFramework {
                 print("warning: \(inFile) is missing PAMPHLET_PREPROCESSOR")
             }
         }
-        
+        return fileContents
+    }
+
+    private func minified(name inFile: String, fileContents string: String) -> String {
+        var fileContents = string
         if inFile.contains(".min") == false {
             minifyHtml(inFile: inFile, fileContents: &fileContents)
             minifyJs(inFile: inFile, fileContents: &fileContents)
             minifyJson(inFile: inFile, fileContents: &fileContents)
         }
-        
         return fileContents
     }
-    
+
+    private func contentsFor(name inFile: String, fileContents string: String) -> String? {
+        return minified(name: inFile, fileContents: expanded(name: inFile, fileContents: string))
+    }
+
+    private struct ProcessedFile {
+        let filePath: FilePath
+        let isText: Bool
+        let hasGzip: Bool
+        let debug: String
+        let release: String
+    }
+
+    private func fileFingerprint(for fileName: String) -> String {
+        fingerprintLock.lock()
+        if let existing = fingerprints[fileName] {
+            fingerprintLock.unlock()
+            return existing
+        }
+        fingerprintLock.unlock()
+
+        var parts: [String] = []
+        parts.append(includeOriginal(for: fileName) ? "o1" : "o0")
+        parts.append(includeGzip(for: fileName)     ? "g1" : "g0")
+        parts.append(releaseOnly(for: fileName)     ? "r1" : "r0")
+        parts.append(minifyHtml(for: fileName)      ? "h1" : "h0")
+        parts.append(minifyJs(for: fileName)        ? "j1" : "j0")
+        parts.append(minifyJson(for: fileName)      ? "n1" : "n0")
+        parts.append("c\(compressionLevel(for: fileName) ?? 9)")
+        parts.append(preprocessorWraps(for: fileName, string: "\u{1}"))
+        let result = parts.joined(separator: ",")
+
+        fingerprintLock.lock()
+        fingerprints[fileName] = result
+        fingerprintLock.unlock()
+        return result
+    }
+
+    private func processFile(_ filePath: FilePath,
+                             _ inFile: String,
+                             _ options: PamphletOptions) -> ProcessedFile? {
+
+        guard let rawBytes = try? Data(contentsOf: URL(fileURLWithPath: inFile)) else { return nil }
+
+        var asText = String(data: rawBytes, encoding: .utf8)
+        if asText == nil {
+            asText = try? String(contentsOfFile: inFile)
+        }
+
+        let fingerprint = fileFingerprint(for: filePath.fileName)
+
+        if let text = asText {
+            let contents = expanded(name: inFile, fileContents: text)
+            let hash = Data(contents.utf8).md5()?.toString() ?? ""
+            let key = cache?.key(contentHash: hash, absolutePath: inFile, fileFingerprint: fingerprint)
+
+            if let key = key, let hit = cache?.load(key: key) {
+                return ProcessedFile(filePath: filePath, isText: true, hasGzip: hit.hasGzip,
+                                     debug: hit.debug, release: hit.release)
+            }
+
+            let minifiedContents = minified(name: inFile, fileContents: contents)
+            let gzipped = gzip(path: filePath, contents: minifiedContents)
+            let (debug, release) = generateFile(filePath, inFile, minifiedContents,
+                                                gzipped, "String", options)
+            if let key = key {
+                cache?.store(key: key, CachedFile(isText: true, hasGzip: gzipped != nil,
+                                                  debug: debug, release: release))
+            }
+            return ProcessedFile(filePath: filePath, isText: true, hasGzip: gzipped != nil,
+                                 debug: debug, release: release)
+        }
+
+        let hash = rawBytes.md5()?.toString() ?? ""
+        let key = cache?.key(contentHash: hash, absolutePath: inFile, fileFingerprint: fingerprint)
+
+        if let key = key, let hit = cache?.load(key: key) {
+            return ProcessedFile(filePath: filePath, isText: false, hasGzip: hit.hasGzip,
+                                 debug: hit.debug, release: hit.release)
+        }
+
+        var gzipBase64: String? = nil
+        if includeGzip(for: filePath.fileName) {
+            var level: CompressionLevel = .bestCompression
+            if let configured = compressionLevel(for: filePath.fileName) {
+                #if os(Windows)
+                level = CompressionLevel(rawValue: Int32(configured)) ?? .bestCompression
+                #else
+                level = CompressionLevel(rawValue: Int32(configured))
+                #endif
+            }
+            if let gz = try? rawBytes.gzipped(level: level), gz.count < rawBytes.count {
+                gzipBase64 = gz.base64EncodedString()
+            }
+        }
+
+        let (debug, release) = generateFile(filePath, inFile, rawBytes.base64EncodedString(),
+                                            gzipBase64, "Data", options)
+        if let key = key {
+            cache?.store(key: key, CachedFile(isText: false, hasGzip: gzipBase64 != nil,
+                                              debug: debug, release: release))
+        }
+        return ProcessedFile(filePath: filePath, isText: false, hasGzip: gzipBase64 != nil,
+                             debug: debug, release: release)
+    }
+
     private func fileContentsForTextFile(_ inFile: String) -> String? {
         guard let fileContents = try? String(contentsOfFile: inFile) else { return nil }
         return contentsFor(name: inFile, fileContents: fileContents)
@@ -586,7 +698,7 @@ public class PamphletFramework {
                          options: PamphletOptions,
                          textPages: BoxedArray<FilePath>,
                          dataPages: BoxedArray<FilePath>,
-                         compressedDataPages: BoxedArray<FilePath>) {
+                         compressedDataPages: BoxedArray<FilePath>) -> (String, String) {
         
         let resourceKeys: [URLResourceKey] = [.contentModificationDateKey, .creationDateKey, .isDirectoryKey]
         
@@ -627,103 +739,49 @@ public class PamphletFramework {
             }
             if let jsonDirectoryEncoded = try? jsonDirectory.json() {
                 if let (contentDebug, contentRelease) = processStringAsFile(directoryFilePath, nil, jsonDirectoryEncoded, options) {
-                    
-                    appendOutput(string: contentDebug,
-                                 path: debugPath,
-                                 type: .debug)
-                    
-                    appendOutput(string: contentRelease,
-                                 path: releasePath,
-                                 type: .release)
-                    
                     directoryFilePath.isStaticString = true
                     textPages.append(directoryFilePath)
+                    return (contentDebug, contentRelease)
                 }
             }
-            return
+            return ("", "")
         }
         
-        // When we collapse a directory, all swift files in the directory go into a single files
-        let outputDirectory = URL(fileURLWithPath: generateFilesDirectory).path
-        let outputFile = "\(outputDirectory)/\(fileDirectoryPartialPath).collapsed\(options.fileExt())"
-                    
-        // 0. check for skipping
-        var shouldSkipAll = true
-        for fileURL in files {
-            var shouldSkip = false
-            if let outResourceValues = try? URL(fileURLWithPath: outputFile).resourceValues(forKeys: Set(resourceKeys)) {
-                // We need to check the main source output file, but also any files which are #include to this one
-                // and any and all files #included from the dependencies
-                shouldSkip = shouldSkipFile(outResourceValues.contentModificationDate!, fileURL.path)
-                if !shouldSkip {
-                    //print("DATE CHECK FAILED: \(fileURL.path)")
-                }
-                // also check against the modification date of pamphlet itself
-                if shouldSkip {
-                    shouldSkip = pamphletExecPathValues.contentModificationDate! <= outResourceValues.contentModificationDate!
-                }
-            }
-            if shouldSkip == false {
-                shouldSkipAll = false
-                break
-            }
-        }
-        
-        if shouldSkipAll {
-            // Even if we skip generating files, we need to note them so that they are added to the
-            // Pamphlet.swift file
-            for fileURL in files {
-                let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
-                let filePath = FilePath(pamphletName, partialPath, options)
-                if let _ = try? String(contentsOfFile: fileURL.path) {
-                    textPages.append(filePath)
-                } else {
-                    dataPages.append(filePath)
-                }
-            }
-            return
-        }
-                    
-        // 1. at least one file was updated, regenerate all of the files
-        var collapsedDebugContent = ""
-        var collapsedReleaseContent = ""
-        let appendLock = NSLock()
-        for fileURL in files {
-            
+        let fileList = Array(files)
+        var results = [ProcessedFile?](repeating: nil, count: fileList.count)
+        let resultsLock = NSLock()
+
+        for (index, fileURL) in fileList.enumerated() {
             queue1.addOperation {
                 let partialPath = String(fileURL.path.dropFirst(inDirectoryFullPath.count))
                 let filePath = FilePath(pamphletName, partialPath, options)
-                
-                if let (contentDebug, contentRelease) = self.processTextFile(filePath, fileURL.path, options) {
-                    appendLock.lock()
-                    collapsedDebugContent += contentDebug + "\n"
-                    collapsedReleaseContent += contentRelease + "\n"
-                    textPages.append(filePath)
-                    appendLock.unlock()
-                } else if let (contentDebug, contentRelease) = self.processDataFile(filePath, fileURL.path, options, compressedDataPages) {
-                    appendLock.lock()
-                    collapsedDebugContent += contentDebug + "\n"
-                    collapsedReleaseContent += contentRelease + "\n"
-                    dataPages.append(filePath)
-                    appendLock.unlock()
-                } else {
+                guard let processed = self.processFile(filePath, fileURL.path, options) else {
                     fatalError("Processing failed for file: \(fileURL.path)")
+                }
+                resultsLock.lock()
+                results[index] = processed
+                resultsLock.unlock()
+            }
+        }
+
+        queue1.waitUntilAllOperationsAreFinished()
+
+        var collapsedDebugContent = ""
+        var collapsedReleaseContent = ""
+        for processed in results.compactMap({ $0 }) {
+            collapsedDebugContent += processed.debug + "\n"
+            collapsedReleaseContent += processed.release + "\n"
+            if processed.isText {
+                textPages.append(processed.filePath)
+            } else {
+                dataPages.append(processed.filePath)
+                if processed.hasGzip {
+                    compressedDataPages.append(processed.filePath)
                 }
             }
         }
-        
-        queue1.waitUntilAllOperationsAreFinished()
-        
-        appendOutput(string: collapsedDebugContent,
-                     path: debugPath,
-                     type: .debug)
-        
-        appendOutput(string: collapsedReleaseContent,
-                     path: releasePath,
-                     type: .release)
-        
-        return
-    
+
+        return (collapsedDebugContent, collapsedReleaseContent)
     }
     
     private func shouldSkipFile(_ date: Date, _ filePath: String) -> Bool {
@@ -871,6 +929,28 @@ public class PamphletFramework {
                                     
             let pamphletFilePath = generateFilesDirectory + "/\(pamphletName)\(options.fileExt())"
             
+            _ = includeOriginal(for: nil)
+            _ = includeGzip(for: nil)
+            _ = releaseOnly(for: nil)
+            _ = minifyHtml(for: nil)
+            _ = minifyJs(for: nil)
+            _ = minifyJson(for: nil)
+            _ = compressionLevel(for: nil)
+
+            let toolIdentity = [
+                "\(pamphletExecPathValues.contentModificationDate?.timeIntervalSince1970 ?? 0)",
+                "\(pamphletExecPathValues.fileSize ?? 0)"
+            ].joined(separator: ":")
+
+            cache = PamphletCache(directory: outDirectory + "/pamphlet.cache/",
+                                  globalFingerprint: [
+                                      pamphletName,
+                                      "\(options.rawValue)",
+                                      options.kotlinPackage ?? "",
+                                      ignoreHeader ?? "",
+                                      toolIdentity
+                                  ].joined(separator: "\u{0}"))
+
             debugPath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.debug.swift"
             releasePath = "\(pamphletTempPath)\(UUID().uuidString).pamphlet.release.swift"
             
@@ -957,24 +1037,39 @@ public class PamphletFramework {
                 }
             }
             
-            for directoryURL in filesByDirectory.keys {
+            // Dictionary key order is randomized per process, and the operations
+            // finish out of order, so both must be pinned for the generated file
+            // to be byte-reproducible across builds.
+            let sortedDirectories = filesByDirectory.keys.sorted { $0.path < $1.path }
+            var directoryOutput = [(String, String)?](repeating: nil, count: sortedDirectories.count)
+            let directoryLock = NSLock()
+
+            for (index, directoryURL) in sortedDirectories.enumerated() {
                 guard let files = filesByDirectory[directoryURL] else { continue }
                 queue2.addOperation {
-                    self.process(directory: directoryURL,
-                                 files: files,
-                                 pamphletName: pamphletName,
-                                 pamphletExecPathValues: pamphletExecPathValues,
-                                 inDirectoryFullPath: inDirectoryFullPath,
-                                 generateFilesDirectory: generateFilesDirectory,
-                                 options: options,
-                                 textPages: textPages,
-                                 dataPages: dataPages,
-                                 compressedDataPages: compressedDataPages)
+                    let content = self.process(directory: directoryURL,
+                                               files: files,
+                                               pamphletName: pamphletName,
+                                               pamphletExecPathValues: pamphletExecPathValues,
+                                               inDirectoryFullPath: inDirectoryFullPath,
+                                               generateFilesDirectory: generateFilesDirectory,
+                                               options: options,
+                                               textPages: textPages,
+                                               dataPages: dataPages,
+                                               compressedDataPages: compressedDataPages)
+                    directoryLock.lock()
+                    directoryOutput[index] = content
+                    directoryLock.unlock()
                 }
             }
             queue2.waitUntilAllOperationsAreFinished()
+
+            for (contentDebug, contentRelease) in directoryOutput.compactMap({ $0 }) {
+                appendOutput(string: contentDebug, path: debugPath, type: .debug)
+                appendOutput(string: contentRelease, path: releasePath, type: .release)
+            }
                         
-            for directory in allDirectories {
+            for directory in allDirectories.sorted(by: { $0.path < $1.path }) {
                 let partialPath = String(directory.path.dropFirst(inDirectoryFullPath.count))
                 let filePath = FilePath(pamphletName, partialPath, options)
                 directoryPages.append(filePath)
@@ -1016,6 +1111,8 @@ public class PamphletFramework {
             // the generated files up in post
             sanityCheckKotlinFile(finalDebugPath)
             sanityCheckKotlinFile(finalReleasePath)
+
+            cache?.prune()
         }
     }
     
