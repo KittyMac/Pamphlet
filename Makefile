@@ -14,6 +14,8 @@ define DOCKER_BUILD_TOOL
 	
 	rm -f ./dist/PamphletTool-$(1).zip
 	cd ./dist && zip -r ./PamphletTool-$(1).zip ./PamphletTool-$(1).artifactbundle
+	
+	sleep 10
 endef
 
 DIST:=$(shell cd dist && pwd)
